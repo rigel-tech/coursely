@@ -20,29 +20,24 @@ const placeholderBlur =
 /**
  * ImageMedia
  *
- * This component passes a **relative** `src` (e.g. `/media/...`) to Next.js Image.
- * The `getMediaUrl` utility constructs the full URL by prepending the base URL from env vars
- * (NEXT_PUBLIC_SERVER_URL). Next.js then optimizes this using `remotePatterns` configured
- * in next.config.js — no custom `loader` needed.
+ * Passes a **relative** `src` (e.g. `/api/media/file/image.webp`) to Next.js Image.
+ * `getMediaUrl` deliberately does NOT prepend a base URL — it only appends the cache tag —
+ * so Next treats the src as local and matches it against `images.localPatterns` in
+ * next.config.ts. Going through `remotePatterns` instead would fail, because Next 16 blocks
+ * private IPs there.
  *
  * Flow:
- *   1. Resource URL from Payload: `/media/image-123.jpg`
- *   2. getMediaUrl() adds base URL: `https://yourdomain.com/media/image-123.jpg`
- *   3. Next.js Image optimizes via remotePatterns: `/_next/image?url=...&w=1200&q=75`
+ *   1. Resource URL from Payload: `/api/media/file/image-123.webp`
+ *   2. getMediaUrl() appends the cache tag: `/api/media/file/image-123.webp?<updatedAt>`
+ *   3. Next optimizes via localPatterns: `/_next/image?url=...&w=1200&q=100`
  *
- * If your storage/plugin returns **external CDN URLs** (e.g. `https://cdn.example.com/...`),
- * choose ONE of the following:
- *   A) Allow the remote host in next.config.js:
+ * `quality={100}` below must stay listed in `images.qualities` in next.config.ts.
+ *
+ * If storage moves to **external CDN URLs** (e.g. `https://cdn.example.com/...`), pick one:
+ *   A) Allow the host in next.config.ts:
  *      images: { remotePatterns: [{ protocol: 'https', hostname: 'cdn.example.com' }] }
- *   B) Provide a **custom loader** for CDN-specific transforms:
- *      const imageLoader: ImageLoader = ({ src, width, quality }) =>
- *        `https://cdn.example.com${src}?w=${width}&q=${quality ?? 75}`
- *      <Image loader={imageLoader} src="/media/hero.jpg" width={1200} height={600} alt="" />
- *   C) Skip optimization:
- *      <Image unoptimized src="https://cdn.example.com/hero.jpg" width={1200} height={600} alt="" />
- *
- * TL;DR: Template uses relative URLs + getMediaUrl() to construct full URLs, then relies on
- * remotePatterns for optimization. Only add `loader` if using external CDNs with custom transforms.
+ *   B) Provide a custom loader for CDN-specific transforms.
+ *   C) Skip optimization with `unoptimized`.
  */
 
 export const ImageMedia: React.FC<MediaProps> = (props) => {
