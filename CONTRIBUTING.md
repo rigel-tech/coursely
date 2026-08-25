@@ -67,6 +67,19 @@ git push -u origin feat/course-enrollment
 Configuration: [`.husky/`](.husky), [`.lintstagedrc.json`](.lintstagedrc.json),
 [`commitlint.config.mjs`](commitlint.config.mjs).
 
+## Standing invariants
+
+[`INVARIANTS.md`](INVARIANTS.md) lists the constraints that **break silently** — the ones
+no linter, type checker, or test can catch. Read the relevant entry before working in an
+area it covers.
+
+It is not a changelog. If your change supersedes an entry, rewrite or delete that entry in
+**the same commit**; if your work uncovers a new silent-breaking constraint, add it while
+you implement, not later.
+
+**Before opening a pull request:** if you touched a file `INVARIANTS.md` names, confirm the
+entry naming it still holds as written.
+
 ## Bypassing a hook
 
 ```bash
