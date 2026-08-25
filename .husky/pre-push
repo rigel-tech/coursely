@@ -1,0 +1,22 @@
+. "$(dirname -- "$0")/branch-rules.sh"
+
+# Git feeds one line per ref being pushed on stdin:
+#   <local_ref> <local_sha> <remote_ref> <remote_sha>
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  [ -z "$remote_ref" ] && continue
+
+  if is_protected_branch "${remote_ref#refs/heads/}"; then
+    echo ""
+    red "✖ Refusing to push directly to protected branch: ${remote_ref#refs/heads/}"
+    echo ""
+    echo "  Push your own branch and open a pull request instead:"
+    dim "    git push -u origin \$(git rev-parse --abbrev-ref HEAD)"
+    echo ""
+    exit 1
+  fi
+done
+
+assert_branch_allowed "push"
+
+echo "→ Typechecking before push..."
+pnpm run typecheck

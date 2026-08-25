@@ -1,0 +1,2 @@
+# Commit message rules live in commitlint.config.mjs.
+pnpm exec commitlint --edit "$1"

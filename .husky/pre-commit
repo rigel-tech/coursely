@@ -1,0 +1,5 @@
+. "$(dirname -- "$0")/branch-rules.sh"
+
+assert_branch_allowed "commit"
+
+pnpm exec lint-staged
