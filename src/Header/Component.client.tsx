@@ -2,11 +2,12 @@
 import { useHeaderTheme } from '@/providers/HeaderTheme'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 
 import type { Header } from '@/payload-types'
 
 import { Logo } from '@/components/Logo/Logo'
+import useIsHydrated from '@/utilities/useIsHydrated'
 import { HeaderNav } from './Nav'
 
 interface HeaderClientProps {
@@ -14,20 +15,17 @@ interface HeaderClientProps {
 }
 
 export const HeaderClient: React.FC<HeaderClientProps> = ({ data }) => {
-  /* Storing the value in a useState to avoid hydration errors */
-  const [theme, setTheme] = useState<string | null>(null)
   const { headerTheme, setHeaderTheme } = useHeaderTheme()
   const pathname = usePathname()
 
-  useEffect(() => {
-    setHeaderTheme(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname])
+  /* The provider seeds itself from <html data-theme>, which only exists in the browser,
+     so the theme is withheld until hydration to keep both renders identical. */
+  const isHydrated = useIsHydrated()
+  const theme = isHydrated ? headerTheme : null
 
   useEffect(() => {
-    if (headerTheme && headerTheme !== theme) setTheme(headerTheme)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [headerTheme])
+    setHeaderTheme(null)
+  }, [pathname, setHeaderTheme])
 
   return (
     <header className="container relative z-20   " {...(theme ? { 'data-theme': theme } : {})}>
