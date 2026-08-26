@@ -72,9 +72,9 @@ _Why: strong criteria let you iterate without asking constantly, and make "done"
   `theme-guard` inside `pnpm lint`; `theme-guard-ignore` in a comment exempts one line.
 - **Tokens govern public UI only.** Admin UI runs on Payload's own design system and is
   outside the token rules: `src/app/(payload)/` and `src/components/admin/`. Everything
-  else is public and bound by them. The folder **is** the boundary, so placing a component
-  is a real decision. `admin/AdminBar` is the exception to watch — it renders on public
-  pages, so use tokens there anyway; the guard will not catch you.
+  else is public and bound by them. The folder **is** the boundary, so sort by where a
+  component paints, not who it serves: AdminBar is editor tooling yet lives in `public/`,
+  because it renders on public pages.
 - **UI components** are shadcn/ui on Tailwind v4, anchored at `src/components/public/ui/`.
 - **Invariants are maintained as you go.** A change that **supersedes** an entry rewrites
   or deletes it **in the same commit** — never leave the old rule beside the new one. Work
