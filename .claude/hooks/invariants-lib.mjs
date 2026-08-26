@@ -80,13 +80,24 @@ export function extractTitles(text) {
 
 const SOURCE_PATH = /`((?:\.\/)?[\w@.\-/[\]()]+\.(?:tsx?|jsx?|mjs|cjs|mts|s?css|json))(?::\d+)?`/g
 
-/** Repo-relative source paths the file points at, taken from its `file:line` pointers. */
-export function extractTrackedPaths(text) {
+/**
+ * Repo-relative paths the file points at, taken from its `file:line` pointers.
+ *
+ * Existence on disk is the filter, not a prefix. A `src/`-and-`tests/` prefix left
+ * `tailwind.config.mjs` and `scripts/theme-guard.mjs` unwatched even though INVARIANTS.md
+ * names both — and a fix to the first of those went through with the hook silent.
+ * Existence also drops the bare filenames used as shorthand in prose (`importMap.js`,
+ * `globals.css`), which no prefix rule could tell apart from a real path.
+ *
+ * A pointer to a file that has since been deleted stops being watched. That pointer is
+ * already broken and wants fixing; widening the watch list would not tell anyone.
+ */
+export function extractTrackedPaths(text, root) {
+  const base = root || process.cwd()
   const paths = new Set()
   for (const match of text.matchAll(SOURCE_PATH)) {
     const path = match[1].replace(/\\/g, '/').replace(/^\.\//, '')
-    // Only paths that look like they live in this repo's source tree.
-    if (/^(src|tests)\//.test(path)) paths.add(path)
+    if (existsSync(join(base, path))) paths.add(path)
   }
   return paths
 }
