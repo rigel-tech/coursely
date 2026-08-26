@@ -65,8 +65,9 @@ const ROOTS = ['src']
  * cannot be satisfied. The split is therefore by folder, and the folder is the boundary:
  * put a component in `admin/` and it is outside the token regime.
  *
- * That makes placement a real decision, not filing. `src/components/admin/AdminBar` is
- * the one member that paints on a public page — see the note there.
+ * That makes placement a real decision, not filing — sort by where a component paints,
+ * not by who it serves. AdminBar is editor tooling but renders on public pages, so it
+ * lives under `public/` and stays covered.
  */
 const EXCLUDE = [
   // The one legal home for colour. Excluding it is the entire premise of the guard.

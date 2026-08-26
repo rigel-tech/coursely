@@ -89,13 +89,15 @@ describe('theme-guard', () => {
   })
 
   it('case 8b: admin UI is outside the token regime, public UI is not', () => {
-    expect(isExcluded('src/components/admin/AdminBar/index.tsx')).toBe(true)
+    expect(isExcluded('src/components/admin/BeforeLogin/index.tsx')).toBe(true)
     expect(isExcluded('src/components/admin/BeforeDashboard/index.scss')).toBe(true)
     expect(isExcluded('src/components/admin/RowLabel/Header.tsx')).toBe(true)
 
     // The half the guard exists for must stay covered.
     expect(isExcluded('src/components/public/Card/index.tsx')).toBe(false)
     expect(isExcluded('src/components/public/ui/button.tsx')).toBe(false)
+    // Renders on public pages, so it stays covered even though it is editor tooling.
+    expect(isExcluded('src/components/public/AdminBar/index.tsx')).toBe(false)
     // The prefix must not spill onto a neighbouring folder.
     expect(isExcluded('src/components/admin-tools/x.tsx')).toBe(false)
     expect(isExcluded('src/components/admin.tsx')).toBe(false)
