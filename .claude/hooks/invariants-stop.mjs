@@ -50,7 +50,7 @@ try {
   if (changed.has(INVARIANTS_FILE)) process.exit(0)
 
   // Condition 1: intersect what changed with what the file points at.
-  const tracked = extractTrackedPaths(text)
+  const tracked = extractTrackedPaths(text, root)
   const hits = [...changed].filter((file) => tracked.has(file))
   if (hits.length === 0) process.exit(0)
 
