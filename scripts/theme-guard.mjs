@@ -60,11 +60,12 @@ const ROOTS = ['src']
 /**
  * Every entry is a hole, so each one has to earn its place.
  *
- * Note what is deliberately NOT excluded: the Payload admin components that live outside
- * `src/app/(payload)/` (AdminBar, BeforeDashboard, BeforeLogin, the two RowLabels). They
- * hold no colours today, and if one ever needs a Payload-admin colour, `theme-guard-ignore`
- * on that line is the right answer — an explicit, reviewable decision instead of a
- * standing exemption nobody revisits.
+ * `src/components/admin/` is deliberately NOT excluded. That folder groups components by
+ * purpose so people can find them; it does not grant an exemption. Only
+ * `src/app/(payload)/` is exempt, and only because those files are generated. If a
+ * component under `admin/` ever genuinely needs a Payload-admin colour,
+ * `theme-guard-ignore` on that line is the answer — an explicit, reviewable decision
+ * instead of a standing exemption nobody revisits.
  */
 const EXCLUDE = [
   // The one legal home for colour. Excluding it is the entire premise of the guard.

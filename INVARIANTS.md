@@ -115,8 +115,8 @@ visible, but only to whoever clicks it.
 :37), `src/app/(frontend)/(sitemaps)/pages-sitemap.xml/route.ts:50`,
 `src/app/(frontend)/[slug]/page.tsx:48` (the `slug = 'home'` default),
 `src/utilities/generatePreviewPath.ts:4` (`collectionPrefixMap`, `pages: ''`),
-`src/components/Link/index.tsx:38` (`CMSLink`),
-`src/components/PayloadRedirects/index.tsx:31` (`PayloadRedirects`, also :35).
+`src/components/public/Link/index.tsx:38` (`CMSLink`),
+`src/components/public/PayloadRedirects/index.tsx:31` (`PayloadRedirects`, also :35).
 
 ## Config-to-component wiring
 
@@ -137,7 +137,7 @@ silent `return null` at :44.
 ### Admin components referenced by string path require `pnpm generate:importmap`
 
 **Rule** — Payload config references admin components as strings
-(`'@/Header/RowLabel#RowLabel'`). After adding, moving, or renaming one, run
+(`'@/components/admin/RowLabel/Header#RowLabel'`). After adding, moving, or renaming one, run
 `pnpm generate:importmap` and commit the regenerated `importMap.js`.
 
 **Why it breaks silently** — The reference is a **string literal**, so TypeScript never
@@ -147,7 +147,7 @@ label shows a generic index instead of the nav item's own label, the dashboard r
 the custom panel. The admin panel loads fine and the build succeeds.
 
 **Where** — `src/Header/config.ts:24` and `src/Footer/config.ts:24` (the string paths),
-resolved by `src/app/(payload)/admin/importMap.js:75` (`importMap`, generated), wired at
+resolved by `src/app/(payload)/admin/importMap.js:57` (`importMap`, generated), wired at
 `src/payload.config.ts:31` (`admin.importMap.baseDir`).
 
 ### Any field `CardPostData` reads must be listed in `Posts.defaultPopulate`
@@ -162,10 +162,10 @@ extra field is `undefined` at runtime while the type says otherwise. `Card` guar
 with `&&`, so it renders a card that is simply missing its image, or its category line, with
 no error anywhere.
 
-**Where** — `src/components/Card/index.tsx:11` (`CardPostData`),
+**Where** — `src/components/public/Card/index.tsx:11` (`CardPostData`),
 `src/collections/Posts/index.ts:41` (`defaultPopulate`). Relationship-fed consumers:
 `src/blocks/RelatedPosts/Component.tsx:27` (`RelatedPosts`),
-`src/components/CollectionArchive/index.tsx:21` (`CollectionArchive`).
+`src/components/public/CollectionArchive/index.tsx:21` (`CollectionArchive`).
 
 ## Client-side state
 
@@ -209,5 +209,5 @@ untouched.
 
 **Where** — `tailwind.config.mjs:9` (`--tw-prose-body`, `--tw-prose-headings`),
 `src/app/(frontend)/globals.css` (the token file — grep it for `--text` and find nothing),
-`src/components/RichText/index.tsx:74` (`enableProse`), and the blind-spot note in the
+`src/components/public/RichText/index.tsx:74` (`enableProse`), and the blind-spot note in the
 header of `scripts/theme-guard.mjs`.
