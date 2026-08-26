@@ -26,7 +26,7 @@ exists is the point; the rule itself is one read away.
 - `tests/int/**/*.int.spec.ts` is vitest; `tests/e2e/` is playwright and starts `pnpm dev`
   itself. `tests/int/api.int.spec.ts` needs Postgres up — `docker compose up -d`.
 
-<!-- CONSTITUTION START — v1.0.0 -->
+<!-- CONSTITUTION START — v1.1.0 -->
 <!-- On adopting spec-kit: move this block to .specify/memory/constitution.md, delete the
      body here, and leave a one-line pointer. Full text in two places is a sync debt. -->
 
@@ -61,8 +61,16 @@ _Why: strong criteria let you iterate without asking constantly, and make "done"
 
 - **Tests — every change.** Before writing code, present **two lists**: (1) **required** —
   designated by me from the code the change touches, not negotiable; (2) **suggested** —
-  you pick what you want and add your own. No code before both lists exist.
-- **Bugs.** A test that reproduces the defect must be observed **red** before the fix.
+  you pick what you want and add your own. No code before both lists exist. A change with
+  no executable behaviour has an empty required list — say so and say why.
+- **Every test is written first and observed red (NON-NEGOTIABLE).** Write it before the
+  code that satisfies it, run it against the unfixed code, and **show the failing output**.
+  The failure must be the assertion itself: a red from a missing import, a typo or a
+  misconfigured runner proves nothing — fix that and rerun until it fails for the reason
+  the test exists. Only then write the code that turns it green.
+  _Why: a test never seen failing is not evidence. It may assert something trivially true,
+  or assert against the wrong object, and it will then sit green forever while the
+  behaviour it is named after goes completely unchecked._
 - **pnpm only.** Every command goes through it. Version is pinned in `packageManager`.
 - **UI colour comes from tokens.** Forbidden in UI code: hex literals, raw colour
   functions (`rgb() hsl() oklch() lab() lch()`), and Tailwind's built-in palette classes
@@ -98,10 +106,19 @@ source. A superseded rule is edited directly above and merely noted here; two co
 rules must never coexist. Past 10 entries, split this section into a
 CONSTITUTION-LOG file and leave a one-line pointer.
 
+### v1.1.0 — 2026-08-26
+
+**Changed:** the red observation now covers **every** test, not only a test written for a
+bug, and the failing output has to be shown.
+**Why:** v1.0.0 required it only when fixing a bug, which left every other test free to be
+written after the code and never once seen failing — exactly the tests that end up
+asserting something trivially true.
+**Source:** decision taken while reviewing v1.0.0 in the session that adopted it; the gap
+was found by asking what the rule actually bound.
+
 ### v1.0.0 — 2026-08-26
 
-Initial adoption. No amendments yet — the first one has to come from something that
-actually happened.
+Initial adoption.
 
 <!-- CONSTITUTION END -->
 
