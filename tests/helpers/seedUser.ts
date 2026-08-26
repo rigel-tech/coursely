@@ -1,46 +1,35 @@
-import { getPayload } from 'payload'
-import config from '../../src/payload.config.js'
+// Deliberately imports nothing from src/. Playwright drives the app over HTTP; the moment
+// this file pulls in the Payload config, the `next/cache` import inside the collection
+// hooks stops resolving and Playwright fails during discovery — `0 tests in 0 files`, with
+// no failing test to point at. tests/unit/repo/e2e-isolation.spec.ts guards that.
+//
+// The seeding itself runs in a child process via `payload run`, Payload's own CLI, which
+// loads the config the way Next does.
+
+import { execFileSync } from 'node:child_process'
 
 export const testUser = {
   email: 'dev@payloadcms.com',
   password: 'test',
 }
 
-/**
- * Seeds a test user for e2e admin tests.
- */
-export async function seedTestUser(): Promise<void> {
-  const payload = await getPayload({ config })
+const SCRIPT = 'scripts/seed-e2e-user.ts'
 
-  // Delete existing test user if any
-  await payload.delete({
-    collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  })
-
-  // Create fresh test user
-  await payload.create({
-    collection: 'users',
-    data: testUser,
-  })
+const run = (command: 'seed' | 'cleanup'): void => {
+  execFileSync(
+    'pnpm',
+    ['payload', 'run', SCRIPT, command, testUser.email, testUser.password],
+    // shell: true because `pnpm` is a .cmd shim on Windows and execFile will not find it.
+    { shell: true, stdio: 'inherit' },
+  )
 }
 
-/**
- * Cleans up test user after tests
- */
-export async function cleanupTestUser(): Promise<void> {
-  const payload = await getPayload({ config })
+/** Creates the e2e admin user, replacing any earlier one so reruns are repeatable. */
+export async function seedTestUser(): Promise<void> {
+  run('seed')
+}
 
-  await payload.delete({
-    collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  })
+/** Removes the e2e admin user. */
+export async function cleanupTestUser(): Promise<void> {
+  run('cleanup')
 }
