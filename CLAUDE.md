@@ -1,57 +1,119 @@
-# Claude Code
+# Coursely
 
-This project uses the Payload CMS skill at `.claude/skills/payload/`.
-Start with `.claude/skills/payload/SKILL.md` for a quick reference, then see `.claude/skills/payload/reference/` for detailed docs.
+Payload CMS 3 + Next.js 16 App Router, Postgres, Tailwind v4, shadcn/ui.
 
-## Design tokens
+## Signposts
 
-Public UI takes colour, spacing and typography from tokens in
-[`src/app/(frontend)/globals.css`](<src/app/(frontend)/globals.css>). In UI code the
-following are **forbidden**:
+Open the file. Do not work from this page's summary of it.
 
-- hex literals (`#fff`, `#0a0a0a`)
-- raw colour functions (`rgb()`, `rgba()`, `hsl()`, `oklch()`, `lab()`, `lch()`)
-- Tailwind's built-in palette classes (`text-gray-500`, `bg-slate-900`, …) — these are the
-  commonest way UI drifts off-theme, because they _look_ like tokens
+| Working on                                          | Read                                                                                              |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Payload: collections, fields, hooks, access control | `.claude/skills/payload/SKILL.md`, then `reference/`                                              |
+| Anything in an area with a silently-breaking trap   | [`INVARIANTS.md`](INVARIANTS.md)                                                                  |
+| Colour, theme, tokens                               | [`src/app/(frontend)/globals.css`](<src/app/(frontend)/globals.css>) — header states the contract |
+| Branches, commits, git hooks, scripts               | [`CONTRIBUTING.md`](CONTRIBUTING.md)                                                              |
+| Fixing or debugging the colour guard                | [`scripts/theme-guard.mjs`](scripts/theme-guard.mjs) — header                                     |
 
-Need a colour role that does not exist? Add it to the token file — never inline it. Handle
-light and dark through the same token names; do not hand-write `dark:` colour variants.
+A SessionStart hook loads the `INVARIANTS.md` entry titles into context. Knowing a trap
+exists is the point; the rule itself is one read away.
 
-The values in that file are placeholders. **The token name is the contract, the colour is
-not** — so this rule works now, before any design direction is settled, and settling it
-later stays a value-only diff in one file.
+## Structure & commands
 
-Enforced by [`scripts/theme-guard.mjs`](scripts/theme-guard.mjs), which runs in
-`pnpm lint`. A genuinely unavoidable colour (a third-party brand, say) can carry
-`theme-guard-ignore` in a comment on that line. Its 9 behaviours are pinned by
-`tests/int/theme-guard.int.spec.ts`.
+- `src/payload-types.ts` and `src/app/(payload)/admin/importMap.js` are **generated**.
+  Never hand-edit. Rerun `pnpm generate:types` / `pnpm generate:importmap`.
+- Green before anything counts as done: `pnpm lint` (eslint **and** theme-guard),
+  `pnpm typecheck`, `pnpm test:int`.
+- `tests/int/**/*.int.spec.ts` is vitest; `tests/e2e/` is playwright and starts `pnpm dev`
+  itself. `tests/int/api.int.spec.ts` needs Postgres up — `docker compose up -d`.
 
-> **A green guard is not evidence that a page is on-theme.** It never opens
-> `node_modules`, so a dependency's own CSS is invisible to it — including a live case in
-> this repo. See the entry on vendor stylesheets in [`INVARIANTS.md`](INVARIANTS.md).
+<!-- CONSTITUTION START — v1.0.0 -->
+<!-- On adopting spec-kit: move this block to .specify/memory/constitution.md, delete the
+     body here, and leave a one-line pointer. Full text in two places is a sync debt. -->
 
-## Standing invariants
+## Principles
 
-[`INVARIANTS.md`](INVARIANTS.md) records the constraints in this repo that **break
-silently** — violate one and the code still compiles, still passes review, still renders a
-200, and only the data or the output is wrong. No linter, type checker, or test catches
-them.
+**I. Think before writing code.** State assumptions out loud. Unsure — ask, do not guess.
+More than one reading — present them all, never pick one silently. A simpler way exists —
+say so. Something is confusing — stop, name it, and ask.
+_Why: most defects and wasted effort come from unstated assumptions and silent decisions._
 
-**Read the relevant entry before changing code in an area it covers.** A SessionStart hook
-loads the entry titles into context; the rules themselves are one read away.
+**II. Simple first.** The least code that solves the stated problem. Forbidden unless
+explicitly asked for: features outside the request, abstraction for a single use,
+"flexibility" or configuration nobody requested, error handling for cases that cannot
+happen. If you wrote 200 lines where 50 would do, write it again.
+_Why: speculative complexity is the largest long-term maintenance cost._
 
-### Maintenance obligation
+**III. Change only what was asked.** Touch what the task requires and nothing else. Do not
+"improve" nearby code, comments, or formatting. Do not refactor what is not broken. Follow
+the existing style even where you prefer another. Unrelated dead code: **report** it, do
+not delete it. Clean up exactly the imports and variables your own change orphaned. The
+test: every changed line traces back to the request.
+_Why: a swollen diff makes review hard, hides intent, and widens the blast radius._
 
-This is a standing rule, not a suggestion:
+**IV. Drive to verifiable goals (NON-NEGOTIABLE).** Turn the task into checkable criteria
+**before** starting. "Add validation" → "write a test for bad input, then make it pass".
+"Fix a bug" → "write a test that reproduces it, then make it pass". Multi-step work: state
+a short plan, each step with how it is verified. Not verified is not done.
+_Why: strong criteria let you iterate without asking constantly, and make "done" mean
+"checked", not "looks right"._
 
-- When a change **supersedes** an entry, rewrite or delete that entry **in the same
-  commit**. Never leave the old rule beside the new one — a stale invariant is worse than a
-  missing one, because it will still be believed.
-- When work **uncovers** a new constraint that (1) breaks silently, (2) constrains future
-  code anywhere in the repo, and (3) is true today, add it **while implementing**, not
-  later.
-- If none of the entries you touched need changing, that is a valid outcome — say so and
-  move on.
+## Settled decisions
 
-A Stop hook flags this, but only when the session changed a file `INVARIANTS.md` points at
-and left `INVARIANTS.md` alone. It is deliberately quiet otherwise.
+- **Tests — every change.** Before writing code, present **two lists**: (1) **required** —
+  designated by me from the code the change touches, not negotiable; (2) **suggested** —
+  you pick what you want and add your own. No code before both lists exist.
+- **Bugs.** A test that reproduces the defect must be observed **red** before the fix.
+- **pnpm only.** Every command goes through it. Version is pinned in `packageManager`.
+- **UI colour comes from tokens.** Forbidden in UI code: hex literals, raw colour
+  functions (`rgb() hsl() oklch() lab() lch()`), and Tailwind's built-in palette classes
+  (`text-gray-500`) — the last is the commonest drift because it _looks_ like a token.
+  Need a role that does not exist? Add it to the token file; never inline. Light and dark
+  go through the same token names — do not hand-write `dark:` colour variants. Enforced by
+  `theme-guard` inside `pnpm lint`; `theme-guard-ignore` in a comment exempts one line.
+- **`src/components/admin/` vs `public/` splits by who a component is for**, decided by
+  who imports it. It is organisation, not an exemption: `admin/` is still bound by the
+  token rules. Only `src/app/(payload)/` is exempt, and only because it is generated.
+- **UI components** are shadcn/ui on Tailwind v4, anchored at `src/components/public/ui/`.
+- **Invariants are maintained as you go.** A change that **supersedes** an entry rewrites
+  or deletes it **in the same commit** — never leave the old rule beside the new one. Work
+  that **uncovers** a constraint which (1) breaks silently, (2) constrains future code
+  anywhere, (3) is true today, adds it **while implementing**. Nothing to change is a
+  valid outcome: say so and move on. A Stop hook flags this, and only this.
+- **Branch and commit rules** live in `CONTRIBUTING.md` and are enforced by husky.
+- **UI language / i18n: [UNDECIDED].** Nothing is configured — no Payload localization, no
+  i18n library. Decide before the first screen with user-facing strings: changing it later
+  means reworking every string already written.
+
+## Amendment log
+
+This constitution is versioned. **MAJOR** = a principle removed or redefined · **MINOR** =
+a rule added or materially widened · **PATCH** = wording clarified.
+
+Every entry **must cite its source** — the incident, issue number, or decision that
+produced the rule. **No source, no rule.** That citation is the only thing keeping this
+document from drifting into slogans. Three lines maximum per entry: what changed, why,
+source. A superseded rule is edited directly above and merely noted here; two conflicting
+rules must never coexist. Past 10 entries, split this section into a
+CONSTITUTION-LOG file and leave a one-line pointer.
+
+### v1.0.0 — 2026-08-26
+
+Initial adoption. No amendments yet — the first one has to come from something that
+actually happened.
+
+<!-- CONSTITUTION END -->
+
+<!-- CONTEXT START -->
+
+## Current context
+
+Anything that **outlives the feature** belongs in `INVARIANTS.md`, not here. This section
+holds only what is true _while_ a feature is being built, and is **deleted when it ships**.
+Ten lines, hard limit.
+
+_Empty — no feature in flight._
+
+<!-- On adopting spec-kit: /speckit-plan writes its own block between SPECKIT markers, for
+     the same job. Delete this CONTEXT block then, keep SPECKIT, and copy the ten-line
+     limit and the rule above into it. spec-kit will not keep that block small for you. -->
+<!-- CONTEXT END -->
