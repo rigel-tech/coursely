@@ -12,6 +12,15 @@ import './index.scss'
 
 import { getClientSideURL } from '@/utilities/getURL'
 
+/**
+ * The one component under `admin/` that renders on the PUBLIC site — it is editor tooling
+ * overlaid on real pages, mounted from `(frontend)/layout.tsx`.
+ *
+ * `admin/` is outside theme-guard's reach, so a hardcoded colour here would not be caught.
+ * Take colour from tokens anyway: whatever this paints sits on a themed page, and getting
+ * it wrong shows up as a bar that ignores light/dark while everything around it follows.
+ */
+
 const baseClass = 'admin-bar'
 
 const collectionLabels = {
