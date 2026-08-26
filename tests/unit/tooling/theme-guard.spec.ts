@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { isExcluded, scanSource } from '../../scripts/theme-guard.mjs'
+import { isExcluded, scanSource } from '../../../scripts/theme-guard.mjs'
 
 type Violation = { file: string; line: number; name: string; text: string }
 
