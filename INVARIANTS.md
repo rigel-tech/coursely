@@ -215,3 +215,26 @@ invisible to it, because there is nothing to dangle.
 that are mapped), `src/app/(frontend)/globals.css` (the token file),
 `src/components/public/RichText/index.tsx:74` (`enableProse`), and the blind-spot note in
 the header of `scripts/theme-guard.mjs`.
+
+## Identifiers
+
+### Document IDs are numbers here — never test a relationship value with `typeof x === 'string'`
+
+**Rule** — To tell an unpopulated relationship from a populated one, check for the object:
+`typeof value === 'object'`. Never branch on `typeof value === 'string'`, and never treat
+an ID as a string when building a URL or a cache key.
+
+**Why it breaks silently** — The adapter decides the ID type, and `postgresAdapter` issues
+`integer` primary keys. A `typeof value === 'string'` branch is therefore simply never
+entered: no error, no warning, the `else` runs instead and produces an empty slug, a URL
+like `/posts/`, or a lookup that never happens. TypeScript is no help — it narrows the
+branch to `never` and lets the dead code stand, so `pnpm typecheck` passes.
+
+The idiom is everywhere in this codebase because it began as the MongoDB template, where
+IDs really were strings. `src/payload-types.ts` was generated against Mongo too and
+declared `id: string` throughout until it was regenerated.
+
+**Where** — `src/payload.config.ts:60` (`postgresAdapter`),
+`src/payload-types.ts` (`defaultIDType: number`). Two branches that can no longer run:
+`src/components/public/PayloadRedirects/index.tsx:26` (`PayloadRedirects`) and
+`src/blocks/RelatedPosts/Component.tsx:25` (`RelatedPosts`).
