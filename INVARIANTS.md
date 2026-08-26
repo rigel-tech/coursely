@@ -187,3 +187,27 @@ at :5), imported by the **writer** `src/providers/Theme/index.tsx:8` (`ThemeProv
 at :34 and :36). Copy B: `src/providers/Theme/ThemeSelector/types.ts:3` (same two names),
 imported by the **readers** `src/providers/Theme/InitTheme/index.tsx:4` (`InitTheme`, reads at
 :30) and `src/providers/Theme/ThemeSelector/index.tsx:16` (`ThemeSelector`, reads at :26).
+
+## Theming
+
+### A dependency that ships its own CSS keeps its own palette until every one of its variables is mapped to a token
+
+**Rule** — When adding a package that brings its own stylesheet — a typography plugin, a
+component library, a chart or map library — map _all_ of its colour variables onto the
+tokens in `globals.css`. Mapping some of them is not partial success: every one you leave
+alone keeps the vendor's colour.
+
+**Why it breaks silently** — `theme-guard` reads this project's source and never opens
+`node_modules`, so it reports `0 violations` no matter how much vendor colour is on the
+page. Nothing fails, nothing warns, and the result looks deliberate because vendor
+palettes are tasteful greys. Only opening the real page in both light and dark reveals it.
+Live in this repo today: `@tailwindcss/typography` defines 36 `--tw-prose-*` variables
+from its own slate/gray ramps, `tailwind.config.mjs` overrides 2 of them, and both of
+those point at `var(--text)` — a token that is defined nowhere. So every `prose` surface
+draws most of its colour from the plugin, and the whole `prose-invert` dark set is
+untouched.
+
+**Where** — `tailwind.config.mjs:9` (`--tw-prose-body`, `--tw-prose-headings`),
+`src/app/(frontend)/globals.css` (the token file — grep it for `--text` and find nothing),
+`src/components/RichText/index.tsx:74` (`enableProse`), and the blind-spot note in the
+header of `scripts/theme-guard.mjs`.

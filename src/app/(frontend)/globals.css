@@ -1,3 +1,18 @@
+/**
+ * DESIGN TOKENS — the one legal home for colour in this project.
+ *
+ * The values in this file are PLACEHOLDERS. What is contractual is the token NAME, not
+ * the colour. Do not hardcode a colour in a component because the current one looks ugly
+ * or provisional — when the design direction is settled, only this file changes, and the
+ * whole site follows.
+ *
+ * Enforced by `scripts/theme-guard.mjs`, which runs in `pnpm lint`. Need a colour role
+ * that does not exist yet? Add it to :root and [data-theme='dark'] below, then expose it
+ * through the `@theme inline` block so it becomes a Tailwind utility. Never inline it.
+ *
+ * Light and dark are both handled here, through the same token names. Components should
+ * not be hand-writing `dark:` colour variants.
+ */
 @import 'tailwindcss';
 @import 'tw-animate-css';
 

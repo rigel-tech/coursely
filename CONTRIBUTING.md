@@ -93,8 +93,9 @@ to come from branch protection rules on the remote.
 ## Scripts
 
 ```bash
-pnpm lint          # eslint across the repo
+pnpm lint          # eslint across the repo, then the design-token guard
 pnpm lint:fix      # eslint --fix
+pnpm lint:theme    # design-token guard on its own
 pnpm format        # prettier --write .
 pnpm typecheck     # tsc --noEmit
 pnpm test:int      # vitest
