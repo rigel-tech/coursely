@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
-import { login } from '../helpers/login'
-import { seedTestUser, cleanupTestUser, testUser } from '../helpers/seedUser'
+import { login } from './helpers/login'
+import { seedTestUser, cleanupTestUser, testUser } from './helpers/seedUser'
 
 test.describe('Admin Panel', () => {
   let page: Page
