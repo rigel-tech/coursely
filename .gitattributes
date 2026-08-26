@@ -2,3 +2,9 @@
 # `\r: command not found` and the hook silently stops working.
 .husky/** text eol=lf
 *.sh      text eol=lf
+
+# A shebang plus CRLF is a file every tool disagrees about: git calls it unmodified,
+# tsc and esbuild parse it, node runs it, and Vite's transform throws
+# `SyntaxError: Invalid or unexpected token` with no file and no line. Same root cause
+# as the rule above, different victim.
+*.mjs     text eol=lf
