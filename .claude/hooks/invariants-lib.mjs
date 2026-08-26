@@ -9,10 +9,15 @@
 // caller can exit 0 without ever blocking the session.
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 export const INVARIANTS_FILE = 'INVARIANTS.md'
+
+// Where the Stop hook remembers what it has already said. Lives in the git dir: not
+// committed, per-clone, and thrown away with the repo.
+const STATE_FILE = 'invariants-stop-state.json'
+const MAX_SESSIONS = 20
 
 // Returns raw stdout, NOT trimmed: `git status --porcelain` encodes the status in a
 // fixed-width `XY ` prefix, and trimming would eat the leading space of an unstaged
@@ -84,6 +89,62 @@ export function extractTrackedPaths(text) {
     if (/^(src|tests)\//.test(path)) paths.add(path)
   }
   return paths
+}
+
+/**
+ * True when this session has NOT already been reminded about exactly this set of files,
+ * and records the set so the following turns stay quiet.
+ *
+ * Without it the hook re-fires every single turn until the doc is edited or the work is
+ * pushed — and since confirming "the entry still holds" changes no file, the most common
+ * and most correct outcome is the one that cannot stop the nagging. A reminder that
+ * repeats gets tuned out, which is the failure this whole system exists to prevent.
+ *
+ * Touching a different covered file changes the set, so genuinely new work is still
+ * flagged. Anything that goes wrong here returns true: the hook stays loud rather than
+ * silently switching itself off.
+ */
+export function isNewReminder(root, sessionId, hits) {
+  if (!sessionId) return true
+
+  const gitDir = tryGitLine(['rev-parse', '--absolute-git-dir'], root)
+  if (!gitDir) return true
+  const path = join(gitDir, STATE_FILE)
+
+  const key = [...hits].sort().join('\n')
+
+  let sessions = {}
+  try {
+    if (existsSync(path)) {
+      const parsed = JSON.parse(readFileSync(path, 'utf8'))
+      if (parsed && typeof parsed.sessions === 'object' && parsed.sessions) {
+        sessions = parsed.sessions
+      }
+    }
+  } catch {
+    sessions = {}
+  }
+
+  if (sessions[sessionId] && sessions[sessionId].key === key) return false
+
+  sessions[sessionId] = { key, at: new Date().toISOString() }
+
+  // Keep the file from growing without bound as sessions come and go.
+  const ids = Object.keys(sessions)
+  if (ids.length > MAX_SESSIONS) {
+    ids
+      .sort((a, b) => (sessions[a].at < sessions[b].at ? -1 : 1))
+      .slice(0, ids.length - MAX_SESSIONS)
+      .forEach((id) => delete sessions[id])
+  }
+
+  try {
+    writeFileSync(path, JSON.stringify({ sessions }))
+  } catch {
+    // Could not persist — remind again next turn rather than going quiet.
+  }
+
+  return true
 }
 
 /**
