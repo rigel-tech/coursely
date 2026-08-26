@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-import { extractTrackedPaths } from '../../.claude/hooks/invariants-lib.mjs'
+import { extractTrackedPaths } from '../../../.claude/hooks/invariants-lib.mjs'
 
 const root = process.cwd()
 const doc = readFileSync('INVARIANTS.md', 'utf8')

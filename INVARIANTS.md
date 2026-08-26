@@ -207,7 +207,7 @@ bold, quotes, code, bullets, borders, captions, and the entire 18-variable `pros
 set that dark mode runs on — still come from the plugin. Every `prose` surface is
 therefore only partly on-theme, and nothing in the repo will say so.
 
-`tests/int/theme-tokens.int.spec.ts` catches only the narrower failure next door: a
+`tests/unit/repo/theme-tokens.spec.ts` catches only the narrower failure next door: a
 `var(--x)` naming a token that does not exist. A variable that is never mapped at all is
 invisible to it, because there is nothing to dangle.
 

@@ -98,6 +98,7 @@ pnpm lint:fix      # eslint --fix
 pnpm lint:theme    # design-token guard on its own
 pnpm format        # prettier --write .
 pnpm typecheck     # tsc --noEmit
-pnpm test:int      # vitest
+pnpm test:unit     # vitest, no infrastructure needed
+pnpm test:int      # vitest, needs Postgres
 pnpm test:e2e      # playwright
 ```

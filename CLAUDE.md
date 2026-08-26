@@ -22,9 +22,11 @@ exists is the point; the rule itself is one read away.
 - `src/payload-types.ts` and `src/app/(payload)/admin/importMap.js` are **generated**.
   Never hand-edit. Rerun `pnpm generate:types` / `pnpm generate:importmap`.
 - Green before anything counts as done: `pnpm lint` (eslint **and** theme-guard),
-  `pnpm typecheck`, `pnpm test:int`.
-- `tests/int/**/*.int.spec.ts` is vitest; `tests/e2e/` is playwright and starts `pnpm dev`
-  itself. `tests/int/api.int.spec.ts` needs Postgres up — `docker compose up -d`.
+  `pnpm typecheck`, `pnpm test:unit`. `test:int` and `test:e2e` need infrastructure —
+  run them when you touched something they cover.
+- Tests are split by the infrastructure they need, not by subject: `tests/unit/` needs
+  none and must always pass, `tests/int/` needs Postgres (`docker compose up -d`),
+  `tests/e2e/` needs a browser and starts `pnpm dev` itself.
 
 <!-- CONSTITUTION START — v1.1.0 -->
 <!-- On adopting spec-kit: move this block to .specify/memory/constitution.md, delete the

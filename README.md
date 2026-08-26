@@ -37,6 +37,7 @@ pnpm dev          # Next dev server, admin panel included
 pnpm build        # production build
 pnpm lint         # eslint, then the design-token guard
 pnpm typecheck    # tsc --noEmit
+pnpm test:unit    # vitest — no infrastructure, always runnable
 pnpm test:int     # vitest — needs Postgres running
 pnpm test:e2e     # playwright — starts the dev server itself
 ```
