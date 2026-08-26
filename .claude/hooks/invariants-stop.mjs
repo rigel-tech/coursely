@@ -14,6 +14,7 @@ import {
   changedFiles,
   extractTrackedPaths,
   INVARIANTS_FILE,
+  isNewReminder,
   readInvariants,
   repoRoot,
 } from './invariants-lib.mjs'
@@ -52,6 +53,9 @@ try {
   const tracked = extractTrackedPaths(text)
   const hits = [...changed].filter((file) => tracked.has(file))
   if (hits.length === 0) process.exit(0)
+
+  // Say it once per set of files per session, not once per turn.
+  if (!isNewReminder(root, payload.session_id, hits)) process.exit(0)
 
   const reason = [
     `This session changed ${hits.length} file(s) covered by ${INVARIANTS_FILE}, and`,
