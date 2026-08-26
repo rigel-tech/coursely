@@ -93,6 +93,18 @@ _Why: strong criteria let you iterate without asking constantly, and make "done"
 - **UI language / i18n: [UNDECIDED].** Nothing is configured — no Payload localization, no
   i18n library. Decide before the first screen with user-facing strings: changing it later
   means reworking every string already written.
+- **Comments come in three tiers**, told apart by what is being documented, not by length.
+  **JSDoc** (`/** … */`) sits directly above an **exported** symbol so it shows on hover;
+  one line unless params, returns or throws need listing. **Module banner** — a plain
+  comment at the top of a file, explaining the whole module: its architecture, why it
+  exists, a constraint you cannot infer from the code. **Inline** — one _why_ on the one
+  confusing line, and docs for non-exported helpers; never JSDoc for these. The test: if
+  the comment describes exactly the thing on the next line **and** that thing is exported,
+  it is JSDoc; otherwise it is a plain comment. Do not restate the signature or the types
+  in prose, and do not narrate mechanics the code already shows — record the invariant
+  that breaks if it changes. A short comment that survives edits beats a long one that
+  drifts; any comment describing behaviour must be reread whenever that behaviour is
+  touched. Applies to code written from here on: do not sweep existing comments.
 
 ## Amendment log
 
