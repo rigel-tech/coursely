@@ -4,9 +4,9 @@ import React, { useEffect } from 'react'
 
 import type { Page } from '@/payload-types'
 
-import { CMSLink } from '@/components/Link'
-import { Media } from '@/components/Media'
-import RichText from '@/components/RichText'
+import { CMSLink } from '@/components/public/Link'
+import { Media } from '@/components/public/Media'
+import RichText from '@/components/public/RichText'
 
 export const HighImpactHero: React.FC<Page['hero']> = ({ links, media, richText }) => {
   const { setHeaderTheme } = useHeaderTheme()

@@ -3,8 +3,8 @@ import Link from 'next/link'
 import React from 'react'
 
 import { ThemeSelector } from '@/providers/Theme/ThemeSelector'
-import { CMSLink } from '@/components/Link'
-import { Logo } from '@/components/Logo/Logo'
+import { CMSLink } from '@/components/public/Link'
+import { Logo } from '@/components/public/Logo/Logo'
 
 export async function Footer() {
   const footerData = await getCachedGlobal('footer', 1)()

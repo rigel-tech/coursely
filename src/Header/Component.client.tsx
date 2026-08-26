@@ -6,7 +6,7 @@ import React, { useEffect } from 'react'
 
 import type { Header } from '@/payload-types'
 
-import { Logo } from '@/components/Logo/Logo'
+import { Logo } from '@/components/public/Logo/Logo'
 import useIsHydrated from '@/utilities/useIsHydrated'
 import { HeaderNav } from './Nav'
 
