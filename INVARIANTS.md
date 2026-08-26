@@ -201,13 +201,17 @@ alone keeps the vendor's colour.
 `node_modules`, so it reports `0 violations` no matter how much vendor colour is on the
 page. Nothing fails, nothing warns, and the result looks deliberate because vendor
 palettes are tasteful greys. Only opening the real page in both light and dark reveals it.
-Live in this repo today: `@tailwindcss/typography` defines 36 `--tw-prose-*` variables
-from its own slate/gray ramps, `tailwind.config.mjs` overrides 2 of them, and both of
-those point at `var(--text)` — a token that is defined nowhere. So every `prose` surface
-draws most of its colour from the plugin, and the whole `prose-invert` dark set is
-untouched.
+Live in this repo today: `@tailwindcss/typography` defines 36 `--tw-prose-*` variables from
+its own slate/gray ramps, and `tailwind.config.mjs` maps 2 of them. The other 34 — links,
+bold, quotes, code, bullets, borders, captions, and the entire 18-variable `prose-invert`
+set that dark mode runs on — still come from the plugin. Every `prose` surface is
+therefore only partly on-theme, and nothing in the repo will say so.
 
-**Where** — `tailwind.config.mjs:9` (`--tw-prose-body`, `--tw-prose-headings`),
-`src/app/(frontend)/globals.css` (the token file — grep it for `--text` and find nothing),
-`src/components/public/RichText/index.tsx:74` (`enableProse`), and the blind-spot note in the
-header of `scripts/theme-guard.mjs`.
+`tests/int/theme-tokens.int.spec.ts` catches only the narrower failure next door: a
+`var(--x)` naming a token that does not exist. A variable that is never mapped at all is
+invisible to it, because there is nothing to dangle.
+
+**Where** — `tailwind.config.mjs:9` (`--tw-prose-body`, `--tw-prose-headings` — the two
+that are mapped), `src/app/(frontend)/globals.css` (the token file),
+`src/components/public/RichText/index.tsx:74` (`enableProse`), and the blind-spot note in
+the header of `scripts/theme-guard.mjs`.
