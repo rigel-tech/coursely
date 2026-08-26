@@ -88,6 +88,19 @@ describe('theme-guard', () => {
     expect(isExcluded('src/app/(frontend)/globals.css.bak')).toBe(false)
   })
 
+  it('case 8b: admin UI is outside the token regime, public UI is not', () => {
+    expect(isExcluded('src/components/admin/AdminBar/index.tsx')).toBe(true)
+    expect(isExcluded('src/components/admin/BeforeDashboard/index.scss')).toBe(true)
+    expect(isExcluded('src/components/admin/RowLabel/Header.tsx')).toBe(true)
+
+    // The half the guard exists for must stay covered.
+    expect(isExcluded('src/components/public/Card/index.tsx')).toBe(false)
+    expect(isExcluded('src/components/public/ui/button.tsx')).toBe(false)
+    // The prefix must not spill onto a neighbouring folder.
+    expect(isExcluded('src/components/admin-tools/x.tsx')).toBe(false)
+    expect(isExcluded('src/components/admin.tsx')).toBe(false)
+  })
+
   it('case 9: the guard exits non-zero on a violation and zero on a clean tree', () => {
     // Clean tree: the real repo, which must stay green.
     const ok = execFileSync('node', [GUARD], { encoding: 'utf8' })

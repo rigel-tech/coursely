@@ -70,9 +70,11 @@ _Why: strong criteria let you iterate without asking constantly, and make "done"
   Need a role that does not exist? Add it to the token file; never inline. Light and dark
   go through the same token names — do not hand-write `dark:` colour variants. Enforced by
   `theme-guard` inside `pnpm lint`; `theme-guard-ignore` in a comment exempts one line.
-- **`src/components/admin/` vs `public/` splits by who a component is for**, decided by
-  who imports it. It is organisation, not an exemption: `admin/` is still bound by the
-  token rules. Only `src/app/(payload)/` is exempt, and only because it is generated.
+- **Tokens govern public UI only.** Admin UI runs on Payload's own design system and is
+  outside the token rules: `src/app/(payload)/` and `src/components/admin/`. Everything
+  else is public and bound by them. The folder **is** the boundary, so placing a component
+  is a real decision. `admin/AdminBar` is the exception to watch — it renders on public
+  pages, so use tokens there anyway; the guard will not catch you.
 - **UI components** are shadcn/ui on Tailwind v4, anchored at `src/components/public/ui/`.
 - **Invariants are maintained as you go.** A change that **supersedes** an entry rewrites
   or deletes it **in the same commit** — never leave the old rule beside the new one. Work
