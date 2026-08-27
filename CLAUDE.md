@@ -62,10 +62,14 @@ _Why: strong criteria let you iterate without asking constantly, and make "done"
 
 ## Settled decisions
 
-- **Tests — every change.** Before writing code, present **two lists**: (1) **required** —
-  designated by me from the code the change touches, not negotiable; (2) **suggested** —
-  you pick what you want and add your own. No code before both lists exist. A change with
-  no executable behaviour has an empty required list — say so and say why.
+- **Tests — every change.** Before writing code, draft **both lists** yourself: (1)
+  **required** — derived from the code the change touches; (2) **suggested** — anything
+  further worth having. Print both, then put them through a multi-select prompt
+  (`AskUserQuestion`, `multiSelect`, four options a question — split longer lists across
+  questions) with the required ones pre-ticked. I untick, tick and add my own; what comes
+  back is final and **not negotiable**. No code before that answer. A change with no
+  executable behaviour has an empty required list — say so, say why, and if suggested is
+  empty too, skip the prompt and carry on.
 - **Every test is written first and observed red (NON-NEGOTIABLE).** Write it before the
   code that satisfies it, run it against the unfixed code, and **show the failing output**.
   The failure must be the assertion itself: a red from a missing import, a typo or a
@@ -128,6 +132,16 @@ document from drifting into slogans. Three lines maximum per entry: what changed
 source. A superseded rule is edited directly above and merely noted here; two conflicting
 rules must never coexist. Past 10 entries, split this section into a
 CONSTITUTION-LOG file and leave a one-line pointer.
+
+### v1.4.0 — 2026-08-27
+
+**Changed:** I no longer designate the required test list — you draft both lists and I settle
+them by ticking, unticking and adding in a multi-select prompt.
+**Why:** "designated by me" put the drafting on the one person who has not read the diff, so
+the list either arrived late or arrived from you anyway under my name; the authority worth
+keeping is the veto, not the typing.
+**Source:** decision taken 2026-08-27, after reading the pronouns at that bullet ("me" = me,
+"you" = the agent) settled who the old rule actually bound.
 
 ### v1.3.0 — 2026-08-27
 
