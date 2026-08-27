@@ -80,24 +80,40 @@ Zalo + Excel process, and no migration from it is in scope.
 - **Staging** is a self-managed VPS on Docker Compose with Postgres alongside. The repo
   already ships a `Dockerfile` and `docker-compose.yml`; no email adapter is installed yet.
 
-## Round 5 — payments became a ledger
+## Round 5 — payment became a transaction record
 
 Asked how payment was handled, the client rejected the status-only model and asked for a
-dedicated table recording full transaction details **and evidence**, linked to the
-enrollment. That is `US-503` plus `US-508`, and it costs sprint 2 roughly 1.5–2 days.
+dedicated table recording full transaction details **and evidence**, linked to the enrollment.
+That is `US-503` plus `US-508`, costing sprint 2 roughly a day, most of it in `US-508`.
 
-Three things fall out of that choice, all recorded in the backlog:
+A follow-up narrowed it sharply, and the narrowing matters more than the original ask:
 
-**`Enrollment.amountDue` is snapshotted at creation.** v4 kept the fee only on `Course`,
-which is editable. Raising the fee for next term would have silently rewritten the amount on
-every historical enrollment — in the admin list, in the student's own dashboard, and in every
-later report, with no error anywhere.
+- **One payment per enrollment.** Collected once. No instalments, no deposits. Enforced by a
+  unique constraint on `payment.enrollment`, so `PARTIAL` and the running-total machinery are
+  both gone.
+- **The amount is not validated against the course fee.** Taking 2.000.000 for a course listed
+  at 2.500.000 is recorded without warning. Price differences are negotiated outside the
+  system and the website does not adjudicate them.
+- **Status follows the existence of the record, not the amount.** A record means `PAID`, no
+  record means `UNPAID`.
 
-**The three money fields on Enrollment are derived, never written directly.** `amountPaid`,
-`amountOutstanding` and `paymentStatus` are recomputed by hooks on `payments` inside the same
-transaction. They are stored rather than computed on read purely so `US-501` can filter and
-sort in the database. Any code path that writes them directly corrupts the numbers silently —
+The collection stays separate rather than collapsing into flat fields on Enrollment, even at
+1–1, because the Admin needs a transaction list filterable by date and method to reconcile
+against a bank statement. Flattening loses exactly that.
+
+**`Enrollment.amountDue` is snapshotted at creation.** v4 kept the fee only on `Course`, which
+is editable. Raising the fee for next term would have silently rewritten the amount on every
+historical enrollment — in the admin list, in the student's own dashboard, and in every later
+report, with no error anywhere. It is a display reference only; it constrains nothing.
+
+**`paymentStatus` is derived, never written directly.** A hook on `payments` writes it inside
+the same transaction. It is stored rather than computed on read purely so `US-501` can filter
+and sort in the database. Any code path that writes it directly corrupts the status silently —
 an `INVARIANTS.md` entry the moment it is implemented.
+
+Refunds were not raised by the client. `refundedAt` on the payment record is the assistant's
+addition, flagged as assumption 11 for veto, because `US-303` already routes a paid student to
+the Admin to cancel — so the situation will occur.
 
 **Payment evidence must not use the existing `media` collection.** That collection is
 `read: anyone` *and* writes into `public/media`, so Next.js serves those files statically
