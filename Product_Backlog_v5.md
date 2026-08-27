@@ -93,12 +93,49 @@ Sĩ số hiện tại **luôn tính từ Enrollment đang gán vào Class**, kh�
 
 ### Enrollment
 
-`student` · `course` · `class` (nullable) · `enrollmentStatus` · `paymentStatus` ·
-`registrationSource`: `SELF` | `ADMIN` · `registeredAt`
+`student` · `course` · `class` (nullable) · `enrollmentStatus` ·
+`registrationSource`: `SELF` | `ADMIN` · `registeredAt` · `amountDue`
 
 - `enrollmentStatus`: `NEW` | `CONFIRMED` | `ATTENDING` | `COMPLETED` | `CANCELLED`
-- `paymentStatus`: `UNPAID` | `PAID` | `REFUNDED`
+- `amountDue` — số tiền phải thu. **Chốt từ `Course.fee` ngay lúc tạo Enrollment**, sau đó
+  sửa được từng đăng ký để xử lý giảm giá, ưu đãi.
 - Ràng buộc duy nhất: một Student không thể có hai Enrollment chưa hủy cho cùng một Course.
+
+**Ba trường tiền được suy ra, không nhập tay:**
+
+| Trường              | Cách tính                                                                                                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `amountPaid`        | Tổng `Payment` loại `PAYMENT` trừ tổng loại `REFUND`                                                                                                                       |
+| `amountOutstanding` | `amountDue − amountPaid`                                                                                                                                                   |
+| `paymentStatus`     | `UNPAID` khi `amountPaid ≤ 0` · `PARTIAL` khi `0 < amountPaid < amountDue` · `PAID` khi `amountPaid ≥ amountDue` · `REFUNDED` khi có bản ghi hoàn tiền và `amountPaid ≤ 0` |
+
+> **Bắt buộc:** ba trường này được **ghi đè bởi hook** mỗi khi `payments` thay đổi, trong cùng
+> transaction. **Không bao giờ sửa tay, không bao giờ ghi từ chỗ khác.** Nguồn sự thật duy
+> nhất là bảng `Payment`. Chúng được lưu xuống DB thay vì tính lúc đọc chỉ để `US-501` lọc và
+> sắp xếp được — đó là denormalization có chủ đích, không phải nguồn dữ liệu thứ hai.
+>
+> Vi phạm điều này **vỡ hoàn toàn im lặng**: không lỗi, không cảnh báo, chỉ là con số sai âm
+> thầm chảy vào danh sách admin, dashboard học viên và mọi báo cáo sau này. Đây là ứng viên
+> cho `INVARIANTS.md` ngay khi code xong.
+
+### Payment — sổ cái giao dịch
+
+Một Enrollment có **nhiều** Payment. Hoàn tiền là **một dòng**, không phải một trạng thái.
+
+| Trường       | Ghi chú                                                                                                        |
+| ------------ | -------------------------------------------------------------------------------------------------------------- |
+| `enrollment` | Quan hệ, bắt buộc. Gắn vào Enrollment chứ không gắn thẳng vào Course — một học viên có thể đăng ký nhiều khóa. |
+| `type`       | `PAYMENT` \| `REFUND`. Bắt buộc.                                                                               |
+| `amount`     | Số, bắt buộc, **luôn dương**. Chiều tiền do `type` quyết định.                                                 |
+| `paidAt`     | Ngày giao dịch **thực tế**, không phải ngày nhập liệu. Bắt buộc.                                               |
+| `method`     | `CASH` \| `BANK_TRANSFER` \| `OTHER`. Bắt buộc.                                                                |
+| `reference`  | Mã giao dịch, số biên lai. Có thể để trống.                                                                    |
+| `evidence`   | Ảnh chụp chuyển khoản, biên lai. Nhiều tệp. Xem `US-508`.                                                      |
+| `note`       | Ghi chú tự do.                                                                                                 |
+
+### PaymentEvidence — collection upload riêng, **không công khai**
+
+Bằng chứng thanh toán **không được** dùng chung collection `media` hiện có. Lý do ở `US-508`.
 
 ### Notification
 
@@ -112,19 +149,22 @@ Sĩ số hiện tại **luôn tính từ Enrollment đang gán vào Class**, kh�
 Ranh giới hai sprint được đặt **rõ trên mặt giấy** để nếu tuần 2 đuối thì chỗ cắt đã biết
 trước, không phát hiện muộn.
 
-| Sprint           | Story                                                        | Kết quả demo được                                                                         |
-| ---------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| **1**            | E-01, E-02, US-101 → US-106, US-201 → US-203, US-205, US-401 | Khách xem được khóa học. Học viên tạo được tài khoản. Admin quản lý được Course và Class. |
-| **2**            | US-301 → US-304, US-402, US-403, US-501 → US-504, US-601     | Luồng đăng ký chạy đủ vòng: đăng ký → xác nhận → xếp lớp → học viên thấy lớp của mình.    |
-| **Sau 2 sprint** | US-107, US-204, US-404, US-505, US-506, US-507               | Google sign-in, dashboard Admin, báo cáo, export.                                         |
+| Sprint           | Story                                                            | Kết quả demo được                                                                         |
+| ---------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **1**            | E-01, E-02, US-101 → US-106, US-201 → US-203, US-205, US-401     | Khách xem được khóa học. Học viên tạo được tài khoản. Admin quản lý được Course và Class. |
+| **2**            | US-301 → US-304, US-402, US-403, US-501 → US-504, US-508, US-601 | Luồng đăng ký chạy đủ vòng: đăng ký → xác nhận → xếp lớp → học viên thấy lớp của mình.    |
+| **Sau 2 sprint** | US-107, US-204, US-404, US-505, US-506, US-507                   | Google sign-in, dashboard Admin, báo cáo, export.                                         |
 
 ### Chia việc cho 3 người
 
-|           | Sprint 1                                       | Sprint 2                               |
-| --------- | ---------------------------------------------- | -------------------------------------- |
-| **Dev A** | US-101, US-102, US-103, US-104, US-105, US-106 | US-301, US-302, US-303                 |
-| **Dev B** | US-201, US-202, US-203, US-205                 | US-304, US-402, US-403                 |
-| **Dev C** | E-01, E-02, US-401                             | US-501, US-502, US-503, US-504, US-601 |
+|           | Sprint 1                                       | Sprint 2                       |
+| --------- | ---------------------------------------------- | ------------------------------ |
+| **Dev A** | US-101, US-102, US-103, US-104, US-105, US-106 | US-301, US-302, US-303, US-504 |
+| **Dev B** | US-201, US-202, US-203, US-205                 | US-304, US-402, US-403, US-601 |
+| **Dev C** | E-01, E-02, US-401                             | US-501, US-502, US-503, US-508 |
+
+Sổ cái thanh toán (`US-503` + `US-508`) là phần nặng nhất sprint 2, nên Dev C chỉ giữ lane
+admin và không ôm thêm thông báo.
 
 `US-401` là chìa khóa của cách chia này: quản lý Class **chỉ cần Course, không cần
 Enrollment**, nên nó chạy được ngay sprint 1 và gỡ tải cho sprint 2.
@@ -151,12 +191,16 @@ nhau thì đây là cách đổi.
 
 ### Cảnh báo phạm vi — đọc trước khi cam kết
 
-11 story mỗi sprint cho 3 dev là **giả định lạc quan**. Nếu tốc độ không đạt, đây là thứ tự
-bỏ, bỏ từ trên xuống:
+11 story ở sprint 1 và 12 ở sprint 2, cho 3 dev, là **giả định lạc quan**. Nếu tốc độ không
+đạt, đây là thứ tự bỏ, bỏ từ trên xuống:
 
 1. `US-106` SEO — hoãn được, không chặn ai
 2. `US-103` Lọc & tìm kiếm — với ~10 khóa, cuộn tay vẫn dùng được
 3. `US-303` Học viên tự hủy — tạm thời nhắn Admin hủy hộ
+
+**Sổ cái thanh toán làm sprint 2 nặng thêm ~1,5–2 ngày.** `US-503` và `US-508` thay cho một
+story cũ chỉ bật trạng thái bằng tay. Đổi lại thì đối soát được với sao kê và có bằng chứng
+lưu trữ — nhưng nó là chi phí thật, không miễn phí.
 
 **`US-204` Google sign-in đã nằm ngoài 2 sprint.** Bạn có yêu cầu nó, nên nói rõ: muốn kéo
 vào MVP thì phải đẩy ba story trên ra. Đây là phép tính, không phải quyết định của tôi.
@@ -189,6 +233,9 @@ nên ghi thẳng ra đây.
 - Repo **đã có sẵn** `Dockerfile` và `docker-compose.yml` từ template — chỉ cần thêm service
   Postgres và biến môi trường cho staging.
 - Deploy lại được bằng một lệnh.
+- **Thư mục upload phải nằm trên volume gắn ngoài container.** Payload lưu tệp lên đĩa; nếu
+  không mount volume thì **mọi ảnh khóa học, avatar và bằng chứng thanh toán biến mất sau mỗi
+  lần build lại**. Không có lỗi nào báo — chỉ là ảnh hỏng và bằng chứng mất trắng.
 
 ---
 
@@ -469,8 +516,11 @@ nhận và xếp lớp cho tôi.
   ngay tại chỗ, không bắt người dùng đi sang trang khác rồi quay lại.
 - Học viên xem lại thông tin của mình trước khi bấm xác nhận.
 - **Học viên chọn Course, không chọn Class.**
-- Tạo một Enrollment với `enrollmentStatus = NEW`, `paymentStatus = UNPAID`,
-  `registrationSource = SELF`, `class` để trống.
+- Tạo một Enrollment với `enrollmentStatus = NEW`, `registrationSource = SELF`, `class` để
+  trống.
+- **`amountDue` được chốt bằng `Course.fee` tại đúng thời điểm tạo Enrollment.** Không đọc
+  `Course.fee` lúc hiển thị. Sửa học phí của Course về sau **không được** làm thay đổi số
+  tiền của các đăng ký đã tạo.
 - **Chặn trùng:** một Student không thể có hai Enrollment chưa hủy cho cùng một Course.
   Ràng buộc này đặt ở tầng cơ sở dữ liệu, không chỉ kiểm tra ở tầng ứng dụng.
 - Nếu đã có Enrollment còn hiệu lực cho khóa đó, hiển thị trạng thái hiện tại thay vì tạo mới.
@@ -481,7 +531,8 @@ nhận và xếp lớp cho tôi.
 
 **Demo trên staging** — Đăng nhập bằng tài khoản chưa có số điện thoại, bấm đăng ký một khóa:
 bị bắt điền số điện thoại, điền xong đăng ký được. Bấm đăng ký lại chính khóa đó: bị chặn,
-hiện trạng thái đăng ký cũ. Kiểm tra hộp thư: có email xác nhận.
+hiện trạng thái đăng ký cũ. Kiểm tra hộp thư: có email xác nhận. Sau đó **sửa học phí của
+khóa đó trong admin**: đăng ký vừa tạo vẫn giữ nguyên số tiền cũ.
 
 ---
 
@@ -499,7 +550,10 @@ từng đăng ký.
 **Acceptance criteria**
 
 - Danh sách mọi Enrollment của chính mình, mới nhất trước.
-- Mỗi dòng: tên khóa, ngày đăng ký, **trạng thái đăng ký**, **trạng thái thanh toán**.
+- Mỗi dòng: tên khóa, ngày đăng ký, **trạng thái đăng ký**, **trạng thái thanh toán**, và
+  **học phí / đã đóng / còn thiếu**.
+- Học viên **không thấy sổ cái giao dịch** và **không thấy ảnh bằng chứng** — chỉ thấy ba con
+  số tổng hợp. Chi tiết từng lần thu là dữ liệu vận hành nội bộ.
 - Trạng thái hiển thị bằng tiếng Việt dễ hiểu, không phải mã kỹ thuật.
 - **Học viên không xem được Enrollment của người khác.** Kiểm tra ở phía server, không chỉ ẩn
   trên giao diện.
@@ -524,8 +578,9 @@ id Enrollment của tài khoản B → bị chặn.
 
 - Tự hủy được khi `enrollmentStatus` là `NEW` hoặc `CONFIRMED` — **kể cả khi đã được xếp
   lớp**.
-- **Không tự hủy được khi `paymentStatus = PAID`.** Nút đổi thành hướng dẫn liên hệ Admin, vì
-  hoàn tiền là việc ngoài hệ thống.
+- **Không tự hủy được khi đã nhận bất kỳ khoản tiền nào** — điều kiện là `amountPaid > 0`,
+  không phải `paymentStatus = PAID`. Đóng cọc một phần cũng chặn. Nút đổi thành hướng dẫn
+  liên hệ Admin, vì hoàn tiền là việc ngoài hệ thống.
 - **Không tự hủy được sau ngày khai giảng của lớp đã xếp.**
 - Có bước xác nhận trước khi hủy.
 - Hủy xong: `enrollmentStatus = CANCELLED`, **gỡ `class`, chỗ trong lớp được nhả ra ngay**.
@@ -533,7 +588,8 @@ id Enrollment của tài khoản B → bị chặn.
 - Sinh thông báo cho Admin.
 
 **Demo trên staging** — Hủy một đăng ký đã được xếp lớp: sĩ số lớp giảm đi 1 ngay. Đánh dấu
-một đăng ký khác là đã thanh toán: nút hủy biến mất, thay bằng hướng dẫn liên hệ.
+một khoản cọc **nhỏ hơn học phí** vào một đăng ký khác: nút hủy biến mất ngay, thay bằng
+hướng dẫn liên hệ Admin.
 
 ---
 
@@ -672,8 +728,10 @@ mình xử lý.
 
 - Hiển thị mọi Enrollment, từ cả hai nguồn `SELF` và `ADMIN`.
 - Mỗi dòng tối thiểu: học viên, khóa học, lớp đã xếp (nếu có), nguồn đăng ký, ngày đăng ký,
-  trạng thái đăng ký, trạng thái thanh toán.
+  trạng thái đăng ký, trạng thái thanh toán, **số tiền còn thiếu**.
 - Lọc được theo khóa học, lớp, trạng thái đăng ký, trạng thái thanh toán, nguồn đăng ký.
+- Lọc và sắp xếp theo trạng thái thanh toán chạy **trực tiếp trên cơ sở dữ liệu**, không tính
+  lại trong bộ nhớ — đó là lý do `paymentStatus` được lưu xuống thay vì tính lúc đọc.
 - Tìm được theo tên hoặc email học viên.
 - Mặc định sắp xếp mới nhất trước.
 
@@ -706,32 +764,45 @@ nhận được thông báo. Hủy một đăng ký đã xếp lớp: sĩ số l
 
 ---
 
-### US-503 · Admin records payment status
+### US-503 · Payment ledger — record a transaction
 
-|               |               |
-| ------------- | ------------- |
-| Ưu tiên       | P0 · Sprint 2 |
-| Phụ thuộc     | US-501        |
-| Song song với | US-502        |
+|               |                |
+| ------------- | -------------- |
+| Ưu tiên       | P0 · Sprint 2  |
+| Phụ thuộc     | US-501         |
+| Song song với | US-502, US-508 |
 
-**User story** — Là một Admin, tôi muốn ghi nhận tình trạng thanh toán của từng đăng ký.
+**User story** — Là một Admin, tôi muốn ghi lại từng lần thu tiền kèm đầy đủ thông tin giao
+dịch, để đối soát được với sao kê ngân hàng và biết chính xác ai còn nợ bao nhiêu.
 
 **Acceptance criteria**
 
-- `paymentStatus` nhận đúng ba giá trị: `UNPAID`, `PAID`, `REFUNDED`.
-- Admin đổi được trạng thái bất cứ lúc nào.
-- Trạng thái hiển thị trong danh sách Enrollment và trong dashboard học viên.
+- Admin tạo được bản ghi `Payment` gắn vào một Enrollment, gồm: **số tiền**, **ngày giao dịch
+  thực tế**, **phương thức** (tiền mặt / chuyển khoản / khác), **mã tham chiếu**, ghi chú.
+- Một Enrollment có **nhiều** Payment. Đóng cọc trước rồi đóng nốt là **hai bản ghi**.
+- **Hoàn tiền là một bản ghi `type = REFUND`**, không phải một trạng thái. `amount` luôn
+  dương, chiều tiền do `type` quyết định.
+- Sau mỗi lần thêm, sửa hoặc xóa Payment, hệ thống **tính lại** `amountPaid`,
+  `amountOutstanding` và `paymentStatus` trên Enrollment, **trong cùng transaction**.
+- **`paymentStatus` không còn đặt bằng tay.** Nó suy ra hoàn toàn từ sổ cái — không có ô chọn
+  trạng thái thanh toán trong màn hình sửa Enrollment nữa.
+- `paymentStatus` nhận bốn giá trị: `UNPAID`, `PARTIAL`, `PAID`, `REFUNDED`.
+- Thu quá số phải đóng vẫn ghi nhận được, `amountOutstanding` thành số âm kèm cảnh báo cho
+  Admin. **Không chặn** — thu thừa là chuyện có thật, giấu đi thì tệ hơn.
+- Xem được lịch sử đầy đủ các giao dịch của một Enrollment, sắp theo ngày.
 - **`paymentStatus` không bao giờ là điều kiện để xếp lớp.**
 - **Website không xử lý thanh toán trực tuyến.** Không tích hợp cổng thanh toán nào.
-- Đổi trạng thái sinh thông báo cho học viên.
+- Ghi nhận một khoản thu sinh thông báo cho học viên.
 
-> v4 dùng ba giá trị `Chưa thanh toán / Đã thanh toán / Đã hủy`, trong đó "Đã hủy" trùng tên
-> với trạng thái hủy của Enrollment mà không định nghĩa quan hệ giữa hai cái, đồng thời không
-> biểu diễn được tình huống "đã thu tiền rồi mới hủy". v5 đổi thành `REFUNDED` để nói đúng
-> việc đang xảy ra.
+> **Đây là chỗ dễ hỏng nhất trong toàn bộ backlog.** Ba trường tiền trên Enrollment là dữ liệu
+> **suy ra**, chỉ được lưu xuống để `US-501` lọc được. Bất kỳ đoạn code nào ghi thẳng vào
+> chúng — một seed script, một lần sửa tay trong admin, một hook khác — sẽ làm số liệu sai mà
+> **không phát ra lỗi nào**. Chốt bằng test và ghi vào `INVARIANTS.md` ngay khi code xong.
 
-**Demo trên staging** — Đánh dấu một đăng ký là `PAID`: đổi ngay trong danh sách admin và
-trong dashboard của chính học viên đó, học viên nhận được thông báo.
+**Demo trên staging** — Học phí 2.500.000. Ghi một khoản chuyển khoản 1.000.000: trạng thái
+thành `PARTIAL`, còn thiếu 1.500.000, học viên thấy đúng ba con số đó trong dashboard. Ghi
+tiếp 1.500.000: thành `PAID`, còn thiếu 0. **Xóa bản ghi thứ hai: quay lại đúng `PARTIAL` và
+đúng số cũ.** Thêm một `REFUND` 1.000.000: về `REFUNDED`.
 
 ---
 
@@ -751,11 +822,56 @@ sinh khi vận hành.
 - Admin hủy được **bất kỳ** Enrollment nào, **không bị ràng buộc** bởi các quy tắc áp cho học
   viên ở `US-303`.
 - Đổi được lớp đã xếp; khi đổi vẫn phải đúng Course và còn chỗ ở lớp mới.
+- **Sửa được `amountDue` của từng đăng ký** để xử lý giảm giá, ưu đãi nhóm, học viên cũ. Sửa
+  xong thì `paymentStatus` tự tính lại — giảm học phí xuống bằng số đã thu thì đăng ký chuyển
+  thẳng sang `PAID`.
+- **Không sửa được `amountPaid` và `paymentStatus`.** Muốn đổi hai con số đó thì thêm hoặc sửa
+  một bản ghi trong sổ cái ở `US-503`. Đây là ràng buộc, không phải hạn chế giao diện.
 - Enrollment đã hủy **không bị xóa khỏi cơ sở dữ liệu**, vẫn tra cứu được.
 - Course bị ẩn đi **không làm mất** các Enrollment hiện có.
 
 **Demo trên staging** — Hủy một đăng ký đã thanh toán và đã xếp lớp: hủy được, sĩ số lớp giảm,
 bản ghi vẫn tra cứu được. Ẩn một Course: các đăng ký của khóa đó vẫn còn nguyên.
+
+---
+
+### US-508 · Payment evidence — private file uploads
+
+|               |                |
+| ------------- | -------------- |
+| Ưu tiên       | P0 · Sprint 2  |
+| Phụ thuộc     | US-503         |
+| Song song với | US-502, US-504 |
+
+**User story** — Là một Admin, tôi muốn đính ảnh chụp chuyển khoản hoặc biên lai vào từng giao
+dịch, để có bằng chứng khi đối chiếu sổ sách hoặc khi học viên khiếu nại.
+
+**Acceptance criteria**
+
+- Mỗi `Payment` đính được **nhiều tệp**, ảnh hoặc PDF.
+- **Bằng chứng thanh toán KHÔNG dùng chung collection `media` hiện có.** Phải là một
+  collection upload riêng.
+- Collection đó đặt `read` **chỉ cho Admin đã đăng nhập**. Học viên không đọc được, khách
+  không đọc được.
+- **Thư mục lưu tệp nằm ngoài `public/`**, để tệp đi qua route của Payload và access control
+  thực sự có hiệu lực.
+- Giới hạn loại tệp và dung lượng tối đa.
+- Xóa một `Payment` thì xóa luôn các tệp đính kèm của nó.
+
+> **Vì sao bắt buộc phải tách.** Collection `media` hiện tại đặt `read: anyone`
+> (`src/collections/Media.ts:23`) **và** ghi tệp vào `public/media`
+> (`src/collections/Media.ts:44`). Cộng lại nghĩa là Next.js phục vụ tệp **tĩnh, trước khi
+> Payload kịp kiểm tra quyền**. Comment ngay trong file nói đúng điều đó:
+> _"making them publicly accessible even outside of Payload"_.
+>
+> Nếu để ảnh chuyển khoản vào đó thì **bất kỳ ai biết hoặc đoán được URL đều tải về được**:
+> tên học viên, số tài khoản, số tiền, đôi khi cả số điện thoại. **Đổi sang
+> `read: authenticated` cũng không cứu được**, vì tệp không hề đi qua Payload. Chỉ có
+> collection riêng với thư mục nằm ngoài `public/` mới xử lý được.
+
+**Demo trên staging** — Đính ảnh chuyển khoản vào một giao dịch. Copy URL tệp, mở ở cửa sổ ẩn
+danh chưa đăng nhập: **bị từ chối**. Đăng nhập bằng tài khoản học viên rồi mở lại: **vẫn bị từ
+chối**. Đăng nhập Admin: xem được.
 
 ---
 
@@ -784,17 +900,21 @@ mình, cả trong ứng dụng lẫn qua email.
 - Gửi email thất bại **không được làm hỏng** hành động đã thực hiện — thông báo trong ứng dụng
   vẫn phải xuất hiện.
 
+> **Làm sớm trong sprint.** `US-303`, `US-402`, `US-502` và `US-503` đều gắn sự kiện vào cơ
+> chế này. Nếu `US-601` về muộn thì bốn story kia không đạt đủ acceptance criteria, dù phần
+> việc chính của chúng đã xong.
+
 **Bảy sự kiện trong phạm vi**
 
-| Sự kiện                                    | Người nhận            |
-| ------------------------------------------ | --------------------- |
-| Đăng ký khóa học thành công                | Học viên              |
-| Đăng ký được xác nhận                      | Học viên              |
-| Được xếp lớp                               | Học viên              |
-| Trạng thái thanh toán thay đổi             | Học viên              |
-| Có đăng ký mới trên website                | Admin                 |
-| Học viên tự hủy đăng ký                    | Admin                 |
-| Lớp bị đổi lịch hoặc hủy _(cùng `US-404`)_ | Học viên trong lớp đó |
+| Sự kiện                                         | Người nhận            |
+| ----------------------------------------------- | --------------------- |
+| Đăng ký khóa học thành công                     | Học viên              |
+| Đăng ký được xác nhận                           | Học viên              |
+| Được xếp lớp                                    | Học viên              |
+| Ghi nhận một khoản thu hoặc một khoản hoàn tiền | Học viên              |
+| Có đăng ký mới trên website                     | Admin                 |
+| Học viên tự hủy đăng ký                         | Admin                 |
+| Lớp bị đổi lịch hoặc hủy _(cùng `US-404`)_      | Học viên trong lớp đó |
 
 **Demo trên staging** — Học viên đăng ký một khóa: Admin thấy chuông sáng và nhận được email.
 Admin xác nhận rồi xếp lớp: học viên thấy hai thông báo mới và nhận hai email. Đánh dấu đã
@@ -812,7 +932,7 @@ nghị kéo vào khi có thêm thời gian.
 | `US-204` | **Google sign-in**                    | Bạn có yêu cầu. ~1,5–2 ngày, là mảnh auth khó nhất. Chi tiết ở mục 8.                                                                                                                                                                                                                          |
 | `US-404` | **Class reschedule and cancellation** | Đổi lịch hoặc hủy lớp, sinh thông báo cho mọi học viên trong lớp.                                                                                                                                                                                                                              |
 | `US-505` | **Admin dashboard**                   | Bốn ô, bấm vào ra danh sách đã lọc sẵn: đăng ký chờ xác nhận · đã xác nhận nhưng chưa xếp lớp · lớp sắp khai giảng kèm sĩ số/sức chứa · đăng ký chưa thanh toán. Chọn theo nguyên tắc **việc cần làm**, không phải số liệu đẹp: ở quy mô ~10 khóa thì "số khóa đã xuất bản" là con số vô dụng. |
-| `US-506` | **Enrollment and payment reports**    | Lọc theo khóa, lớp, nguồn, ngày, trạng thái. Không tính doanh thu dự kiến vì website không quản lý học phí đã thu.                                                                                                                                                                             |
+| `US-506` | **Enrollment and payment reports**    | Lọc theo khóa, lớp, nguồn, ngày, trạng thái. Nhờ có sổ cái `Payment`, nay tính được **tổng đã thu và tổng còn phải thu thật**, không còn là ước lượng. Đối soát theo phương thức và theo khoảng ngày cũng làm được.                                                                            |
 | `US-507` | **CSV export**                        | Xuất danh sách Enrollment và Student. Cân nhắc `@payloadcms/plugin-import-export`.                                                                                                                                                                                                             |
 | `US-107` | **Manual featured courses**           | Cho Admin tự chọn khóa nổi bật trên trang chủ, thay cho quy tắc "mới nhất" của `US-104`.                                                                                                                                                                                                       |
 
@@ -825,18 +945,30 @@ nghị kéo vào khi có thêm thời gian.
 1. **`Course.enrollmentOpen`** — trường mới. v4 không có khái niệm đóng nhận đăng ký; vì Class
    ẩn và đăng ký ở cấp Course nên **một khóa sẽ nhận đăng ký vô thời hạn**, kể cả khi không
    còn lớp nào sắp mở.
-2. **`paymentStatus`: `REFUNDED` thay cho "Đã hủy"** — lý do đã nêu ở `US-503`.
-3. **Bỏ `CourseType`** — hệ quả của việc đưa Moodle ra khỏi sản phẩm. Mọi Course đều là
+2. **Thanh toán chuyển từ một trạng thái sang một sổ cái.** v4 chỉ có `paymentStatus` bật tay
+   với ba giá trị, trong đó "Đã hủy" trùng tên với trạng thái hủy của Enrollment mà không định
+   nghĩa quan hệ giữa hai cái, và không diễn tả được "đã thu tiền rồi mới hủy". v5 dùng bảng
+   `Payment` (`US-503`) làm nguồn sự thật; `paymentStatus` trở thành **giá trị suy ra** với
+   bốn trạng thái, thêm `PARTIAL` cho trường hợp đóng cọc.
+3. **`Enrollment.amountDue` — trường mới, chốt lúc tạo.** v4 chỉ có học phí trên `Course`, mà
+   trường đó sửa được bất cứ lúc nào. Nghĩa là sửa học phí kỳ sau sẽ **âm thầm viết lại số
+   tiền của mọi đăng ký cũ** — trong danh sách admin, trong dashboard học viên và trong mọi
+   báo cáo. Không lỗi, không cảnh báo.
+4. **Bằng chứng thanh toán phải có collection upload riêng** (`US-508`). Collection `media`
+   hiện tại vừa `read: anyone` vừa ghi vào `public/`, nên ảnh chuyển khoản để ở đó sẽ tải về
+   được bằng URL trần.
+5. **Bỏ `CourseType`** — hệ quả của việc đưa Moodle ra khỏi sản phẩm. Mọi Course đều là
    offline.
-4. **Trang chủ dùng "khóa mới nhất" thay vì "khóa nổi bật"** — để gỡ phụ thuộc P0→P1 của v4.
-5. **Học viên tự hủy đăng ký** — v4 không có; chỉ Admin hủy được.
-6. **`ATTENDING` và `COMPLETED` do Admin đặt tay.** Không có story điểm danh hay kết thúc khóa
+6. **Trang chủ dùng "khóa mới nhất" thay vì "khóa nổi bật"** — để gỡ phụ thuộc P0→P1 của v4.
+7. **Học viên tự hủy đăng ký** — v4 không có; chỉ Admin hủy được. Điều kiện chặn là **đã nhận
+   bất kỳ khoản tiền nào**, không phải "đã thanh toán đủ".
+8. **`ATTENDING` và `COMPLETED` do Admin đặt tay.** Không có story điểm danh hay kết thúc khóa
    nào tự sinh ra hai trạng thái này. Giữ lại theo v4, nhưng nói rõ để không ai chờ tự động.
-7. **Không có nhật ký thay đổi riêng.** Dùng cơ chế versions sẵn có của Payload trên
-   Enrollment. Đủ để truy vết ai đổi trạng thái thanh toán lúc nào.
-8. **Không xóa cứng** Course, Class hay Student đang có ràng buộc dữ liệu. Dùng ẩn hoặc hủy.
-   v4 nhắc "CRUD" nhưng không story nào định nghĩa hành vi xóa; với Postgres thì xóa sẽ hoặc
-   cascade mất dữ liệu, hoặc lỗi khóa ngoại.
+9. **Không có nhật ký thay đổi riêng.** Lịch sử tiền bạc đã nằm sẵn trong bảng `Payment`; phần
+   còn lại dùng cơ chế versions của Payload trên Enrollment.
+10. **Không xóa cứng** Course, Class hay Student đang có ràng buộc dữ liệu. Dùng ẩn hoặc hủy.
+    v4 nhắc "CRUD" nhưng không story nào định nghĩa hành vi xóa; với Postgres thì xóa sẽ hoặc
+    cascade mất dữ liệu, hoặc lỗi khóa ngoại.
 
 ---
 
@@ -883,48 +1015,54 @@ Những mục này không được hỏi trong lúc phỏng vấn. Tôi đặt m
 | 8   | **Giới hạn tần suất** cho gửi lại email xác minh và quên mật khẩu, để tránh bị lợi dụng gửi thư rác.                                                                                                                                                          |
 | 9   | **Không di trú dữ liệu** từ Zalo hay Excel. Thiết kế thẳng cho luồng đích.                                                                                                                                                                                    |
 | 10  | **Báo cáo và export** (`US-506`, `US-507`) chưa được đặc tả chi tiết vì đã nằm ngoài 2 sprint. Cần một vòng làm rõ trước khi triển khai.                                                                                                                      |
+| 11  | **Thu làm nhiều lần được hỗ trợ**, vì bạn chọn sổ cái. Đóng cọc rồi đóng nốt là hai bản ghi, và `paymentStatus` có thêm `PARTIAL`. Nếu thực tế **không bao giờ** thu nhiều lần thì nói tôi biết — bỏ `PARTIAL` đi sẽ đơn giản hơn một chút.                   |
+| 12  | **Học phí sửa được theo từng đăng ký** qua `amountDue` (`US-504`), để xử lý giảm giá và ưu đãi. Nếu mọi người luôn đóng đúng giá niêm yết thì trường này chỉ đọc, không hại gì.                                                                               |
+| 13  | **Không có duyệt hai bước cho giao dịch.** Một Admin nhập là ghi nhận luôn. Với một người vận hành thì duyệt chéo không có ý nghĩa.                                                                                                                           |
+| 14  | **Tiền chỉ có một đơn vị là VNĐ.** Không đa tiền tệ, không tỷ giá.                                                                                                                                                                                            |
+| 15  | **Ảnh bằng chứng không tự động xóa theo thời gian.** Đây là dữ liệu tài chính cá nhân; nếu tổ chức có chính sách lưu trữ thì cần thêm một story riêng.                                                                                                        |
 
 ---
 
 ## 10. Bảng tra cứu — v4 sang v5
 
-| v4                                  | v5                           | Ghi chú                                                            |
-| ----------------------------------- | ---------------------------- | ------------------------------------------------------------------ |
-| US-001 Trang chủ                    | `US-104`                     | Bỏ phụ thuộc vào quản lý khóa nổi bật                              |
-| US-002 Danh sách khóa học           | `US-101`                     | Gộp với US-011 thành một lát cắt dọc                               |
-| US-003 Lọc theo loại                | `US-103`                     | Lọc theo **danh mục**, vì `CourseType` không còn                   |
-| US-004 Chi tiết khóa học            | `US-102`                     |                                                                    |
-| US-005, US-006 Moodle               | —                            | **Bỏ.** Moodle ra khỏi sản phẩm                                    |
-| US-007 Học viên đăng ký             | `US-301`                     | Đã bao gồm quy tắc chặn trùng                                      |
-| US-008 Ngăn đăng ký trùng           | —                            | Thành acceptance criterion của `US-301`, không còn là story        |
-| US-009 Xác nhận đăng ký             | `US-301`                     | Gộp vào                                                            |
-| US-010 Admin đăng ký hộ             | `US-304`                     | Nay tạo cả account, trong một transaction                          |
-| US-011, US-013 Quản lý Course       | `US-101`                     | Gộp                                                                |
-| US-012 Phân loại khóa học           | —                            | **Bỏ** cùng `CourseType`                                           |
-| US-014 Quản lý lớp                  | `US-401`                     | Đẩy lên sprint 1 vì không phụ thuộc Enrollment                     |
-| US-015 Đăng ký tài khoản            | `US-201`                     | Thêm việc tạo profile rỗng trong cùng transaction                  |
-| US-016, US-017 Đăng nhập, đăng xuất | `US-202`                     | Gộp                                                                |
-| US-018, US-019 Thông tin tài khoản  | `US-205`                     | Gộp, thêm avatar                                                   |
-| US-020 Reset mật khẩu               | `US-203`                     |                                                                    |
-| US-021 Danh sách đăng ký            | `US-501`                     |                                                                    |
-| US-022 Trạng thái đăng ký           | `US-502`                     |                                                                    |
-| US-023 Trạng thái thanh toán        | `US-503`                     | `REFUNDED` thay cho "Đã hủy"                                       |
-| US-024 Sửa đăng ký                  | `US-504`                     |                                                                    |
-| US-025 Xếp lớp                      | `US-402`                     |                                                                    |
-| US-026 Export                       | `US-507`                     | Ngoài 2 sprint                                                     |
-| US-027 Nội dung trang chủ           | `US-107`                     | Ngoài 2 sprint                                                     |
-| US-028 Trang tĩnh                   | `US-105`                     |                                                                    |
-| US-029 Tin tức                      | —                            | **Bỏ** theo yêu cầu                                                |
-| US-030, US-031, US-032 Admin        | —                            | Payload đã cho sẵn. Một vai Admin duy nhất, không có ma trận quyền |
-| US-033 Dashboard Admin              | `US-505`                     | Ngoài 2 sprint. Rút còn 4 ô hướng hành động                        |
-| US-034, US-035 Báo cáo              | `US-506`                     | Ngoài 2 sprint                                                     |
-| US-036, US-037 Thông báo            | `US-601`                     | Mở rộng thành trung tâm thông báo, 7 sự kiện                       |
-| US-038 Tìm kiếm                     | `US-103`                     | Gộp với lọc                                                        |
-| US-039 SEO                          | `US-106`                     |                                                                    |
-| US-040 Responsive                   | —                            | Thành acceptance criterion của từng story giao diện                |
-| US-041 Hiệu năng                    | —                            | **Bỏ** theo quyết định của bạn                                     |
-| US-042 Bảo mật                      | —                            | Thành giả định số 7 và các criterion trong `US-202`, `US-203`      |
-| US-043 Privacy                      | —                            | Thành giả định số 6                                                |
-| —                                   | `US-302`, `US-303`, `US-403` | **Mới.** Dashboard học viên — lỗ hổng lớn nhất của v4              |
-| —                                   | `US-204`                     | **Mới.** Google sign-in                                            |
-| —                                   | `E-01`, `E-02`               | **Mới.** Hạ tầng email và staging, v4 không có story nào phụ trách |
+| v4                                  | v5                           | Ghi chú                                                                                                                                            |
+| ----------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| US-001 Trang chủ                    | `US-104`                     | Bỏ phụ thuộc vào quản lý khóa nổi bật                                                                                                              |
+| US-002 Danh sách khóa học           | `US-101`                     | Gộp với US-011 thành một lát cắt dọc                                                                                                               |
+| US-003 Lọc theo loại                | `US-103`                     | Lọc theo **danh mục**, vì `CourseType` không còn                                                                                                   |
+| US-004 Chi tiết khóa học            | `US-102`                     |                                                                                                                                                    |
+| US-005, US-006 Moodle               | —                            | **Bỏ.** Moodle ra khỏi sản phẩm                                                                                                                    |
+| US-007 Học viên đăng ký             | `US-301`                     | Đã bao gồm quy tắc chặn trùng                                                                                                                      |
+| US-008 Ngăn đăng ký trùng           | —                            | Thành acceptance criterion của `US-301`, không còn là story                                                                                        |
+| US-009 Xác nhận đăng ký             | `US-301`                     | Gộp vào                                                                                                                                            |
+| US-010 Admin đăng ký hộ             | `US-304`                     | Nay tạo cả account, trong một transaction                                                                                                          |
+| US-011, US-013 Quản lý Course       | `US-101`                     | Gộp                                                                                                                                                |
+| US-012 Phân loại khóa học           | —                            | **Bỏ** cùng `CourseType`                                                                                                                           |
+| US-014 Quản lý lớp                  | `US-401`                     | Đẩy lên sprint 1 vì không phụ thuộc Enrollment                                                                                                     |
+| US-015 Đăng ký tài khoản            | `US-201`                     | Thêm việc tạo profile rỗng trong cùng transaction                                                                                                  |
+| US-016, US-017 Đăng nhập, đăng xuất | `US-202`                     | Gộp                                                                                                                                                |
+| US-018, US-019 Thông tin tài khoản  | `US-205`                     | Gộp, thêm avatar                                                                                                                                   |
+| US-020 Reset mật khẩu               | `US-203`                     |                                                                                                                                                    |
+| US-021 Danh sách đăng ký            | `US-501`                     |                                                                                                                                                    |
+| US-022 Trạng thái đăng ký           | `US-502`                     |                                                                                                                                                    |
+| US-023 Trạng thái thanh toán        | `US-503`                     | **Thay bằng sổ cái.** Một trạng thái bật tay → bảng `Payment` với đầy đủ thông tin giao dịch; `paymentStatus` thành giá trị suy ra, thêm `PARTIAL` |
+| US-024 Sửa đăng ký                  | `US-504`                     |                                                                                                                                                    |
+| US-025 Xếp lớp                      | `US-402`                     |                                                                                                                                                    |
+| US-026 Export                       | `US-507`                     | Ngoài 2 sprint                                                                                                                                     |
+| US-027 Nội dung trang chủ           | `US-107`                     | Ngoài 2 sprint                                                                                                                                     |
+| US-028 Trang tĩnh                   | `US-105`                     |                                                                                                                                                    |
+| US-029 Tin tức                      | —                            | **Bỏ** theo yêu cầu                                                                                                                                |
+| US-030, US-031, US-032 Admin        | —                            | Payload đã cho sẵn. Một vai Admin duy nhất, không có ma trận quyền                                                                                 |
+| US-033 Dashboard Admin              | `US-505`                     | Ngoài 2 sprint. Rút còn 4 ô hướng hành động                                                                                                        |
+| US-034, US-035 Báo cáo              | `US-506`                     | Ngoài 2 sprint                                                                                                                                     |
+| US-036, US-037 Thông báo            | `US-601`                     | Mở rộng thành trung tâm thông báo, 7 sự kiện                                                                                                       |
+| US-038 Tìm kiếm                     | `US-103`                     | Gộp với lọc                                                                                                                                        |
+| US-039 SEO                          | `US-106`                     |                                                                                                                                                    |
+| US-040 Responsive                   | —                            | Thành acceptance criterion của từng story giao diện                                                                                                |
+| US-041 Hiệu năng                    | —                            | **Bỏ** theo quyết định của bạn                                                                                                                     |
+| US-042 Bảo mật                      | —                            | Thành giả định số 7 và các criterion trong `US-202`, `US-203`                                                                                      |
+| US-043 Privacy                      | —                            | Thành giả định số 6                                                                                                                                |
+| —                                   | `US-302`, `US-303`, `US-403` | **Mới.** Dashboard học viên — lỗ hổng lớn nhất của v4                                                                                              |
+| —                                   | `US-204`                     | **Mới.** Google sign-in                                                                                                                            |
+| —                                   | `US-508`                     | **Mới.** Bằng chứng thanh toán, lưu ở collection riêng không công khai                                                                             |
+| —                                   | `E-01`, `E-02`               | **Mới.** Hạ tầng email và staging, v4 không có story nào phụ trách                                                                                 |

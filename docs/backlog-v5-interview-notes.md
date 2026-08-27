@@ -80,6 +80,35 @@ Zalo + Excel process, and no migration from it is in scope.
 - **Staging** is a self-managed VPS on Docker Compose with Postgres alongside. The repo
   already ships a `Dockerfile` and `docker-compose.yml`; no email adapter is installed yet.
 
+## Round 5 — payments became a ledger
+
+Asked how payment was handled, the client rejected the status-only model and asked for a
+dedicated table recording full transaction details **and evidence**, linked to the
+enrollment. That is `US-503` plus `US-508`, and it costs sprint 2 roughly 1.5–2 days.
+
+Three things fall out of that choice, all recorded in the backlog:
+
+**`Enrollment.amountDue` is snapshotted at creation.** v4 kept the fee only on `Course`,
+which is editable. Raising the fee for next term would have silently rewritten the amount on
+every historical enrollment — in the admin list, in the student's own dashboard, and in every
+later report, with no error anywhere.
+
+**The three money fields on Enrollment are derived, never written directly.** `amountPaid`,
+`amountOutstanding` and `paymentStatus` are recomputed by hooks on `payments` inside the same
+transaction. They are stored rather than computed on read purely so `US-501` can filter and
+sort in the database. Any code path that writes them directly corrupts the numbers silently —
+an `INVARIANTS.md` entry the moment it is implemented.
+
+**Payment evidence must not use the existing `media` collection.** That collection is
+`read: anyone` *and* writes into `public/media`, so Next.js serves those files statically
+before Payload evaluates access control — the file's own comment says as much. Bank transfer
+screenshots there would be downloadable by anyone with the URL, and tightening `read` would
+not help, because the request never reaches Payload. `US-508` therefore requires a separate
+upload collection whose static directory sits outside `public/`.
+
+Related: `E-02` now requires the upload directory to live on a mounted volume, or every
+course image, avatar and piece of payment evidence disappears on each container rebuild.
+
 ## Still open after the interview
 
 - **UI language.** `CLAUDE.md` marks i18n `[UNDECIDED]` and requires the decision before the
