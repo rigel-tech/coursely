@@ -28,9 +28,10 @@ exists is the point; the rule itself is one read away.
   none and must always pass, `tests/int/` needs Postgres (`docker compose up -d`),
   `tests/e2e/` needs a browser and starts `pnpm dev` itself.
 
-<!-- CONSTITUTION START — v1.2.0 -->
-<!-- On adopting spec-kit: move this block to .specify/memory/constitution.md, delete the
-     body here, and leave a one-line pointer. Full text in two places is a sync debt. -->
+<!-- CONSTITUTION START — v1.3.0 -->
+<!-- Spec Kit is adopted and this block deliberately stayed here: Claude Code loads CLAUDE.md
+     into every session, while .specify/memory/constitution.md is read only by the speckit
+     skills. That path holds a pointer back to this block instead of a second copy. -->
 
 ## Principles
 
@@ -94,6 +95,12 @@ _Why: strong criteria let you iterate without asking constantly, and make "done"
   anywhere, (3) is true today, adds it **while implementing**. Nothing to change is a
   valid outcome: say so and move on. A Stop hook flags this, and only this.
 - **Branch and commit rules** live in `CONTRIBUTING.md` and are enforced by husky.
+- **Agent-driven work goes through Spec Kit.** Adding or changing behaviour with a coding
+  agent starts at `/speckit-specify` and runs through `/speckit-implement`; a typo, a comment
+  or a one-line fix does not. Install and workflow live in `CONTRIBUTING.md`. The
+  constitution stays in **this** file: `.specify/memory/constitution.md` is a pointer back to
+  it, and `/speckit-constitution` must never run — it would overwrite that pointer with a
+  template that has nowhere to put these decisions.
 - **UI language / i18n: [UNDECIDED].** Nothing is configured — no Payload localization, no
   i18n library. Decide before the first screen with user-facing strings: changing it later
   means reworking every string already written.
@@ -121,6 +128,18 @@ document from drifting into slogans. Three lines maximum per entry: what changed
 source. A superseded rule is edited directly above and merely noted here; two conflicting
 rules must never coexist. Past 10 entries, split this section into a
 CONSTITUTION-LOG file and leave a one-line pointer.
+
+### v1.3.0 — 2026-08-27
+
+**Changed:** agent-driven behaviour changes run the Spec Kit workflow; the constitution stays
+in this file, and `/speckit-constitution` is forbidden.
+**Why:** Spec Kit's constitution template is five principle slots plus governance — nowhere to
+put `Settled decisions` or the `Current context` slot, and its Sync Impact Report drops the
+cite-your-source rule. A constitution held only in `.specify/` also stops being loaded into
+ordinary sessions, leaving non-spec work ungoverned.
+**Source:** decision taken 2026-08-27 to adopt github/spec-kit v1.0.1; the format collision
+was found reading `.specify/templates/constitution-template.md` during that adoption, and it
+supersedes the migration note that stood above this block.
 
 ### v1.2.0 — 2026-08-27
 
