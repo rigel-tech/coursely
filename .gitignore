@@ -23,3 +23,8 @@ node_modules/
 
 # TypeScript incremental build cache (produced by `pnpm typecheck`)
 *.tsbuildinfo
+
+# Claude Code scratch worktrees. `.claude/` itself is committed, so without this
+# an entire second checkout — node_modules and all — sits untracked inside a
+# tracked directory, one `git add .` away from the index.
+.claude/worktrees/
