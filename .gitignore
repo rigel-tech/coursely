@@ -23,3 +23,6 @@ node_modules/
 
 # TypeScript incremental build cache (produced by `pnpm typecheck`)
 *.tsbuildinfo
+
+# CodeGraph's local symbol index (SQLite). Rebuilt per checkout by `codegraph init`.
+.codegraph/

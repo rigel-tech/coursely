@@ -7,6 +7,10 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/invariants-session-start.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/codegraph-session-start.mjs\""
           }
         ]
       }
@@ -20,9 +24,23 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "codegraph prompt-hook"
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {
     "context7@claude-plugins-official": true
-  }
+  },
+  "permissions": {
+    "allow": ["mcp__codegraph__*"]
+  },
+  "enabledMcpjsonServers": ["codegraph"]
 }
