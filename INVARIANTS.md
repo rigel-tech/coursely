@@ -238,3 +238,26 @@ declared `id: string` throughout until it was regenerated.
 `src/payload-types.ts` (`defaultIDType: number`). Two branches that can no longer run:
 `src/components/public/PayloadRedirects/index.tsx:26` (`PayloadRedirects`) and
 `src/blocks/RelatedPosts/Component.tsx:25` (`RelatedPosts`).
+
+## Agent tooling
+
+### A git worktree with no `.codegraph/` of its own answers from the parent repo's index
+
+**Rule** — Every worktree needs its own index before CodeGraph is trusted there.
+`.claude/hooks/codegraph-session-start.mjs` builds one on session start, so this holds by
+itself for worktrees Claude Code opens. A worktree made by hand and used without a session —
+or one opened after that hook is removed — does not get that, and must be indexed with
+`codegraph init` before its answers mean anything.
+
+**Why it breaks silently** — CodeGraph resolves a project by walking up from the working
+directory, so a worktree nested under `.claude/worktrees/` finds the **parent checkout's**
+index instead of failing. Measured: from an unindexed worktree, `codegraph status` reports
+`Project: …/coursely` with 189 files — the main checkout — while the worktree's own tree is
+never consulted. Nothing warns. The tool answers confidently about symbols and call paths from
+a different branch, and `codegraph explore` prints them under a banner promising "verbatim,
+current on-disk source". Once indexed, the same command reports the worktree's own path and
+file count, and the two indexes stay independent.
+
+**Where** — `.claude/hooks/codegraph-session-start.mjs` (the `existsSync` guard on
+`.codegraph`, and the `shell: true` that makes the spawn work at all on Windows).
+`.gitignore:28` (`.codegraph/`) keeps each index per-checkout. Upstream: colbymchenry/codegraph#155.

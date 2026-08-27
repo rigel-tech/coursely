@@ -138,6 +138,33 @@ Include the `Bearer ` prefix. The plugin passes the variable straight through as
 `Authorization: Bearer <key>`. Claude Code reads the variable from the environment of its own
 process, not from this repo's `.env` — putting it there does nothing.
 
+## CodeGraph
+
+[CodeGraph](https://github.com/colbymchenry/codegraph) pre-indexes this repo into a symbol
+graph — definitions, call edges, blast radius — so the agent answers "what calls this, and what
+breaks if I change it" in one call instead of a grep sweep. It runs entirely on your machine: a
+SQLite file, no API key, no network.
+
+`.mcp.json` and `.claude/settings.json` wire it up and are committed. The CLI is not; install it
+once:
+
+```bash
+pnpm add -g @colbymchenry/codegraph@1.6.0
+```
+
+The index lives in `.codegraph/`, which is gitignored and per-checkout.
+
+**Worktrees are handled.** CodeGraph keeps one index per directory and has no way to share it
+across git worktrees ([issue #155](https://github.com/colbymchenry/codegraph/issues/155)), so a
+Claude Code worktree would otherwise open with no graph at all — the tool stays configured,
+reports nothing, and quietly falls back to grep.
+`.claude/hooks/codegraph-session-start.mjs` indexes any checkout that lacks one on first entry,
+about three seconds here, and exits in milliseconds once the index exists. Nothing to run by
+hand, in the main checkout or in a worktree.
+
+Anonymous usage stats — tools used and languages indexed, never code, paths or names — are on by
+default. `codegraph telemetry off` or `CODEGRAPH_TELEMETRY=0` turns them off per machine.
+
 ## Standing invariants
 
 [`INVARIANTS.md`](INVARIANTS.md) lists the constraints that **break silently** — the ones
