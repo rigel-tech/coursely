@@ -15,7 +15,9 @@ on-demand revalidation, SEO, search, redirects.
 
 ## Getting started
 
-Requires Node (see `engines` in `package.json`), pnpm, and Postgres.
+Requires Node (see `engines` in `package.json`), pnpm, and Postgres. On a fresh clone follow
+[`docs/ONBOARDING.md`](docs/ONBOARDING.md) instead — it puts these steps in order and covers
+the agent tooling and the test prerequisites as well.
 
 ```bash
 pnpm install               # also installs the git hooks, via the prepare script
@@ -53,11 +55,12 @@ Both files are generated. Never edit them by hand.
 
 ## Where the rules live
 
-|                                      |                                                                                        |
-| ------------------------------------ | -------------------------------------------------------------------------------------- |
-| [`CLAUDE.md`](CLAUDE.md)             | How work is done here: principles, settled decisions, amendment log                    |
-| [`INVARIANTS.md`](INVARIANTS.md)     | Constraints that break **silently** — read the entry before touching an area it covers |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Branch naming, commit format, what the git hooks run                                   |
+|                                            |                                                                                        |
+| ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| [`docs/ONBOARDING.md`](docs/ONBOARDING.md) | First-run checklist for a fresh clone, in the order the steps have to happen           |
+| [`CLAUDE.md`](CLAUDE.md)                   | How work is done here: principles, settled decisions, amendment log                    |
+| [`INVARIANTS.md`](INVARIANTS.md)           | Constraints that break **silently** — read the entry before touching an area it covers |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md)       | Branch naming, commit format, what the git hooks run                                   |
 
 ## A note on schema changes
 
