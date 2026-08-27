@@ -67,6 +67,43 @@ git push -u origin feat/course-enrollment
 Configuration: [`.husky/`](.husky), [`.lintstagedrc.json`](.lintstagedrc.json),
 [`commitlint.config.mjs`](commitlint.config.mjs).
 
+## Context7 (MCP)
+
+[Context7](https://context7.com) serves up-to-date library documentation to the agent. It
+arrives as the official `context7@claude-plugins-official` plugin, enabled for the project in
+`.claude/settings.json`, so a clone picks it up with nothing to install: Claude Code adds
+Anthropic's official marketplace on first interactive start, and this plugin ships inside that
+marketplace rather than from a separate repository.
+
+**It works anonymously out of the box.** No account, no key, no signup.
+
+You pick it up by trusting the repo folder the first time you open Claude Code here — that is
+what lets the committed settings take effect. Confirm with `claude plugin list`: it should say
+`context7@claude-plugins-official` … `Status: enabled`. If it does not, or the `/plugin`
+**Errors** tab reports it missing, install it once by hand and re-run the check:
+
+```bash
+claude plugin install context7@claude-plugins-official
+```
+
+Plugins load at startup, so a fresh enable needs `/reload-plugins` or a restart before the
+tools show up.
+
+The free tier is roughly 1,000 requests a month, and an unkeyed request counts against a shared
+**anonymous** pool — one office IP can exhaust it for everybody. If quota errors start showing
+up, take a free key from [context7.com/dashboard](https://context7.com/dashboard) and export it,
+which moves your usage onto your own account:
+
+```bash
+setx CONTEXT7_API_KEY "Bearer ctx7sk-..."     # Windows; takes effect in new shells
+export CONTEXT7_API_KEY="Bearer ctx7sk-..."   # macOS/Linux, from your shell profile
+```
+
+Include the `Bearer ` prefix. The plugin passes the variable straight through as the
+`Authorization` header value, and Context7's API documents that header as
+`Authorization: Bearer <key>`. Claude Code reads the variable from the environment of its own
+process, not from this repo's `.env` — putting it there does nothing.
+
 ## Standing invariants
 
 [`INVARIANTS.md`](INVARIANTS.md) lists the constraints that **break silently** — the ones
