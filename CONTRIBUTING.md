@@ -9,6 +9,40 @@ pnpm install   # installs the git hooks through husky (`prepare` script)
 If hooks do not fire, check that `git config core.hooksPath` returns `.husky/_`, then
 re-run `pnpm exec husky`.
 
+## Spec-driven development
+
+Work driven by a coding agent goes through [Spec Kit](https://github.com/github/spec-kit).
+Adding or changing behaviour with an agent runs the workflow first; a typo, a comment, a
+dependency bump or a one-line fix does not.
+
+Install once — `uv` is the only prerequisite, it fetches its own Python:
+
+```bash
+winget install --id=astral-sh.uv    # or: irm https://astral.sh/uv/install.ps1 | iex
+uv tool install specify-cli
+```
+
+The repo is already initialised — `.specify/` and the skills in `.claude/skills/speckit-*`
+are committed, so there is nothing to run per checkout. Drive it from Claude Code:
+
+| Step | Skill                | Produces                                        |
+| ---- | -------------------- | ----------------------------------------------- |
+| 1    | `/speckit-specify`   | `specs/<feature>/spec.md` — what is being built |
+| 2    | `/speckit-plan`      | `plan.md` — the technical approach              |
+| 3    | `/speckit-tasks`     | `tasks.md` — ordered, checkable steps           |
+| 4    | `/speckit-implement` | the code                                        |
+
+`/speckit-clarify` (before planning), `/speckit-analyze` and `/speckit-checklist` are optional
+gates. `/speckit-converge` re-reads the codebase and appends whatever the plan still owes.
+
+**`/speckit-constitution` is off limits.** The constitution lives in [`CLAUDE.md`](CLAUDE.md);
+`.specify/memory/constitution.md` only points at it, and that skill would overwrite the
+pointer with its own template.
+
+Scripts are the `sh` flavour and run on Windows through the git bash that ships with git.
+Do not re-init with `--script py`: it bakes an absolute path to the installing machine's
+Python into every skill file.
+
 ## Branch naming
 
 ```
