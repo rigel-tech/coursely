@@ -1,6 +1,7 @@
 # Backlog v5 — interview notes
 
-Working notes for the rewrite of `Product_Backlog_Website_Quang_ba_Dang_ky_Khoa_hoc_v4.md`.
+Working notes for the rewrite that produced `Product_Backlog_v5.md`, replacing the v4 backlog
+written by someone outside the team.
 These record decisions and their reasons, not requirements. Delete once v5 is written.
 
 ## The point of the rewrite

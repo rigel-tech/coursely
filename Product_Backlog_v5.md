@@ -1,6 +1,7 @@
 # Product Backlog v5 — Website Quảng bá và Đăng ký Khóa học
 
-Thay thế `Product_Backlog_Website_Quang_ba_Dang_ky_Khoa_hoc_v4.pdf`.
+Thay thế Product Backlog v4, bản do bên ngoài team soạn. Bảng tra cứu v4 → v5 ở mục 10 ánh xạ
+đủ 43 story cũ, nên không cần giữ lại bản gốc để đối chiếu.
 
 Quy ước ngôn ngữ: tiêu đề và thuật ngữ kỹ thuật bằng tiếng Anh, nội dung chi tiết bằng
 tiếng Việt.
