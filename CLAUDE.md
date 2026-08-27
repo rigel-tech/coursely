@@ -28,7 +28,7 @@ exists is the point; the rule itself is one read away.
   none and must always pass, `tests/int/` needs Postgres (`docker compose up -d`),
   `tests/e2e/` needs a browser and starts `pnpm dev` itself.
 
-<!-- CONSTITUTION START — v1.1.0 -->
+<!-- CONSTITUTION START — v1.2.0 -->
 <!-- On adopting spec-kit: move this block to .specify/memory/constitution.md, delete the
      body here, and leave a one-line pointer. Full text in two places is a sync debt. -->
 
@@ -81,10 +81,12 @@ _Why: strong criteria let you iterate without asking constantly, and make "done"
   go through the same token names — do not hand-write `dark:` colour variants. Enforced by
   `theme-guard` inside `pnpm lint`; `theme-guard-ignore` in a comment exempts one line.
 - **Tokens govern public UI only.** Admin UI runs on Payload's own design system and is
-  outside the token rules: `src/app/(payload)/` and `src/components/admin/`. Everything
-  else is public and bound by them. The folder **is** the boundary, so sort by where a
-  component paints, not who it serves: AdminBar is editor tooling yet lives in `public/`,
-  because it renders on public pages.
+  outside the token rules: `src/app/(payload)/` and `src/components/admin/`. Build those
+  screens out of `@payloadcms/ui` — its components already carry the admin theme and follow
+  it when Payload restyles. Hand-roll one only when nothing in that set does the job, never
+  because a bespoke one is quicker to write. Everything else is public and bound by them.
+  The folder **is** the boundary, so sort by where a component paints, not who it serves:
+  AdminBar is editor tooling yet lives in `public/`, because it renders on public pages.
 - **UI components** are shadcn/ui on Tailwind v4, anchored at `src/components/public/ui/`.
 - **Invariants are maintained as you go.** A change that **supersedes** an entry rewrites
   or deletes it **in the same commit** — never leave the old rule beside the new one. Work
@@ -119,6 +121,16 @@ document from drifting into slogans. Three lines maximum per entry: what changed
 source. A superseded rule is edited directly above and merely noted here; two conflicting
 rules must never coexist. Past 10 entries, split this section into a
 CONSTITUTION-LOG file and leave a one-line pointer.
+
+### v1.2.0 — 2026-08-27
+
+**Changed:** admin screens are built from `@payloadcms/ui`; a hand-rolled admin control now
+needs a reason nothing in that set fits.
+**Why:** the token bullet said only that admin UI is _exempt_ from tokens, which left "build
+it yourself" and "use Payload's" equally allowed — and a hand-rolled control drifts from the
+admin theme the moment Payload restyles it.
+**Source:** decision taken 2026-08-27; codifies what `src/components/admin/` already does
+(`Banner`, `toast`, `useRowLabel`).
 
 ### v1.1.0 — 2026-08-26
 
