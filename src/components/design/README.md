@@ -8,10 +8,17 @@ What it is missing is a screen that wants it. When one appears, the component **
 
 ## Finding a component
 
+0. Open `/components` — every component in the project, rendered live, labelled with its
+   import path and whether it is ready or still staged.
 1. Look in `src/components/public/ui/` first. If it is there, use it.
 2. If not, look here.
 3. If it is here, **move the file** into `src/components/public/`, then import it.
 4. If it is in neither, build it in `public/` — nothing lands here just to wait.
+
+`/components` is the one route allowed to import from this folder: it documents the
+components rather than shipping them, and a gallery that cannot show an unpromoted
+component is not a gallery. That hole is held to exactly that route by
+`tests/unit/repo/design-staging.spec.ts`.
 
 ## Why moving, not importing
 
