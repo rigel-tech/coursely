@@ -172,6 +172,16 @@
   --warning-foreground: #b8440a;
   --error: #fdecec;
   --error-foreground: #b3261e;
+
+  /*
+   * Elevation is tinted with the palette's own ink (#101a31) rather than pure black, so a
+   * shadow on a blue-tinted surface stays in the family. The dark theme overrides all four
+   * — see the block below, and DESIGN.md's "Elevation & Depth".
+   */
+  --elevation-xs: 0 1px 2px 0 rgb(16 26 49 / 0.06);
+  --elevation-sm: 0 1px 3px 0 rgb(16 26 49 / 0.09), 0 1px 2px -1px rgb(16 26 49 / 0.09);
+  --elevation-md: 0 4px 6px -1px rgb(16 26 49 / 0.1), 0 2px 4px -2px rgb(16 26 49 / 0.1);
+  --elevation-lg: 0 10px 15px -3px rgb(16 26 49 / 0.12), 0 4px 6px -4px rgb(16 26 49 / 0.12);
 }
 
 [data-theme='dark'] {
@@ -205,6 +215,16 @@
   --warning-foreground: #ffa96b;
   --error: #3a1b1b;
   --error-foreground: #ff9b93;
+
+  /*
+   * Pure black at four to five times the light alpha. An ink shadow at 10% over #0b1220
+   * composites to #0a101d — one or two levels per channel, which is no shadow at all. These
+   * read against a dark ground the way the ink values read against a light one.
+   */
+  --elevation-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --elevation-sm: 0 1px 3px 0 rgb(0 0 0 / 0.45), 0 1px 2px -1px rgb(0 0 0 / 0.45);
+  --elevation-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
+  --elevation-lg: 0 10px 15px -3px rgb(0 0 0 / 0.55), 0 4px 6px -4px rgb(0 0 0 / 0.55);
   color-scheme: dark;
 }
 
@@ -239,6 +259,10 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-error: var(--error);
   --color-error-foreground: var(--error-foreground);
+  --shadow-xs: var(--elevation-xs);
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
 }
 
 @layer base {

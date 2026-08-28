@@ -113,6 +113,30 @@ function TypeSpecimen() {
   )
 }
 
+/** The four elevation steps. Values differ per theme — toggle dark to see why. */
+const ELEVATION = [
+  { cls: 'shadow-xs', use: 'Điều khiển ở trạng thái nghỉ' },
+  { cls: 'shadow-sm', use: 'Thẻ ở trạng thái nghỉ' },
+  { cls: 'shadow-md', use: 'Nhấc lên khi hover, menu select' },
+  { cls: 'shadow-lg', use: 'Hộp thoại' },
+] as const
+
+function ElevationSpecimen() {
+  return (
+    <div className="grid grid-cols-2 gap-5.5 sm:grid-cols-4">
+      {ELEVATION.map((step) => (
+        <div className="flex flex-col gap-2" key={step.cls}>
+          <div className={`bg-card border-border h-20 rounded-lg border ${step.cls}`} />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-muted-foreground-subtle font-mono text-xs">{step.cls}</span>
+            <span className="text-muted-foreground text-xs">{step.use}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Section({ children, title }: { children: React.ReactNode; title: string }) {
   return (
     <section className="flex flex-col gap-4.5">
@@ -516,6 +540,10 @@ export function ComponentGallery() {
 
       <Section title="Thang chữ">
         <TypeSpecimen />
+      </Section>
+
+      <Section title="Độ nổi">
+        <ElevationSpecimen />
       </Section>
 
       <Section title="Primitive — dùng được ngay">
