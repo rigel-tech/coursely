@@ -19,11 +19,11 @@ colors:
   secondary-foreground: '#101A31'
   muted: '#F2F6FD'
   muted-foreground: '#41527A'
-  muted-foreground-subtle: '#7B8AAB'
+  muted-foreground-subtle: '#5B6B8C'
   accent: '#E4ECFA'
   accent-foreground: '#0B2A6B'
   brand-accent: '#FF6A1A'
-  brand-accent-foreground: '#FFFFFF'
+  brand-accent-foreground: '#101A31'
   link: '#1650CF'
   heading-accent: '#0B2A6B'
   border: '#E2E8F4'
@@ -32,24 +32,11 @@ colors:
   success: '#E9F7EE'
   success-foreground: '#17643A'
   warning: '#FFF1E8'
-  warning-foreground: '#D9520B'
+  warning-foreground: '#B8440A'
   error: '#FDECEC'
   error-foreground: '#B3261E'
   destructive: '#FDECEC'
   destructive-foreground: '#B3261E'
-  chart-1: '#1650CF'
-  chart-2: '#FF6A1A'
-  chart-3: '#0B2A6B'
-  chart-4: '#17643A'
-  chart-5: '#7B8AAB'
-  sidebar: '#FFFFFF'
-  sidebar-foreground: '#101A31'
-  sidebar-primary: '#1650CF'
-  sidebar-primary-foreground: '#FFFFFF'
-  sidebar-accent: '#E4ECFA'
-  sidebar-accent-foreground: '#0B2A6B'
-  sidebar-border: '#E2E8F4'
-  sidebar-ring: '#1650CF'
   background-dark: '#0B1220'
   foreground-dark: '#F2F5FC'
   card-dark: '#141B2E'
@@ -66,7 +53,7 @@ colors:
   accent-dark: '#1E2A46'
   accent-foreground-dark: '#F2F5FC'
   brand-accent-dark: '#FF6A1A'
-  brand-accent-foreground-dark: '#FFFFFF'
+  brand-accent-foreground-dark: '#101A31'
   link-dark: '#84B0FF'
   heading-accent-dark: '#84B0FF'
   border-dark: '#2A3350'
@@ -80,19 +67,6 @@ colors:
   error-foreground-dark: '#FF9B93'
   destructive-dark: '#3A1B1B'
   destructive-foreground-dark: '#FF9B93'
-  chart-1-dark: '#84B0FF'
-  chart-2-dark: '#FF9E6B'
-  chart-3-dark: '#5B8CE8'
-  chart-4-dark: '#5FD79E'
-  chart-5-dark: '#95A2C6'
-  sidebar-dark: '#141B2E'
-  sidebar-foreground-dark: '#F2F5FC'
-  sidebar-primary-dark: '#84B0FF'
-  sidebar-primary-foreground-dark: '#0B1220'
-  sidebar-accent-dark: '#1E2A46'
-  sidebar-accent-foreground-dark: '#F2F5FC'
-  sidebar-border-dark: '#2A3350'
-  sidebar-ring-dark: '#84B0FF'
 typography:
   display:
     fontFamily: var(--font-sans)
@@ -157,6 +131,11 @@ components:
     foreground: '{colors.primary-foreground}'
     radius: '{rounded.md}'
     typography: '{typography.label-md}'
+  button-brand:
+    background: '{colors.brand-accent}'
+    foreground: '{colors.brand-accent-foreground}'
+    radius: '{rounded.md}'
+    typography: '{typography.label-md}'
   button-ghost:
     background: '{colors.accent}'
     foreground: '{colors.accent-foreground}'
@@ -205,7 +184,9 @@ export still existing. Three deliberate departures from what it shipped:
    every one of them for no gain.
 2. **Admin colour is excluded.** The export's navy sidebar (`#071B45`) and its KPI, funnel
    and weekly-bar chart colours dressed the CMS. Admin runs on Payload's own design system,
-   so those never entered this palette.
+   so those never entered this palette — and shadcn's own `--chart-*` and `--sidebar-*`
+   defaults were removed for the same reason: this site has no chart and no sidebar, and
+   nothing painted with those thirteen roles.
 3. **Values are hex, in both files.** The design.md spec recommends hex, and an identical
    string in two places is greppable when it drifts. The previous `oklch()` values were
    shadcn's untouched template defaults.
@@ -226,7 +207,7 @@ larger change than the palette and was not asked for.
 | `secondary`               | `--bg-surface-2`          | `#F8FAFD`             | `#1B2438`             |
 | `muted`                   | `--bg-soft`               | `#F2F6FD`             | `#172038`             |
 | `muted-foreground`        | `--text-muted`            | `#41527A`             | `#B4C0DE`             |
-| `muted-foreground-subtle` | `--text-subtle`           | `#7B8AAB`             | `#95A2C6`             |
+| `muted-foreground-subtle` | `--text-muted-2`          | `#5B6B8C`             | `#95A2C6`             |
 | `accent`                  | `--chip-bg`               | `#E4ECFA`             | `#1E2A46`             |
 | `brand-accent`            | `--accent`                | `#FF6A1A`             | `#FF6A1A`             |
 | `link`                    | `--link`                  | `#1650CF`             | `#84B0FF`             |
@@ -234,7 +215,7 @@ larger change than the palette and was not asked for.
 | `primary`                 | `--primary`               | `#1650CF`             | `#1650CF`             |
 | `border`, `input`         | `--border`                | `#E2E8F4`             | `#2A3350`             |
 | `success` / `-foreground` | `--ok-bg` / `--ok-fg`     | `#E9F7EE` / `#17643A` | `#143324` / `#5FD79E` |
-| `warning` / `-foreground` | `--warn-bg` / `--warn-fg` | `#FFF1E8` / `#D9520B` | `#3A2718` / `#FFA96B` |
+| `warning` / `-foreground` | `--warn-bg` / `--warn-fg` | `#FFF1E8` / `#B8440A` | `#3A2718` / `#FFA96B` |
 | `error`, `destructive`    | _none — added here_       | `#FDECEC` / `#B3261E` | `#3A1B1B` / `#FF9B93` |
 
 ### `accent` is not the orange
@@ -263,6 +244,36 @@ bg-error`.
 used by `button.tsx`, `input.tsx`, `select.tsx` and the form error; `error` is the name the
 `Banner` block and the `@source inline` entries already used. Neither is dead, so neither
 was deleted.
+
+### A deliberately dark region sets `data-theme="dark"`, it does not reach for black
+
+Heroes over a photo, the editor bar, a syntax-highlighted code block — regions that stay dark
+whatever the page theme is. The way to express that is `data-theme="dark"` on the wrapper,
+which re-scopes every token for the subtree, and then ordinary token classes inside:
+`bg-background text-foreground` render the dark values.
+
+Reaching for `bg-black text-white` instead produces the same picture and loses the contract:
+the region no longer follows the palette, and `theme-guard` did not see it, because a rule
+built around `family-number` walks straight past the keyword colours. That is how this repo
+carried 14 hardcoded colours across five files under a guard reporting zero violations. The
+guard now catches `white` and `black`; `transparent`, `current` and `inherit` stay legal
+because they name no colour of their own.
+
+### Every pair must clear WCAG AA in both themes
+
+`tests/unit/repo/component-roles.spec.ts` computes the contrast of each foreground/background
+pair the components actually put together and fails below 4.5:1. Three values were set by that
+test rather than by taste:
+
+| Role                              | Was       | Is        | Why                                                                           |
+| --------------------------------- | --------- | --------- | ----------------------------------------------------------------------------- |
+| `brand-accent-foreground`         | `#FFFFFF` | `#101A31` | White on the orange is 2.87:1. The palette's own ink is 6.04:1                |
+| `warning-foreground` (light)      | `#D9520B` | `#B8440A` | 3.68:1 on the warning tint, below AA for body text                            |
+| `muted-foreground-subtle` (light) | `#7B8AAB` | `#5B6B8C` | 3.20:1 on the page, and this role is documented for captions — which are text |
+
+`--primary` is exempt as a foreground: it is a surface role, it is deliberately the same blue
+in both themes, and it sits at 2.75:1 on the dark page background. Text that reads as a link
+takes `--link`, which does flip.
 
 ### Brand colours do not change between themes
 

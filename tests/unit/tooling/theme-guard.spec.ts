@@ -155,6 +155,22 @@ describe('theme-guard', () => {
     }
   })
 
+  it('case 11: flags the keyword colours, which carry no palette number', () => {
+    // `text-white` and `bg-black` are as hardcoded as `text-gray-500`, but they end in a word
+    // rather than a shade number, so a rule built around `-<number>` walks straight past them.
+    // The footer shipped `bg-black … text-white` under a green guard for exactly this reason.
+    expect(scan('<i className="text-white" />')).toHaveLength(1)
+    expect(scan('<i className="bg-black" />')).toHaveLength(1)
+    expect(scan('<i className="bg-white/90" />')).toHaveLength(1)
+    expect(scan('<i className="border-black/10" />')).toHaveLength(1)
+  })
+
+  it('case 11b: leaves the keyword non-colours alone', () => {
+    // `transparent`, `current` and `inherit` name no colour of their own — they defer to
+    // whatever the surrounding tokens already decided, which is the behaviour we want.
+    expect(scan('<i className="bg-transparent text-current border-inherit" />')).toEqual([])
+  })
+
   it('does not mistake non-colour hex-ish runs for colours', () => {
     expect(scan(`const a = '#12345'`)).toEqual([]) // 5 digits is not a colour
     expect(scan(`const a = '#abcdefgh'`)).toEqual([]) // not a hex run at all

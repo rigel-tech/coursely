@@ -97,6 +97,19 @@ const UTILITY_PREFIXES =
   'bg|text|border|ring|fill|stroke|from|via|to|outline|divide|decoration|accent|caret'
 
 /**
+ * The two palette colours Tailwind names with a word instead of a shade number.
+ *
+ * They are exactly as hardcoded as `gray-500`, but a rule shaped around `family-number`
+ * cannot see them, and `text-white` reads as a neutral default rather than a colour
+ * decision. This project shipped a footer painted `bg-black … text-white` under a guard
+ * reporting zero violations.
+ *
+ * `transparent`, `current` and `inherit` are deliberately absent: they name no colour of
+ * their own, they defer to whatever the surrounding tokens already decided.
+ */
+const KEYWORD_COLOURS = 'white|black'
+
+/**
  * Exactly three checks. Each extra check is another source of false positives, and false
  * positives kill a guard far faster than false negatives — one bad failure and someone
  * adds an exclusion, or deletes the whole thing.
@@ -111,7 +124,12 @@ const CHECKS = [
     name: 'tailwind-palette',
     // The most common way UI drifts off-theme: `text-gray-500` instead of
     // `text-muted-foreground`. It *looks* like a token, so it sails through review.
-    re: new RegExp(String.raw`\b(?:${UTILITY_PREFIXES})-(?:${COLOUR_FAMILIES})-\d{1,3}\b`, 'g'),
+    // `white`/`black` join it here rather than as a fourth check — same defect, same
+    // message, and one regex cannot disagree with itself about what counts as a colour.
+    re: new RegExp(
+      String.raw`\b(?:${UTILITY_PREFIXES})-(?:(?:${COLOUR_FAMILIES})-\d{1,3}|${KEYWORD_COLOURS})(?![\w-])`,
+      'g',
+    ),
   },
 ]
 
