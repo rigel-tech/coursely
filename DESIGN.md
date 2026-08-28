@@ -158,7 +158,8 @@ components:
     foreground: '{colors.error-foreground}'
     radius: '{rounded.full}'
   input:
-    background: '{colors.card}'
+    # No background of its own: the control is transparent so it takes whichever surface it
+    # is placed on, card or muted alike.
     foreground: '{colors.foreground}'
     border: '{colors.input}'
     placeholder: '{colors.muted-foreground-subtle}'

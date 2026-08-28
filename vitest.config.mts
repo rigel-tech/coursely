@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
-    include: ['tests/{unit,int}/**/*.spec.ts'],
+    // `.tsx` too: component tests render real JSX. @testing-library/react was already a
+    // dependency but no test could pick it up while the glob only matched `.spec.ts`.
+    include: ['tests/{unit,int}/**/*.spec.{ts,tsx}'],
   },
 })
