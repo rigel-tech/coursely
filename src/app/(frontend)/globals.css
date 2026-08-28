@@ -63,6 +63,17 @@
   --breakpoint-2xl: 86rem;
   --font-mono: var(--font-jetbrains-mono);
   --font-sans: var(--font-be-vietnam-pro);
+
+  /*
+   * Literal, not derived. The shadcn template computed this scale from a single --radius
+   * with calc(); 6 / 9 / 14 is not an arithmetic run, so the derivation cannot express it.
+   * `--radius` alone backs the bare `rounded` class and matches `md`, the control radius.
+   * `rounded-full` needs no entry — Tailwind's own pill value is already the intent.
+   */
+  --radius: 9px;
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 14px;
 }
 
 @layer utilities {
@@ -135,7 +146,6 @@
   --warning-foreground: #b8440a;
   --error: #fdecec;
   --error-foreground: #b3261e;
-  --radius: 0.625rem;
 }
 
 [data-theme='dark'] {
@@ -203,10 +213,6 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-error: var(--error);
   --color-error-foreground: var(--error-foreground);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
 }
 
 @layer base {
