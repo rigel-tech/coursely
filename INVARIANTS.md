@@ -234,20 +234,27 @@ alone keeps the vendor's colour.
 `node_modules`, so it reports `0 violations` no matter how much vendor colour is on the
 page. Nothing fails, nothing warns, and the result looks deliberate because vendor
 palettes are tasteful greys. Only opening the real page in both light and dark reveals it.
-Live in this repo today: `@tailwindcss/typography` defines 36 `--tw-prose-*` variables from
-its own slate/gray ramps, and `tailwind.config.mjs` maps 2 of them. The other 34 — links,
-bold, quotes, code, bullets, borders, captions, and the entire 18-variable `prose-invert`
-set that dark mode runs on — still come from the plugin. Every `prose` surface is
-therefore only partly on-theme, and nothing in the repo will say so.
+A neutral palette hides it completely: while this project's tokens were placeholder
+greyscale, the plugin's grey ramp blended in perfectly and looked correct.
+
+`@tailwindcss/typography` is the worked example. It defines 36 `--tw-prose-*` variables;
+all 36 are now mapped in `tailwind.config.mjs`, and `tests/unit/repo/prose-tokens.spec.ts`
+reads the installed package to enumerate them, so a plugin upgrade that adds a 37th turns
+red rather than quietly reintroducing vendor grey. Copy that shape for the next dependency:
+enumerate from the package, do not hand-list.
+
+Two things a role's `invert-` twin must respect: it points at the **same** token, because
+the tokens already flip on `[data-theme='dark']` and `dark:prose-invert` would otherwise
+layer a second flip and paint dark-mode text in light-mode colours.
 
 `tests/unit/repo/theme-tokens.spec.ts` catches only the narrower failure next door: a
 `var(--x)` naming a token that does not exist. A variable that is never mapped at all is
 invisible to it, because there is nothing to dangle.
 
-**Where** — `tailwind.config.mjs:9` (`--tw-prose-body`, `--tw-prose-headings` — the two
-that are mapped), `src/app/(frontend)/globals.css` (the token file),
-`src/components/public/RichText/index.tsx:74` (`enableProse`), and the blind-spot note in
-the header of `scripts/theme-guard.mjs`.
+**Where** — `tailwind.config.mjs` (the 36 mappings and the header explaining them),
+`src/app/(frontend)/globals.css` (the token file), the "Rich text (prose)" table in
+[`DESIGN.md`](DESIGN.md), `src/components/public/RichText/index.tsx:74` (`enableProse`,
+`dark:prose-invert`), and the blind-spot note in the header of `scripts/theme-guard.mjs`.
 
 ## Identifiers
 

@@ -298,6 +298,40 @@ See the `components:` block in the front matter. Every value there is a token re
 a component spec can never drift from the palette — the test resolves each `{section.token}`
 and fails on a dangling one.
 
+### Rich text (prose)
+
+Everything the CMS produces renders through `@tailwindcss/typography`, which defines its own
+36 `--tw-prose-*` colour variables and fills them from a slate/gray ramp. `theme-guard` never
+opens `node_modules`, so unmapped ones stay vendor grey and nothing reports it. All 36 are
+mapped in `tailwind.config.mjs`; the table is the 18 roles, and each role's `invert-` twin
+points at the same token because our tokens already flip with the theme.
+
+| Role            | Token                       |
+| --------------- | --------------------------- |
+| `body`          | `--foreground`              |
+| `headings`      | `--heading-accent`          |
+| `lead`          | `--muted-foreground`        |
+| `links`         | `--link`                    |
+| `bold`          | `--foreground`              |
+| `counters`      | `--muted-foreground`        |
+| `bullets`       | `--muted-foreground-subtle` |
+| `hr`            | `--border`                  |
+| `quotes`        | `--foreground`              |
+| `quote-borders` | `--border`                  |
+| `captions`      | `--muted-foreground`        |
+| `kbd`           | `--foreground`              |
+| `kbd-shadows`   | `--border`                  |
+| `code`          | `--heading-accent`          |
+| `pre-code`      | `--foreground`              |
+| `pre-bg`        | `--muted`                   |
+| `th-borders`    | `--border`                  |
+| `td-borders`    | `--border`                  |
+
+Roles follow the plugin's own structure rather than taste: it gives `code` the same weight as
+`headings`, makes `bullets` lighter than `counters`, and keeps all four border roles on one
+tone. The one departure is `pre-bg` — the plugin hardcodes a dark code block even in light
+mode, ours follows the theme.
+
 ## Do's and Don'ts
 
 **Do** add a new role to `:root`, `[data-theme='dark']` and `@theme inline` together. Miss

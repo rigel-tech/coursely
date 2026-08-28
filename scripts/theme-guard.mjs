@@ -54,8 +54,12 @@ function repoRootDir() {
  * confident "0 violations" that looks exactly like a guard that works. Scanning
  * everything and subtracting the few genuine exceptions fails in the safe direction —
  * a new folder is covered by default.
+ *
+ * A root may also be a single file. `tailwind.config.mjs` is one: it maps the typography
+ * plugin's 36 colour variables onto tokens, so it holds real colour decisions while living
+ * outside `src/`. Scanning only directories left it unguarded.
  */
-const ROOTS = ['src']
+const ROOTS = ['src', 'tailwind.config.mjs']
 
 /**
  * Every entry is a hole, so each one has to earn its place.
@@ -300,6 +304,9 @@ export function main() {
     const full = join(repoRootDir(), root)
     try {
       if (statSync(full).isDirectory()) collectFiles(full, files)
+      // A file named directly was chosen on purpose, so it skips the extension filter —
+      // but silently collecting nothing here would be the "0 violations" lie again.
+      else files.push({ full, rel: root })
     } catch {
       // A root that does not exist is a configuration error worth shouting about.
       process.stderr.write(`theme-guard: ROOTS entry not found: ${root}\n`)
