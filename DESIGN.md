@@ -204,6 +204,7 @@ so a claim here cannot quietly stop being true:
 | Type sizes | `@theme` `--text-*`                         | `type-scale.spec.ts`                               |
 | Radius     | `@theme` `--radius*`                        | `shape-scale.spec.ts`                              |
 | Spacing    | nothing to wire — Tailwind generates it     | `shape-scale.spec.ts`                              |
+| Elevation  | `--elevation-*` → `@theme inline`           | `elevation-scale.spec.ts`                          |
 
 The type sizes were the last to arrive, and the reason the table exists: this paragraph
 claimed typography was live while `globals.css` declared no `--text-*` at all, so all 64
