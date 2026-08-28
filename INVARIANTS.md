@@ -190,6 +190,39 @@ imported by the **readers** `src/providers/Theme/InitTheme/index.tsx:4` (`InitTh
 
 ## Theming
 
+### `--accent` is a hover surface; the brand orange is `--brand-accent`
+
+**Rule** — `bg-accent` / `text-accent-foreground` paint shadcn's subtle hover-and-focus
+state, a pale blue. The signature orange lives at `--brand-accent`. Reach for `accent`
+because you want "the accent colour" and you will get the wrong one.
+
+**Why it breaks silently** — both names resolve, both compile, both render a colour, and
+`theme-guard` is satisfied because neither is hardcoded. The SpeakEdge export this palette
+came from used `--accent` for the orange, so anyone reading `design/src/` — or carrying a
+habit from a stock shadcn project, where `--accent` is a near-white neutral — will map the
+name onto the wrong role. The failure looks like a design choice: a ghost button that flares
+bright orange on hover instead of tinting.
+
+**Where** — `src/app/(frontend)/globals.css` (`--accent`, `--brand-accent`), the "Colors"
+section of [`DESIGN.md`](DESIGN.md), and the consumers that fix the meaning:
+`src/components/public/ui/button.tsx:16,18` (`hover:bg-accent`) and
+`src/components/public/ui/select.tsx:99` (`focus:bg-accent`).
+
+### Semantic colour tokens are pale surfaces; their `-foreground` partner is the readable one
+
+**Rule** — `--success`, `--warning`, `--error` and `--destructive` are background tints. Text
+and borders take the `-foreground` partner: `bg-success text-success-foreground`, and
+`border-success-foreground` — never `border-success`.
+
+**Why it breaks silently** — this is the reverse of stock shadcn, where `--destructive` is
+the saturated colour and the `-foreground` is what sits on top of it. Copy any shadcn recipe
+and `border-destructive` still produces a valid, rendered border — just a near-white one on a
+near-white card, which reads as "no border" and never fails anything.
+
+**Where** — `src/app/(frontend)/globals.css` (the four pairs and the `@source inline`
+entries that keep the classes generated), `src/blocks/Banner/Component.tsx:17-19`, and the
+"Semantic colours are background-first" section of [`DESIGN.md`](DESIGN.md).
+
 ### A dependency that ships its own CSS keeps its own palette until every one of its variables is mapped to a token
 
 **Rule** — When adding a package that brings its own stylesheet — a typography plugin, a
