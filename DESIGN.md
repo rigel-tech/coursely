@@ -194,8 +194,21 @@ export still existing. Three deliberate departures from what it shipped:
    string in two places is greppable when it drifts. The previous `oklch()` values were
    shadcn's untouched template defaults.
 
-Every scale below is live: colour, typography, radius and spacing all reach the page, and a
-test holds each one to what this document says.
+Every scale below reaches the page, and each is pinned to this document by a named test —
+so a claim here cannot quietly stop being true:
+
+| Scale      | Where it lands                              | Held by                                            |
+| ---------- | ------------------------------------------- | -------------------------------------------------- |
+| Colour     | `:root` / `[data-theme='dark']`             | `design-tokens.spec.ts`, `component-roles.spec.ts` |
+| Typeface   | `next/font` → `--font-sans` / `--font-mono` | `fonts.spec.ts`                                    |
+| Type sizes | `@theme` `--text-*`                         | `type-scale.spec.ts`                               |
+| Radius     | `@theme` `--radius*`                        | `shape-scale.spec.ts`                              |
+| Spacing    | nothing to wire — Tailwind generates it     | `shape-scale.spec.ts`                              |
+
+The type sizes were the last to arrive, and the reason the table exists: this paragraph
+claimed typography was live while `globals.css` declared no `--text-*` at all, so all 64
+`text-*` uses in the project were taking Tailwind's ladder instead. A sentence is not a
+guarantee; the right-hand column is.
 
 ## Colors
 
@@ -303,6 +316,37 @@ Be Vietnam Pro is not a variable font, so weights are loaded individually: **400
 700** — exactly the four the tokens above use. Adding a fifth token weight means adding it in
 `layout.tsx` too, or the browser fakes it. JetBrains Mono is variable and ships its whole
 range in one file.
+
+### Scale
+
+The eight tokens map one-to-one onto Tailwind's size ladder, so `text-sm` means `label-md`
+and nothing has to learn a second vocabulary.
+
+| Token         | Size                     | Line height | Class       |
+| ------------- | ------------------------ | ----------- | ----------- |
+| `label-sm`    | 11px                     | 1.4         | `text-xs`   |
+| `label-md`    | 12.5px                   | 1.5         | `text-sm`   |
+| `body-md`     | 14px                     | 1.55        | `text-base` |
+| `body-lg`     | 15.5px                   | 1.6         | `text-md`   |
+| `headline-sm` | 18px                     | 1.45        | `text-lg`   |
+| `headline-md` | 22px                     | 1.25        | `text-xl`   |
+| `headline-lg` | 30px                     | 1.1         | `text-2xl`  |
+| `display`     | clamp(30px, 6.2vw, 58px) | 1.08        | `text-3xl`  |
+
+`text-md` does not exist in stock Tailwind; the design has eight steps and the default ladder
+has seven, so it is declared here. Every step also declares its own
+`--text-…--line-height`: Tailwind keeps its own ratio for any size that omits one, which puts
+correctly-sized text on the wrong rhythm and reads as a spacing bug rather than a token one.
+
+Anything outside these eight fails `tests/unit/repo/type-scale.spec.ts`. That matters more
+here than elsewhere, because until this was wired `globals.css` declared no `--text-*` at all
+and all 64 uses in the project were quietly taking Tailwind's ladder — of which only
+`text-lg` agreed with the design.
+
+**Headings carry no size of their own.** `globals.css` resets `h1`–`h6` to
+`font-size: unset`, so an `<h2>` is 14px until a step is put on it. That is deliberate — it
+stops the document outline and the visual hierarchy from being the same decision — but it
+means every heading needs an explicit class.
 
 ## Layout
 

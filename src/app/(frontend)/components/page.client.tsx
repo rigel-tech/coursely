@@ -82,6 +82,37 @@ const COURSES = [
   },
 ]
 
+/** The eight steps from DESIGN.md's Typography scale, in the order they are declared. */
+const TYPE_SCALE = [
+  { token: 'display', cls: 'text-3xl', size: 'clamp(30–58px) / 1.08' },
+  { token: 'headline-lg', cls: 'text-2xl', size: '30px / 1.1' },
+  { token: 'headline-md', cls: 'text-xl', size: '22px / 1.25' },
+  { token: 'headline-sm', cls: 'text-lg', size: '18px / 1.45' },
+  { token: 'body-lg', cls: 'text-md', size: '15.5px / 1.6' },
+  { token: 'body-md', cls: 'text-base', size: '14px / 1.55' },
+  { token: 'label-md', cls: 'text-sm', size: '12.5px / 1.5' },
+  { token: 'label-sm', cls: 'text-xs', size: '11px / 1.4' },
+] as const
+
+function TypeSpecimen() {
+  return (
+    <div className="flex flex-col gap-4">
+      {TYPE_SCALE.map((step) => (
+        <div className="flex flex-col gap-0.5" key={step.cls}>
+          <div className="text-muted-foreground-subtle flex flex-wrap items-baseline gap-2 font-mono text-xs">
+            <span>{step.cls}</span>
+            <span>·</span>
+            <span>{step.token}</span>
+            <span>·</span>
+            <span>{step.size}</span>
+          </div>
+          <p className={step.cls}>Học tiếng Anh cùng người đồng hành</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Section({ children, title }: { children: React.ReactNode; title: string }) {
   return (
     <section className="flex flex-col gap-4.5">
@@ -482,6 +513,10 @@ export function ComponentGallery() {
           Đổi theme bằng ô chọn ở chân trang để xem cả hai chế độ.
         </p>
       </header>
+
+      <Section title="Thang chữ">
+        <TypeSpecimen />
+      </Section>
 
       <Section title="Primitive — dùng được ngay">
         {PRIMITIVES.map((entry) => (
