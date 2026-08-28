@@ -42,7 +42,10 @@ export const PostHero: React.FC<{
           </div>
 
           <div className="">
-            <h1 className="mb-6 text-3xl md:text-5xl lg:text-6xl">{title}</h1>
+            {/* `text-3xl` is the display step: clamp(30px, 6.2vw, 58px) already scales with
+                the viewport, so the manual md/lg ramp it replaces was doing the same job in
+                three classes and stopping outside the scale. */}
+            <h1 className="mb-6 text-3xl">{title}</h1>
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 md:gap-16">
