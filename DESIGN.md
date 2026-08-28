@@ -360,6 +360,37 @@ box — `p-4.5` is 18px, `p-5.5` is 22px, `p-7` is 28px, `p-9` is 36px — confi
 build, where `p-4.5` compiles to `calc(var(--spacing) * 4.5)`. Do not add a spacing config;
 there is nothing for it to do.
 
+## Elevation & Depth
+
+Four steps, and unlike every other scale here they are **not** the same in both themes.
+
+| Step        | Light      | Dark         | Used for                                   |
+| ----------- | ---------- | ------------ | ------------------------------------------ |
+| `shadow-xs` | ink at 6%  | black at 40% | Resting controls — input, checkbox, button |
+| `shadow-sm` | ink at 9%  | black at 45% | Cards at rest                              |
+| `shadow-md` | ink at 10% | black at 50% | Hover lift, select menu                    |
+| `shadow-lg` | ink at 12% | black at 55% | Dialogs                                    |
+
+"Ink" is the palette's own `#101a31` rather than pure black, so a shadow on a blue-tinted
+surface stays in the family instead of going grey.
+
+**Why dark needs its own values, and this is the whole point of the section.** Tailwind's
+shadows are `rgb(0 0 0 / 0.05–0.25)`, static across themes. Composite a 10% black shadow over
+the dark page background `#0B1220` and the result is `#0A101D` — one or two levels per
+channel. Invisible. Every card, dialog and hover lift in this project had no elevation in
+dark mode at all, and nothing reported it, because the shadow does render — it just cannot be
+seen. Dark therefore uses pure black at four to five times the alpha, which reads against a
+dark ground the way a soft ink shadow reads against a light one.
+
+The values are declared as `--elevation-*` in `:root` and `[data-theme='dark']`, then exposed
+as `--shadow-*` through `@theme inline` — exactly the shape the colour roles use, so the two
+scales are read the same way. `tests/unit/repo/elevation-scale.spec.ts` fails if a step is
+missing from either theme, and specifically if a step is _identical_ in both: that is the
+regression back to invisible, and it is not otherwise detectable.
+
+Only these four exist. `shadow-xl` and `shadow-2xl` fall back to Tailwind's own values and
+are outside the system.
+
 ## Shapes
 
 Radius 6 / 9 / 14 / 99 px — small controls, cards, pills — declared as literals in the

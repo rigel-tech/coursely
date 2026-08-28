@@ -174,11 +174,15 @@ describe('globals.css token structure', () => {
     expect(referenced.filter((t) => !defined.has(t))).toEqual([])
   })
 
-  it('writes every colour as a hex literal', () => {
-    const css = tokens()
+  it('writes every colour as a hex literal, elevation excepted', () => {
+    // Elevation is the one place a colour function belongs: a shadow is a colour *with*
+    // alpha, and `rgb(16 26 49 / 0.06)` states that far more plainly than `#101a310f`. The
+    // rule is scoped rather than dropped — every flat colour role must still be hex, so a
+    // stray `oklch()` creeping back into the palette still fails.
+    const css = tokens().replace(/--elevation-[\w-]+:[^;]*;/g, '')
     const fnColours = [...css.matchAll(/\b(?:rgba?|hsla?|oklch|lab|lch)\s*\(/g)].map((m) => m[0])
 
     expect(fnColours).toEqual([])
-    expect(Object.keys(colourTokens(css, ':root')).length).toBeGreaterThan(20)
+    expect(Object.keys(colourTokens(tokens(), ':root')).length).toBeGreaterThan(20)
   })
 })
