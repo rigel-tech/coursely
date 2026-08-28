@@ -195,16 +195,17 @@ lives in [`src/app/(frontend)/globals.css`](<src/app/(frontend)/globals.css>); t
 held in step by `tests/unit/repo/design-tokens.spec.ts`, which fails if a single hex string
 drifts. Edit both together, or edit this file and let the test tell you what you missed.
 
-The palette is derived from the SpeakEdge export in `design/src/`, with three deliberate
-departures:
+The palette came out of a one-off Claude Design export ("SpeakEdge") that has since been
+thrown away. Everything worth keeping from it is in this file — nothing here depends on that
+export still existing. Three deliberate departures from what it shipped:
 
 1. **Token names are shadcn/ui's, not SpeakEdge's.** The components in
    `src/components/public/ui/` are shadcn components and read `--background`, `--muted`,
    `--border`. Renaming the contract to `--bg-page` / `--text-muted` would mean rewriting
    every one of them for no gain.
-2. **Admin colour is excluded.** SpeakEdge's `--bg-sidebar: #071B45` and its KPI, funnel and
-   weekly-bar chart colours dress the CMS. Admin runs on Payload's own design system, so
-   those never enter this palette.
+2. **Admin colour is excluded.** The export's navy sidebar (`#071B45`) and its KPI, funnel
+   and weekly-bar chart colours dressed the CMS. Admin runs on Payload's own design system,
+   so those never entered this palette.
 3. **Values are hex, in both files.** The design.md spec recommends hex, and an identical
    string in two places is greppable when it drifts. The previous `oklch()` values were
    shadcn's untouched template defaults.
@@ -310,9 +311,9 @@ silently inherits the light value. Both compile.
 **Don't** hand-write `dark:` colour variants. Light and dark go through the same token name;
 that is the whole point of the contract.
 
-**Don't** add a token because the palette "looks incomplete". `chip`, `track`, `dash-border`
-and `accent-soft` exist in the export and were deliberately left out — no public screen uses
-them yet. Add one when a screen needs it, not before.
+**Don't** add a token because the palette "looks incomplete". The export also carried `chip`,
+`track`, `dash-border` and `accent-soft`; they were left out because no public screen uses
+them. Add one when a screen needs it, not before.
 
 **Don't** apply this palette to `src/app/(payload)/` or `src/components/admin/`. Those are
 Payload's design system and are outside the token regime entirely.
