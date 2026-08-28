@@ -17,6 +17,11 @@ import { describe, expect, it } from 'vitest'
 
 const DESIGN_DIR = 'src/components/design'
 const PUBLIC_UI_DIR = 'src/components/public/ui'
+/** The only route allowed to import staged components — it shows them, it does not ship them. */
+const SHOWCASE_DIR = 'src/app/(frontend)/components'
+
+const importsDesign = (source: string): boolean =>
+  /from\s+['"][^'"]*(@\/components\/design|components\/design)/.test(source)
 
 const walk = (dir: string, acc: string[] = []): string[] => {
   for (const name of readdirSync(dir)) {
@@ -94,17 +99,36 @@ describe('the design staging folder', () => {
     expect(shadowed).toEqual([])
   })
 
-  it('is imported by nothing outside itself', () => {
-    // The promotion step is moving the file. An import that reaches in from a page skips it,
-    // and the folder silently becomes a second place components live.
+  it('is imported by nothing outside itself, except the showcase', () => {
+    // The promotion step is moving the file. An import that reaches in from a product screen
+    // skips it, and the folder silently becomes a second place components live.
+    //
+    // The showcase route is the one exemption: it documents the folder rather than shipping
+    // it, and a gallery that cannot show unpromoted components is not a gallery. The next
+    // test keeps that hole exactly one route wide.
     const outside = walk('src').filter((f) => !f.startsWith(`${DESIGN_DIR}/`))
     const reachingIn = outside
-      .filter((file) =>
-        /from\s+['"][^'"]*(@\/components\/design|components\/design)/.test(sourceOf(file)),
-      )
+      .filter((file) => importsDesign(sourceOf(file)))
+      .filter((file) => !file.startsWith(`${SHOWCASE_DIR}/`))
       .map((file) => `${file} imports from ${DESIGN_DIR}`)
 
     expect(outside.length).toBeGreaterThan(20)
     expect(reachingIn).toEqual([])
+  })
+
+  it('grants that exemption to the showcase route and nothing else', () => {
+    // Asserted from the other side: the exemption must still be *used*, or the rule above
+    // has quietly become "nobody imports design/", and widening it later goes unnoticed.
+    //
+    // Only files outside the folder count. Staged components import each other by design —
+    // CourseList renders CourseCard, ClassRoster renders Avatar — and those are internal.
+    const importers = walk('src')
+      .filter((file) => !file.startsWith(`${DESIGN_DIR}/`))
+      .filter((file) => importsDesign(sourceOf(file)))
+    const showcaseImporters = importers.filter((f) => f.startsWith(`${SHOWCASE_DIR}/`))
+
+    expect(showcaseImporters.length).toBeGreaterThan(0)
+    expect(showcaseImporters.length).toBeLessThanOrEqual(2)
+    expect(importers.filter((f) => !f.startsWith(`${SHOWCASE_DIR}/`))).toEqual([])
   })
 })
