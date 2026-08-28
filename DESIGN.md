@@ -114,6 +114,8 @@ typography:
     fontWeight: 400
     lineHeight: 1.5
 rounded:
+  # `default` backs the bare `rounded` class and matches `md`, the control radius.
+  default: 9px
   sm: 6px
   md: 9px
   lg: 14px
@@ -192,9 +194,8 @@ export still existing. Three deliberate departures from what it shipped:
    string in two places is greppable when it drifts. The previous `oklch()` values were
    shadcn's untouched template defaults.
 
-Not covered here: typography, radius and spacing are **documented** below but are not yet
-wired into `globals.css`. Changing `--radius` reshapes every existing component, which is a
-larger change than the palette and was not asked for.
+Every scale below is live: colour, typography, radius and spacing all reach the page, and a
+test holds each one to what this document says.
 
 ## Colors
 
@@ -306,14 +307,30 @@ range in one file.
 ## Layout
 
 Container widths come from the breakpoints already in `globals.css`: 40 / 48 / 64 / 80 /
-86 rem. The spacing scale above adds the export's 18 / 22 / 28 / 36 px steps, which Tailwind's
-default 4px ramp does not hit.
+86 rem.
+
+**The spacing scale needs no configuration, and that was checked rather than assumed.**
+Tailwind v4 generates spacing utilities on demand as `calc(var(--spacing) * n)` with
+`--spacing: 0.25rem`, and it accepts fractional `n`. Every step above is reachable out of the
+box — `p-4.5` is 18px, `p-5.5` is 22px, `p-7` is 28px, `p-9` is 36px — confirmed in a real
+build, where `p-4.5` compiles to `calc(var(--spacing) * 4.5)`. Do not add a spacing config;
+there is nothing for it to do.
 
 ## Shapes
 
-Radius 6 / 9 / 14 / 99 px — small controls, cards, pills. Documented, not yet wired:
-`globals.css` derives `--radius-sm|md|lg|xl` from a single `--radius`, and that arithmetic
-cannot produce 6 / 9 / 14. Reconciling it changes the shape of every existing component.
+Radius 6 / 9 / 14 / 99 px — small controls, cards, pills — declared as literals in the
+`@theme` block of `globals.css`.
+
+They are literals because the shadcn template derived the whole scale from a single
+`--radius` with `calc()`, and 6 / 9 / 14 is not an arithmetic run: no single base produces
+it. The derivation was quietly giving 6 / 8 / 10 / 14 instead, so `rounded-md` and
+`rounded-lg` were both a size the design never asked for.
+
+`rounded` with no suffix is a real level — three blocks use it — so it is declared as
+`default` and matches `md`. `rounded-full` has no entry: Tailwind's own pill value already
+is the intent. Anything outside these levels fails
+`tests/unit/repo/shape-scale.spec.ts`, including an arbitrary `rounded-[0.8rem]`, which is
+what `Form`, `MediaBlock` and `checkbox` were using before this scale existed.
 
 ## Components
 
