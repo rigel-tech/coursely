@@ -272,13 +272,24 @@ the export. Everything that must stay legible against a flipped background — `
 
 ## Typography
 
-Be Vietnam Pro for text, JetBrains Mono for numbers and class codes, per the export. The
-scale is the export's: 11 / 12.5 / 14 / 15.5 / 18 / 22 / 30 / clamp(30–58) px.
+Be Vietnam Pro for text, JetBrains Mono for numbers and class codes. The scale is the
+export's: 11 / 12.5 / 14 / 15.5 / 18 / 22 / 30 / clamp(30–58) px.
 
-These tokens are **documented, not yet wired**. `globals.css` currently maps `--font-sans`
-and `--font-mono` to `next/font` variables (`--font-geist-sans`, `--font-geist-mono`).
-Switching the actual typefaces is a separate change and needs the fonts loading through
-`next/font` first.
+Both load through `next/font/google` in `src/app/(frontend)/layout.tsx` and reach the page
+as `--font-be-vietnam-pro` and `--font-jetbrains-mono`, which `globals.css` reads into
+`--font-sans` and `--font-mono`. `tests/unit/repo/fonts.spec.ts` holds that chain together:
+nothing else does, because the variables are injected at runtime and so look dangling to the
+token tests.
+
+**Both families request the `vietnamese` subset.** Skipping it does not fail — accented
+characters simply fall out to a fallback face mid-word, which reads as a rendering glitch.
+Geist, which this replaced, did cover the Vietnamese codepoints; the change is a design
+decision, not a repair.
+
+Be Vietnam Pro is not a variable font, so weights are loaded individually: **400, 500, 600,
+700** — exactly the four the tokens above use. Adding a fifth token weight means adding it in
+`layout.tsx` too, or the browser fakes it. JetBrains Mono is variable and ships its whole
+range in one file.
 
 ## Layout
 
