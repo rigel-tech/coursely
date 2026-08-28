@@ -190,6 +190,43 @@ imported by the **readers** `src/providers/Theme/InitTheme/index.tsx:4` (`InitTh
 
 ## Theming
 
+### A region that must stay dark sets `data-theme="dark"`; it never reaches for `bg-black`
+
+**Rule** — Heroes over a photo, the editor bar, a code block: anything deliberately dark in
+both themes wraps in `data-theme="dark"` and then uses ordinary token classes
+(`bg-background text-foreground`). The attribute re-scopes every custom property for the
+subtree, and Tailwind's utilities compile to `var(--token)` rather than a baked hex, so the
+dark values apply.
+
+**Why it breaks silently** — `bg-black text-white` produces the same picture today and quietly
+leaves the palette: change the tokens and that region does not follow. It is also invisible to
+review, because white and black read as neutral defaults rather than colour decisions.
+`theme-guard` now catches them, but only after this repo carried 14 such colours across five
+files (`AdminBar`, `Footer`, both heroes, `Code`) under a guard reporting zero violations —
+the keyword colours end in a word, and the palette rule was shaped around `family-number`.
+
+**Where** — `src/heros/HighImpact/index.tsx`, `src/heros/PostHero/index.tsx`,
+`src/components/public/AdminBar/index.tsx`, `src/blocks/Code/Component.client.tsx`, the
+`KEYWORD_COLOURS` constant in `scripts/theme-guard.mjs`, and the "deliberately dark region"
+section of [`DESIGN.md`](DESIGN.md).
+
+### `--primary` is a surface, not a text colour — links take `--link`
+
+**Rule** — Never paint text or an icon with `--primary` against the page background. It is a
+fill for `bg-primary`, paired with `--primary-foreground`. Anything that reads as a link takes
+`--link`.
+
+**Why it breaks silently** — `--primary` is deliberately the same blue in light and dark, so
+against the dark page background it sits at **2.75:1**, below WCAG AA. In light mode the same
+class is 6.30:1 and looks perfect, so the defect only exists in one theme and never throws.
+The button's `link` variant shipped this way, and the header nav renders exactly that variant;
+`--link` in the same position is 8.59:1.
+
+**Where** — `src/components/public/ui/button.tsx` (the `link` variant),
+`src/Header/Nav/index.tsx` (the search icon), the `PAIRS` list in
+`tests/unit/repo/component-roles.spec.ts`, which excludes `primary` as a foreground and says
+why.
+
 ### `--accent` is a hover surface; the brand orange is `--brand-accent`
 
 **Rule** — `bg-accent` / `text-accent-foreground` paint shadcn's subtle hover-and-focus
