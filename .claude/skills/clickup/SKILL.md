@@ -42,6 +42,7 @@ see [MCP-VS-REST.md](reference/MCP-VS-REST.md).
 | Hit `429`                                 | Back off; limit is per token, per minute               | [MCP-VS-REST.md#rate-limits](reference/MCP-VS-REST.md#rate-limits)                                                                                                 |
 | MCP says daily limit reached              | Switch to REST — a separate, far higher budget         | [MCP-VS-REST.md#when-mcp-runs-out](reference/MCP-VS-REST.md#when-mcp-runs-out)                                                                                     |
 | MCP "server not connected"                | Session-local drop; CLI health check does not prove it | [GOTCHAS.md#mcp-connection-drops](reference/GOTCHAS.md#mcp-connection-drops)                                                                                       |
+| You learned something not written here    | Record it in this skill, in the same change            | [#maintaining-this-skill](#maintaining-this-skill)                                                                                                                 |
 
 ## Base URLs and versions
 
@@ -135,3 +136,65 @@ calling the work done. [GOTCHAS.md](reference/GOTCHAS.md) lists every trap obser
 Written against the official docs, fetched as markdown by appending `.md` to any page
 URL. The full index lives at <https://developer.clickup.com/llms.txt> — start there when
 this skill does not cover something, rather than guessing an endpoint path.
+
+## Maintaining this skill
+
+This file executes nothing. It stays correct only because the agent reading it writes back
+what it learns — the same rule this repo applies to `INVARIANTS.md`.
+
+**Before finishing any ClickUp work, ask what this skill did not tell you that it should
+have.** If the answer is "nothing", say so and move on; that is a valid outcome. If there
+is something, record it in the same change as the work, not later.
+
+An observation earns an entry when all three hold:
+
+1. **It breaks silently** — the API returns success, or a plausible-looking wrong answer,
+   rather than an error.
+2. **It constrains future work**, not only the task in hand.
+3. **It is true now**, checked against the live API or the current docs this session.
+
+Where it goes:
+
+| What you learned                                             | Where it belongs                                    |
+| ------------------------------------------------------------ | --------------------------------------------------- |
+| Behaviour that contradicts the docs, or that no doc mentions | `GOTCHAS.md`, labelled _Observed_ with the date     |
+| A documented fact this skill got wrong, or never covered     | the matching `reference/` file, corrected in place  |
+| Something a future reader needs to find in seconds           | one row in Quick Reference, pointing at the section |
+
+**Supersede, never accumulate.** A corrected fact is rewritten where it stood and the old
+wording deleted. Two contradicting statements in one skill are worse than the gap that
+preceded them.
+
+Keep the two kinds of claim visibly apart. _Observed_ means someone watched the API do it,
+and carries a date so it can be re-tested. Everything else is only as reliable as ClickUp's
+documentation, which has already been caught contradicting itself.
+
+### Checking a claim before writing it down
+
+Endpoint pages embed their OpenAPI definition, so the schema — not the prose — is the
+authority on what a parameter is called and which direction it travels:
+
+```bash
+curl -s https://developer.clickup.com/llms.txt -o index.txt        # every page, by topic
+curl -s https://developer.clickup.com/reference/createtask.md -o ep.md
+
+grep -n '"requestBody"\|"responses"' ep.md    # where the request ends, the response begins
+grep -n '<field name>' ep.md                  # which side of that line the field falls on
+```
+
+A field appearing above `"responses"` is something you send; below it, something you
+receive. Prose guides and request examples on the same page have both been wrong about
+this.
+
+### The mistake this section exists to prevent
+
+The first version of this skill listed `markdown_description` as the field for writing a
+task description. It is the field for **reading** one, and only with
+`?include_markdown_description=true`; writes take `markdown_content`.
+
+Both the guide text and the create-task example pointed the wrong way, and the MCP tool's
+parameter is named after the read field, so three sources agreed with each other and with
+the mistake. Only the request schema disagreed — and it was right.
+
+Trust the schema. When the schema and the prose conflict, the prose is the thing to
+document as a trap.
