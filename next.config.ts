@@ -14,6 +14,7 @@ const NEXT_PUBLIC_SERVER_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
 const nextConfig: NextConfig = {
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
+  output: 'standalone',
   sassOptions: {
     loadPaths: ['./node_modules/@payloadcms/ui/dist/scss/'],
   },
