@@ -104,6 +104,11 @@ Two behaviours that bite:
 
 `time_spent` is in milliseconds and appears only on tasks that have time entries.
 
+A 404 from `GET /v2/task/{task_id}` says which kind of miss it was. `ITEM_013 Task not
+found, deleted` means the ID did address a task and that task is gone; `SHARD_006 Not
+found` means the ID never addressed a task at all — most often a Workspace, Space or List
+ID pasted into the task endpoint.
+
 ## Update a task
 
 ```
@@ -162,6 +167,20 @@ DELETE /v2/task/{task_id}/link/{links_to}
 ```
 
 Returned under `linked_tasks` on the task, separate from `dependencies`.
+
+## Merging tasks
+
+```
+POST /v2/task/{task_id}/merge      # body: {"source_task_ids": ["abc123", "def456"]}
+```
+
+The task named in the path is the **survivor**; every ID in `source_task_ids` is folded
+into it and then hard-deleted. Custom Task IDs are rejected here — native IDs only.
+
+Comments and attachments move across. The **description does not**: the target keeps its
+own body and the sources' bodies die with them. Write the combined description onto the
+target first, then merge. See
+[GOTCHAS.md](GOTCHAS.md#merging-discards-every-source-description).
 
 ## Large lists
 

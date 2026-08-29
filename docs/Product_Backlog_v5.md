@@ -160,19 +160,19 @@ Bằng chứng thanh toán **không được** dùng chung collection `media` hi
 Ranh giới hai sprint được đặt **rõ trên mặt giấy** để nếu tuần 2 đuối thì chỗ cắt đã biết
 trước, không phát hiện muộn.
 
-| Sprint           | Story                                                            | Kết quả demo được                                                                         |
-| ---------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **1**            | E-01, E-02, US-101 → US-106, US-201 → US-203, US-205, US-401     | Khách xem được khóa học. Học viên tạo được tài khoản. Admin quản lý được Course và Class. |
-| **2**            | US-301 → US-304, US-402, US-403, US-501 → US-504, US-508, US-601 | Luồng đăng ký chạy đủ vòng: đăng ký → xác nhận → xếp lớp → học viên thấy lớp của mình.    |
-| **Sau 2 sprint** | US-107, US-204, US-404, US-505, US-506, US-507                   | Google sign-in, dashboard Admin, báo cáo, export.                                         |
+| Sprint           | Story                                                                | Kết quả demo được                                                                         |
+| ---------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **1**            | E-01, E-02, US-101 → US-104, US-106, US-201 → US-203, US-205, US-401 | Khách xem được khóa học. Học viên tạo được tài khoản. Admin quản lý được Course và Class. |
+| **2**            | US-301 → US-304, US-402, US-403, US-501 → US-504, US-508, US-601     | Luồng đăng ký chạy đủ vòng: đăng ký → xác nhận → xếp lớp → học viên thấy lớp của mình.    |
+| **Sau 2 sprint** | US-107, US-204, US-404, US-505, US-506, US-507                       | Google sign-in, dashboard Admin, báo cáo, export.                                         |
 
 ### Chia việc cho 3 người
 
-|           | Sprint 1                                       | Sprint 2                       |
-| --------- | ---------------------------------------------- | ------------------------------ |
-| **Dev A** | US-101, US-102, US-103, US-104, US-105, US-106 | US-301, US-302, US-303, US-504 |
-| **Dev B** | US-201, US-202, US-203, US-205                 | US-304, US-402, US-403, US-601 |
-| **Dev C** | E-01, E-02, US-401                             | US-501, US-502, US-503, US-508 |
+|           | Sprint 1                               | Sprint 2                       |
+| --------- | -------------------------------------- | ------------------------------ |
+| **Dev A** | US-101, US-102, US-103, US-104, US-106 | US-301, US-302, US-303, US-504 |
+| **Dev B** | US-201, US-202, US-203, US-205         | US-304, US-402, US-403, US-601 |
+| **Dev C** | E-01, E-02, US-401                     | US-501, US-502, US-503, US-508 |
 
 Ghi nhận thanh toán kèm bằng chứng (`US-503` + `US-508`) là phần nặng nhất lane admin, nên
 Dev C không ôm thêm thông báo.
@@ -191,9 +191,10 @@ Cắt dọc gỡ được phần lớn phụ thuộc, nhưng **collection dùng 
 | 2      | **`US-301`** định nghĩa collection `Enrollment` | `US-302`, `US-304`, `US-402`, `US-501`, `US-601`                        |
 
 Cách xử lý: **để một người làm dứt điểm story đường găng trong 1–2 ngày đầu sprint**, hai
-người còn lại bắt đầu bằng phần không đụng tới collection đó — sprint 1 thì `US-104`, `US-105`
-và toàn bộ Epic B không cần `Course`; sprint 2 thì `US-401` đã xong từ tuần trước và phần tạo
-học viên của `US-304` không cần `Enrollment`.
+người còn lại bắt đầu bằng phần không đụng tới collection đó — sprint 1 thì `US-104` (trừ khối
+"N khóa mới nhất", phần duy nhất của nó chạm vào `Course`) và toàn bộ Epic B không cần
+`Course`; sprint 2 thì `US-401` đã xong từ tuần trước và phần tạo học viên của `US-304` không
+cần `Enrollment`.
 
 Nếu muốn gỡ triệt để hơn: tách riêng một task **"định nghĩa schema Course và Enrollment"** làm
 ngay ngày đầu sprint 1, rồi mọi story sau chỉ mở rộng. Đổi lại nó là task không demo được —
@@ -255,11 +256,11 @@ nên ghi thẳng ra đây.
 
 ### US-101 · Course catalog page
 
-|               |                                |
-| ------------- | ------------------------------ |
-| Ưu tiên       | P0 · Sprint 1                  |
-| Phụ thuộc     | —                              |
-| Song song với | US-201, US-401, US-104, US-105 |
+|               |                        |
+| ------------- | ---------------------- |
+| Ưu tiên       | P0 · Sprint 1          |
+| Phụ thuộc     | —                      |
+| Song song với | US-201, US-401, US-104 |
 
 **User story** — Là một khách truy cập, tôi muốn xem danh sách các khóa học đang được cung
 cấp để chọn khóa phù hợp với mình.
@@ -329,7 +330,7 @@ khóa thuộc danh mục đó. Gõ tên một khóa vào ô tìm: ra đúng khó
 
 ---
 
-### US-104 · Homepage
+### US-104 · Pages — trang chủ và trang tĩnh
 
 |               |                       |
 | ------------- | --------------------- |
@@ -337,46 +338,40 @@ khóa thuộc danh mục đó. Gõ tên một khóa vào ô tìm: ra đúng khó
 | Phụ thuộc     | —                     |
 | Song song với | tất cả story sprint 1 |
 
-**User story** — Là một khách truy cập, tôi muốn hiểu ngay tổ chức này dạy gì và tìm được
-đường tới danh sách khóa học.
+> Gộp từ `US-104 · Homepage` và `US-105 · Static pages`. Trang chủ đi qua đúng collection
+> `pages` như mọi trang khác, nên hai story cũ tả cùng một cơ chế. Số `US-105` nghỉ hẳn,
+> không dùng lại cho story mới.
 
-**Acceptance criteria**
+**User story** — Là một Admin, tôi muốn quản lý mọi trang nội dung của website — kể cả trang
+chủ — trong cùng một chỗ, để sửa được nội dung mà không cần đụng code.
 
-- Có phần giới thiệu tổ chức, Admin sửa được nội dung không cần đụng code.
-- Hiển thị **N khóa học mới xuất bản gần nhất** — không cần Admin cấu hình gì.
-- Có một **link ngoài sang website Moodle** kèm mô tả ngắn về các khóa trực tuyến miễn phí.
-- Có điều hướng tới danh sách khóa học.
-- Hiển thị đúng trên mobile, tablet, desktop.
-
-> Cố tình **không** phụ thuộc vào chức năng chọn khóa nổi bật. "Mới nhất" là quy tắc tự động,
-> nên story này chạy được ngay từ ngày đầu. Chọn thủ công là `US-107`, làm sau.
-
-**Demo trên staging** — Mở trang chủ: thấy giới thiệu, thấy các khóa mới nhất, bấm link
-Moodle sang đúng site Moodle.
-
----
-
-### US-105 · Static pages
-
-|               |                       |
-| ------------- | --------------------- |
-| Ưu tiên       | P0 · Sprint 1         |
-| Phụ thuộc     | —                     |
-| Song song với | tất cả story sprint 1 |
-
-**User story** — Là một Admin, tôi muốn tự quản lý các trang Giới thiệu, Liên hệ, Điều khoản
-và Chính sách bảo mật.
-
-**Acceptance criteria**
+**Acceptance criteria — quản lý trang, áp dụng cho mọi trang gồm cả trang chủ**
 
 - Tạo, sửa, xuất bản, ẩn được từng trang.
 - Định dạng được văn bản và chèn link.
 - Trang chưa xuất bản không hiện công khai.
 - Có sẵn bốn trang: Giới thiệu, Liên hệ, Điều khoản, Chính sách bảo mật.
 
-> Collection `pages` của template đã làm gần hết việc này. Chi phí thực tế rất thấp.
+**Acceptance criteria — trang chủ**
 
-**Demo trên staging** — Tạo trang "Giới thiệu", xuất bản, mở bằng URL công khai.
+- Trang chủ là một document `pages` slug `home`, sửa bằng đúng màn hình như các trang khác.
+- Có phần giới thiệu tổ chức, Admin sửa được nội dung không cần đụng code.
+- Hiển thị **N khóa học mới xuất bản gần nhất** — không cần Admin cấu hình gì.
+- Có một **link ngoài sang website Moodle** kèm mô tả ngắn về các khóa trực tuyến miễn phí.
+- Có điều hướng tới danh sách khóa học.
+- Hiển thị đúng trên mobile, tablet, desktop.
+
+> Collection `pages` của template đã làm gần hết việc này, và trang chủ đã đi qua đúng đường
+> đó: `src/app/(frontend)/page.tsx` chỉ re-export `[slug]/page.tsx`, route đó mặc định
+> `slug = 'home'` và đọc collection `pages`. Việc còn lại là tạo document `pages` slug
+> `home` rồi bỏ fallback `homeStatic`.
+
+> Cố tình **không** phụ thuộc vào chức năng chọn khóa nổi bật. "Mới nhất" là quy tắc tự động,
+> nên phần lớn story chạy được ngay từ ngày đầu. Chọn thủ công là `US-107`, làm sau. Riêng
+> khối "mới nhất" vẫn cần collection `Course` — xem ghi chú ở mục chia việc.
+
+**Demo trên staging** — Tạo trang "Giới thiệu", xuất bản, mở bằng URL công khai. Rồi mở trang
+chủ: thấy giới thiệu, thấy các khóa mới nhất, bấm link Moodle sang đúng site Moodle.
 
 ---
 
@@ -1060,7 +1055,7 @@ Những mục này không được hỏi trong lúc phỏng vấn. Tôi đặt m
 | US-025 Xếp lớp                      | `US-402`                     |                                                                                                                                                                    |
 | US-026 Export                       | `US-507`                     | Ngoài 2 sprint                                                                                                                                                     |
 | US-027 Nội dung trang chủ           | `US-107`                     | Ngoài 2 sprint                                                                                                                                                     |
-| US-028 Trang tĩnh                   | `US-105`                     |                                                                                                                                                                    |
+| US-028 Trang tĩnh                   | `US-104`                     |                                                                                                                                                                    |
 | US-029 Tin tức                      | —                            | **Bỏ** theo yêu cầu                                                                                                                                                |
 | US-030, US-031, US-032 Admin        | —                            | Payload đã cho sẵn. Một vai Admin duy nhất, không có ma trận quyền                                                                                                 |
 | US-033 Dashboard Admin              | `US-505`                     | Ngoài 2 sprint. Rút còn 4 ô hướng hành động                                                                                                                        |
