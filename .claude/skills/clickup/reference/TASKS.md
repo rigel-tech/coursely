@@ -11,24 +11,24 @@ POST /v2/list/{list_id}/task
 
 Only `name` is required. The parameters worth knowing:
 
-| Parameter                          | Type            | Notes                                                 |
-| ---------------------------------- | --------------- | ----------------------------------------------------- |
-| `name`                             | string          | Required                                              |
-| `description`                      | string          | Plain text                                            |
-| `markdown_description`             | string          | Markdown; use instead of `description`, not alongside |
-| `assignees`                        | array of int    | User IDs, not emails                                  |
-| `tags`                             | array of string | Tag **names**; Space-scoped                           |
-| `status`                           | string          | Must be a status configured on that List              |
-| `priority`                         | integer or null | `1`–`4`, see below                                    |
-| `due_date`, `start_date`           | integer         | Unix **milliseconds**                                 |
-| `due_date_time`, `start_date_time` | boolean         | Whether the date carries a time component             |
-| `time_estimate`                    | integer         | **Milliseconds** in the REST API                      |
-| `points`                           | number          | Sprint points                                         |
-| `parent`                           | string or null  | Parent task ID — this is how a subtask is created     |
-| `custom_fields`                    | array           | `{ id, value }` objects                               |
-| `custom_item_id`                   | number          | Custom task type; `0` is a standard task              |
-| `check_required_custom_fields`     | boolean         | Enforce required fields before saving                 |
-| `notify_all`                       | boolean         | Notify watchers                                       |
+| Parameter                          | Type            | Notes                                              |
+| ---------------------------------- | --------------- | -------------------------------------------------- |
+| `name`                             | string          | Required                                           |
+| `description`                      | string          | Plain text                                         |
+| `markdown_content`                 | string          | Markdown; wins over `description` if both are sent |
+| `assignees`                        | array of int    | User IDs, not emails                               |
+| `tags`                             | array of string | Tag **names**; Space-scoped                        |
+| `status`                           | string          | Must be a status configured on that List           |
+| `priority`                         | integer or null | `1`–`4`, see below                                 |
+| `due_date`, `start_date`           | integer         | Unix **milliseconds**                              |
+| `due_date_time`, `start_date_time` | boolean         | Whether the date carries a time component          |
+| `time_estimate`                    | integer         | **Milliseconds** in the REST API                   |
+| `points`                           | number          | Sprint points                                      |
+| `parent`                           | string or null  | Parent task ID — this is how a subtask is created  |
+| `custom_fields`                    | array           | `{ id, value }` objects                            |
+| `custom_item_id`                   | number          | Custom task type; `0` is a standard task           |
+| `check_required_custom_fields`     | boolean         | Enforce required fields before saving              |
+| `notify_all`                       | boolean         | Notify watchers                                    |
 
 ## Priority
 
@@ -58,13 +58,26 @@ back before doing arithmetic that assumes midnight.
 
 ## Descriptions
 
-`markdown_description` renders markdown. Supported: headers, emphasis, ordered and
-unordered lists, links and images, blockquotes, inline code.
+**The field is named differently for writing and for reading.**
+
+| Direction | Field                  | How                                                        |
+| --------- | ---------------------- | ---------------------------------------------------------- |
+| Write     | `markdown_content`     | In the body of create and update. Wins over `description`. |
+| Read      | `markdown_description` | Only returned with `?include_markdown_description=true`    |
+
+Sending `markdown_description` on a write is not the documented request property — the
+schema for both `POST .../task` and `PUT /v2/task/{id}` names `markdown_content`. Some
+examples in ClickUp's own docs use the read name in a request body, and ClickUp's MCP
+tools take `markdown_description` as their parameter, which is where the confusion starts.
+When in doubt, write `markdown_content` and read back with the query parameter.
+
+Supported markdown: headers, emphasis, ordered and unordered lists, links and images,
+blockquotes, inline code.
 
 Tables and checkboxes are **not** in that supported list, though they are accepted on
 input. If a description must render as a table, verify it by reading the task back.
 
-Double quotes inside `description`, `text_content`, or `markdown_description` have to be
+Double quotes inside `description`, `text_content`, or the markdown fields have to be
 escaped as `\"`:
 
 ```json

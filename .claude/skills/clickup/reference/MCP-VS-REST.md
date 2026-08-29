@@ -54,14 +54,14 @@ Nothing is lost; the two interfaces write to the same data. Switch front doors:
 
 The MCP tools are a wrapper, not a passthrough. Ported code breaks quietly on these:
 
-| Concept          | MCP tool                       | REST API                                                                                         |
-| ---------------- | ------------------------------ | ------------------------------------------------------------------------------------------------ |
-| Priority         | `"high"` (word)                | `2` (integer 1–4)                                                                                |
-| Task description | `markdown_description`         | `markdown_description` on create task; `markdown_content` also appears in the create-task schema |
-| Time estimate    | minutes                        | **milliseconds**                                                                                 |
-| Dates            | `YYYY-MM-DD` string            | Unix milliseconds integer                                                                        |
-| Doc page update  | `clickup_update_document_page` | `PUT .../pages/{page_id}`                                                                        |
-| Workspace        | `workspace_id`                 | `team_id` on v2 paths, same value                                                                |
+| Concept          | MCP tool                                            | REST API                                                                                                             |
+| ---------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Priority         | `"high"` (word)                                     | `2` (integer 1–4)                                                                                                    |
+| Task description | `markdown_description` for both reading and writing | `markdown_content` to write; `markdown_description` only on read, and only with `?include_markdown_description=true` |
+| Time estimate    | minutes                                             | **milliseconds**                                                                                                     |
+| Dates            | `YYYY-MM-DD` string                                 | Unix milliseconds integer                                                                                            |
+| Doc page update  | `clickup_update_document_page`                      | `PUT .../pages/{page_id}`                                                                                            |
+| Workspace        | `workspace_id`                                      | `team_id` on v2 paths, same value                                                                                    |
 
 Priority and time estimate are the dangerous pair: both accept the other form's value
 shape without erroring in at least one direction, producing a task that looks created but

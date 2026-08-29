@@ -22,7 +22,7 @@ see [MCP-VS-REST.md](reference/MCP-VS-REST.md).
 | Create a task                             | `POST /v2/list/{list_id}/task`                         | [TASKS.md#create-a-task](reference/TASKS.md#create-a-task)                                                                                                         |
 | Set priority                              | Integer `1`–`4`, not a string                          | [TASKS.md#priority](reference/TASKS.md#priority)                                                                                                                   |
 | Set a due date                            | Unix **milliseconds**, UTC                             | [TASKS.md#dates](reference/TASKS.md#dates)                                                                                                                         |
-| Rich task description                     | `markdown_description`                                 | [TASKS.md#descriptions](reference/TASKS.md#descriptions)                                                                                                           |
+| Rich task description                     | Write `markdown_content`, read `markdown_description`  | [TASKS.md#descriptions](reference/TASKS.md#descriptions)                                                                                                           |
 | Link tasks as blocking                    | `POST /v2/task/{task_id}/dependency`                   | [TASKS.md#dependencies](reference/TASKS.md#dependencies)                                                                                                           |
 | Non-blocking association                  | Task link, not dependency                              | [TASKS.md#linked-tasks](reference/TASKS.md#linked-tasks)                                                                                                           |
 | List tasks in a list                      | `GET /v2/list/{list_id}/task` — 100/page               | [TASKS.md#reading-tasks](reference/TASKS.md#reading-tasks)                                                                                                         |
@@ -76,7 +76,7 @@ curl -s -X POST "https://api.clickup.com/api/v2/list/${LIST_ID}/task" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "US-101 · Course catalog page",
-    "markdown_description": "## Acceptance Criteria\n\n- Draft courses stay hidden\n",
+    "markdown_content": "## Acceptance Criteria\n\n- Draft courses stay hidden\n",
     "priority": 2,
     "tags": ["sprint-1", "story"]
   }'
