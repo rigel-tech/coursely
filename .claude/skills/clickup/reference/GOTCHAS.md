@@ -92,6 +92,18 @@ body of substance, and changes nothing. `GET /v2/task/{task_id}` on that same ID
 A loop that only checks the status code therefore reports a clean run over tasks that no
 longer exist. `GET` first; the status code is not evidence of existence.
 
+## Merging discards every source description
+
+_Observed 2026-08-29 while folding two backlog stories into one._
+
+`POST /v2/task/{target}/merge` answers `HTTP 200` with an empty object `{}` — the same
+answer whether or not anything of value survived. Comments and attachments move to the
+target; the source tasks' **descriptions do not**, and the sources are hard-deleted, so
+`GET` on them returns `ITEM_013 Task not found, deleted`.
+
+Nothing in the response hints that content was dropped, and there is no undo. Write the
+merged description onto the target, read it back, and only then merge.
+
 ## Drop-down reads return an index, not the ID you wrote
 
 _Observed 2026-08-29, same session._
