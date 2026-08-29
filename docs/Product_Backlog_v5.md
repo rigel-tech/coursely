@@ -160,19 +160,19 @@ Bằng chứng thanh toán **không được** dùng chung collection `media` hi
 Ranh giới hai sprint được đặt **rõ trên mặt giấy** để nếu tuần 2 đuối thì chỗ cắt đã biết
 trước, không phát hiện muộn.
 
-| Sprint           | Story                                                                | Kết quả demo được                                                                         |
-| ---------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **1**            | E-01, E-02, US-101 → US-104, US-106, US-201 → US-203, US-205, US-401 | Khách xem được khóa học. Học viên tạo được tài khoản. Admin quản lý được Course và Class. |
-| **2**            | US-301 → US-304, US-402, US-403, US-501 → US-504, US-508, US-601     | Luồng đăng ký chạy đủ vòng: đăng ký → xác nhận → xếp lớp → học viên thấy lớp của mình.    |
-| **Sau 2 sprint** | US-107, US-204, US-404, US-505, US-506, US-507                       | Google sign-in, dashboard Admin, báo cáo, export.                                         |
+| Sprint           | Story                                                            | Kết quả demo được                                                                         |
+| ---------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **1**            | E-01, E-02, US-101 → US-104, US-201 → US-203, US-205, US-401     | Khách xem được khóa học. Học viên tạo được tài khoản. Admin quản lý được Course và Class. |
+| **2**            | US-301 → US-304, US-402, US-403, US-501 → US-504, US-508, US-601 | Luồng đăng ký chạy đủ vòng: đăng ký → xác nhận → xếp lớp → học viên thấy lớp của mình.    |
+| **Sau 2 sprint** | US-107, US-204, US-404, US-505, US-506, US-507                   | Google sign-in, dashboard Admin, báo cáo, export.                                         |
 
 ### Chia việc cho 3 người
 
-|           | Sprint 1                               | Sprint 2                       |
-| --------- | -------------------------------------- | ------------------------------ |
-| **Dev A** | US-101, US-102, US-103, US-104, US-106 | US-301, US-302, US-303, US-504 |
-| **Dev B** | US-201, US-202, US-203, US-205         | US-304, US-402, US-403, US-601 |
-| **Dev C** | E-01, E-02, US-401                     | US-501, US-502, US-503, US-508 |
+|           | Sprint 1                       | Sprint 2                       |
+| --------- | ------------------------------ | ------------------------------ |
+| **Dev A** | US-101, US-102, US-103, US-104 | US-301, US-302, US-303, US-504 |
+| **Dev B** | US-201, US-202, US-203, US-205 | US-304, US-402, US-403, US-601 |
+| **Dev C** | E-01, E-02, US-401             | US-501, US-502, US-503, US-508 |
 
 Ghi nhận thanh toán kèm bằng chứng (`US-503` + `US-508`) là phần nặng nhất lane admin, nên
 Dev C không ôm thêm thông báo.
@@ -185,10 +185,10 @@ Enrollment**, nên nó chạy được ngay sprint 1 và gỡ tải cho sprint 2
 Cắt dọc gỡ được phần lớn phụ thuộc, nhưng **collection dùng chung thì không gỡ được**: ai
 định nghĩa nó trước thì người sau xây lên trên. Mỗi sprint có đúng một story như vậy.
 
-| Sprint | Đường găng                                      | Ai đang chờ                                                             |
-| ------ | ----------------------------------------------- | ----------------------------------------------------------------------- |
-| 1      | **`US-101`** định nghĩa collection `Course`     | `US-102`, `US-103`, `US-106`, `US-401`, và sang cả sprint 2 là `US-304` |
-| 2      | **`US-301`** định nghĩa collection `Enrollment` | `US-302`, `US-304`, `US-402`, `US-501`, `US-601`                        |
+| Sprint | Đường găng                                      | Ai đang chờ                                                   |
+| ------ | ----------------------------------------------- | ------------------------------------------------------------- |
+| 1      | **`US-101`** định nghĩa collection `Course`     | `US-102`, `US-103`, `US-401`, và sang cả sprint 2 là `US-304` |
+| 2      | **`US-301`** định nghĩa collection `Enrollment` | `US-302`, `US-304`, `US-402`, `US-501`, `US-601`              |
 
 Cách xử lý: **để một người làm dứt điểm story đường găng trong 1–2 ngày đầu sprint**, hai
 người còn lại bắt đầu bằng phần không đụng tới collection đó — sprint 1 thì `US-104` (trừ khối
@@ -203,12 +203,11 @@ nhau thì đây là cách đổi.
 
 ### Cảnh báo phạm vi — đọc trước khi cam kết
 
-11 story ở sprint 1 và 12 ở sprint 2, cho 3 dev, là **giả định lạc quan**. Nếu tốc độ không
+9 story ở sprint 1 và 12 ở sprint 2, cho 3 dev, là **giả định lạc quan**. Nếu tốc độ không
 đạt, đây là thứ tự bỏ, bỏ từ trên xuống:
 
-1. `US-106` SEO — hoãn được, không chặn ai
-2. `US-103` Lọc & tìm kiếm — với ~10 khóa, cuộn tay vẫn dùng được
-3. `US-303` Học viên tự hủy — tạm thời nhắn Admin hủy hộ
+1. `US-103` Lọc & tìm kiếm — với ~10 khóa, cuộn tay vẫn dùng được
+2. `US-303` Học viên tự hủy — tạm thời nhắn Admin hủy hộ
 
 **Ghi nhận giao dịch làm sprint 2 nặng thêm ~1 ngày.** `US-503` và `US-508` thay cho một
 story cũ chỉ bật trạng thái bằng tay. Đổi lại thì đối soát được với sao kê và có bằng chứng
@@ -372,32 +371,6 @@ chủ — trong cùng một chỗ, để sửa được nội dung mà không c�
 
 **Demo trên staging** — Tạo trang "Giới thiệu", xuất bản, mở bằng URL công khai. Rồi mở trang
 chủ: thấy giới thiệu, thấy các khóa mới nhất, bấm link Moodle sang đúng site Moodle.
-
----
-
-### US-106 · SEO for course pages
-
-|               |                                       |
-| ------------- | ------------------------------------- |
-| Ưu tiên       | P1 · Sprint 1 · **Ứng viên cắt số 1** |
-| Phụ thuộc     | US-102                                |
-| Song song với | mọi story khác                        |
-
-**User story** — Là người làm marketing, tôi muốn các trang khóa học lên được kết quả tìm
-kiếm.
-
-**Acceptance criteria**
-
-- Mỗi Course đặt được SEO title và meta description riêng.
-- URL khóa học dễ đọc (slug từ tên).
-- Ảnh có alt text.
-- Heading đúng cấp bậc, mỗi trang một `h1`.
-- Course xuất bản xuất hiện trong sitemap.
-
-> `seoPlugin` và sitemap đã bật sẵn cho `pages`/`posts` — việc chính là mở rộng cho `courses`.
-
-**Demo trên staging** — Xem mã nguồn một trang khóa học: thấy title và meta description đã
-đặt. Mở sitemap: thấy URL khóa đó.
 
 ---
 
@@ -575,7 +548,7 @@ id Enrollment của tài khoản B → bị chặn.
 
 |               |                                       |
 | ------------- | ------------------------------------- |
-| Ưu tiên       | P1 · Sprint 2 · **Ứng viên cắt số 3** |
+| Ưu tiên       | P1 · Sprint 2 · **Ứng viên cắt số 2** |
 | Phụ thuộc     | US-302                                |
 | Song song với | US-401, US-501                        |
 
@@ -1062,7 +1035,7 @@ Những mục này không được hỏi trong lúc phỏng vấn. Tôi đặt m
 | US-034, US-035 Báo cáo              | `US-506`                     | Ngoài 2 sprint                                                                                                                                                     |
 | US-036, US-037 Thông báo            | `US-601`                     | Mở rộng thành trung tâm thông báo, 7 sự kiện                                                                                                                       |
 | US-038 Tìm kiếm                     | `US-103`                     | Gộp với lọc                                                                                                                                                        |
-| US-039 SEO                          | `US-106`                     |                                                                                                                                                                    |
+| US-039 SEO                          | —                            | **Bỏ** như story riêng — SEO là yêu cầu mặc định áp cho mọi trang Next.js, không tách task                                                                         |
 | US-040 Responsive                   | —                            | Thành acceptance criterion của từng story giao diện                                                                                                                |
 | US-041 Hiệu năng                    | —                            | **Bỏ** theo quyết định của bạn                                                                                                                                     |
 | US-042 Bảo mật                      | —                            | Thành giả định số 7 và các criterion trong `US-202`, `US-203`                                                                                                      |
