@@ -81,6 +81,51 @@ _Documented behaviour._
 Use `POST /v2/task/{task_id}/field/{field_id}`, one call per field. See
 [CUSTOM-FIELDS.md](CUSTOM-FIELDS.md).
 
+## Writing a custom field to a deleted task returns 200
+
+_Observed 2026-08-29 while backfilling a drop-down across a backlog._
+
+`POST /v2/task/{task_id}/field/{field_id}` on a deleted task answers `HTTP 200` with no
+body of substance, and changes nothing. `GET /v2/task/{task_id}` on that same ID returns
+`ITEM_013 Task not found, deleted`.
+
+A loop that only checks the status code therefore reports a clean run over tasks that no
+longer exist. `GET` first; the status code is not evidence of existence.
+
+## Drop-down reads return an index, not the ID you wrote
+
+_Observed 2026-08-29, same session._
+
+Writes take the option UUID. Reads return the option's `orderindex` integer. See
+[CUSTOM-FIELDS.md](CUSTOM-FIELDS.md#reading-a-drop-down-back-is-not-symmetric-with-writing-it).
+
+Two ways this bites a verification pass:
+
+- Grepping the response for the UUID you wrote matches on **every** task, because
+  `include=custom_fields` embeds the whole option list on each one. The check passes
+  regardless of the stored value.
+- Splitting the JSON on `},{"id":"` to isolate a field cuts the options array too, so the
+  fragment holding `"name":"Type"` no longer holds that field's `"value"`, and every task
+  reads as empty.
+
+Both failure modes produce a confident, wrong answer — one all-pass, one all-empty.
+
+## Custom task types are capped by plan
+
+_Observed 2026-08-29: 19 tasks carried a custom type, the 20th write was rejected._
+
+```json
+{ "err": "Max usage for custom task types reached", "ECODE": "ITEM_247" }
+```
+
+`HTTP 400`, not `429` — this is a plan quota on how many tasks may carry a custom task
+type, not a rate limit, so waiting does not help. The cap counts across the whole
+Workspace, including Spaces unrelated to the work at hand.
+
+Setting `custom_item_id` back to `0` releases a slot. A drop-down custom field carries
+the same information without touching the quota, at the cost of the type not showing in
+the task header.
+
 ## Lists hide tasks whose home is elsewhere
 
 _Documented behaviour._
