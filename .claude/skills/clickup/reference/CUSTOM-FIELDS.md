@@ -3,6 +3,31 @@
 Custom Fields are defined on a container (List, Folder, Space, or Workspace) and carry a
 value per task. Reading a definition and writing a value use different endpoints.
 
+## The API cannot create, edit, or delete a field
+
+Across all 173 endpoints there are only four reads, one write, and one clear:
+
+```
+GET    /v2/list|folder|space|team/{id}/field    # read definitions
+POST   /v2/task/{task_id}/field/{field_id}      # set a value
+DELETE /v2/task/{task_id}/field/{field_id}      # clear a value
+```
+
+There is **no endpoint to create a field, change its options, or delete it** — that is UI
+work. The same is true of custom task types: `GET /v2/team/{team_id}/custom_item` lists
+them and nothing creates or removes them.
+
+Plan for this when scripting a migration: the field has to exist before any of it runs.
+Fail loudly if the lookup comes back empty rather than writing to a guessed ID.
+
+## A field only appears once it reaches the container
+
+A field created elsewhere in the Workspace is invisible to a List until it is moved or
+shared into that List's hierarchy. All four read endpoints return `{"fields":[]}` for a
+List that inherits nothing — which looks identical to "no fields exist anywhere".
+
+Before concluding a field is missing, check the Space and Workspace levels too.
+
 ## Update Task does not touch custom fields
 
 `PUT /v2/task/{task_id}` **ignores** custom field values. It does not error — it accepts
@@ -121,3 +146,43 @@ Each field definition carries a `type_config` describing its options: the choice
 `drop_down` or `labels` field, the currency and precision for `currency`, the scale and
 symbol for `emoji`, the start/end values for progress fields. Read it before writing a
 `drop_down` value, since the write takes an option UUID that only appears there.
+
+## Reading a drop-down back is not symmetric with writing it
+
+**Write takes the option's UUID. Read returns the option's `orderindex`.**
+
+```jsonc
+// what you POST
+{ "value": "7d123997-da17-4e10-8fd7-f1a265b31447" }
+
+// what GET /v2/task/{id}?include=custom_fields returns for the same field
+{ "id": "1e8d4078-…", "name": "Type", "type": "drop_down",
+  "type_config": { "options": [ /* … */ ] },
+  "value": 2 }
+```
+
+`2` is the index of that option in `type_config.options`, not an ID. To turn it back into
+a label, index into the options array — and never assume the order is stable if someone
+can reorder options in the UI.
+
+A verification script that greps the response for the UUID it just wrote will report
+success on **every** task, because `include=custom_fields` embeds the full option list on
+each one. Match `"value":` inside the field's own object instead.
+
+Parsing that out without a JSON tool is fiddly, because the options array is separated by
+the same `},{"id":"` that separates fields. Cut to the field by name first, drop the
+options array, then read the first `"value":`:
+
+```bash
+sed 's/.*"name":"Type"//; s/"options":\[[^]]*\]//' task.json \
+  | grep -o '"value":[0-9]*' | head -1
+```
+
+## Writing to a deleted task returns 200
+
+`POST /v2/task/{task_id}/field/{field_id}` against a task that has been deleted responds
+`HTTP 200` and does nothing. `GET` on the same ID returns `ITEM_013 Task not found,
+deleted`.
+
+So a bulk field update can report a clean run while silently skipping every deleted task.
+Probe with a `GET` before writing; do not treat `200` as proof the task exists.
