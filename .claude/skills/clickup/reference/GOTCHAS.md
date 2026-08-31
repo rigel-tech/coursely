@@ -161,6 +161,28 @@ Matching is by **name**, so it is not.
 Read the destination's statuses before deciding — `GET /v2/list/{list_id}` — and send the
 mapping only for names that genuinely have no counterpart there.
 
+## A List description cannot be read back as markdown
+
+_Observed 2026-08-29 writing Sprint Goals onto sprint Lists._
+
+`PUT /v2/list/{list_id}` takes `markdown_content` and renders it correctly — no escaping
+bug here, unlike Docs. But `GET /v2/list/{list_id}` returns only `content`, holding the
+**flattened** text. `## Sprint Goal` comes back as `Sprint Goal`; `**bold**` and
+`` `code` `` come back bare. The response carries no `markdown_content` field, and no
+query parameter restores it the way `?include_markdown_description=true` does for a task.
+
+Two ways this bites:
+
+- **Verification.** Comparing what you sent against what you read always differs, which
+  looks like the write was mangled. It was not — check for _escaped_ markers (`\#`)
+  instead, which is what an actual failure looks like.
+- **Read-modify-write.** Reading `content`, appending a line, and PUTting it back as
+  `markdown_content` silently destroys every heading and emphasis the description had.
+  There is no undo and no warning.
+
+Treat the markdown source as write-only: keep the authoritative copy in the repo and
+re-render the whole description from it, rather than editing what the API hands back.
+
 ## Lists hide tasks whose home is elsewhere
 
 _Documented behaviour._
