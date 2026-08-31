@@ -138,6 +138,51 @@ Setting `custom_item_id` back to `0` releases a slot. A drop-down custom field c
 the same information without touching the quota, at the cost of the type not showing in
 the task header.
 
+## `status_mappings` is rejected when it is not needed
+
+_Observed 2026-08-29 while moving a backlog into a sprint List._
+
+This one fails loudly rather than silently, and is recorded because the documentation
+invites the mistake. The Move Task docs say `status_mappings` is "required if the task's
+current status is not available in the new List" — which reads as permission to send it
+defensively. It is not. When the destination already has a status of that name, a mapping
+naming the correct source and destination IDs still answers:
+
+```json
+{ "status": 400, "message": "Invalid status mappings" }
+```
+
+The same request with `-d '{}'` succeeds and lands the task on the destination's own `to
+do`. What misleads is the ID shape: a List with `override_statuses: true` has status IDs
+(`sc901820738489_jyuatNb3`) that share nothing with the source List's
+(`p901812548912_0VwFQ8z2`), so the two look unrelated and a mapping looks obligatory.
+Matching is by **name**, so it is not.
+
+Read the destination's statuses before deciding — `GET /v2/list/{list_id}` — and send the
+mapping only for names that genuinely have no counterpart there.
+
+## A List description cannot be read back as markdown
+
+_Observed 2026-08-29 writing Sprint Goals onto sprint Lists._
+
+`PUT /v2/list/{list_id}` takes `markdown_content` and renders it correctly — no escaping
+bug here, unlike Docs. But `GET /v2/list/{list_id}` returns only `content`, holding the
+**flattened** text. `## Sprint Goal` comes back as `Sprint Goal`; `**bold**` and
+`` `code` `` come back bare. The response carries no `markdown_content` field, and no
+query parameter restores it the way `?include_markdown_description=true` does for a task.
+
+Two ways this bites:
+
+- **Verification.** Comparing what you sent against what you read always differs, which
+  looks like the write was mangled. It was not — check for _escaped_ markers (`\#`)
+  instead, which is what an actual failure looks like.
+- **Read-modify-write.** Reading `content`, appending a line, and PUTting it back as
+  `markdown_content` silently destroys every heading and emphasis the description had.
+  There is no undo and no warning.
+
+Treat the markdown source as write-only: keep the authoritative copy in the repo and
+re-render the whole description from it, rather than editing what the API hands back.
+
 ## Lists hide tasks whose home is elsewhere
 
 _Documented behaviour._

@@ -40,7 +40,9 @@ So `/v2/team/{team_id}/task` and `/v3/workspaces/{workspace_id}/docs` take the s
 number in that slot. The rename is cosmetic; do not go looking for a separate ID.
 
 Path shapes differ too — v3 pluralises (`/v3/workspaces/...`) where v2 does not
-(`/v2/team/...`). Currently only Docs and Pages are v3; everything else is v2.
+(`/v2/team/...`). Most endpoints are still v2, but v3 is **not** limited to Docs: Move
+Task is v3 while every other task endpoint is v2, so check `llms.txt` rather than
+inferring the version from the subject.
 
 ## Finding IDs
 
@@ -77,6 +79,28 @@ can be rejected in another. Read them before writing:
 ```bash
 GET /v2/list/{list_id}          # returns the configured `statuses` array
 ```
+
+## Writing a List description
+
+A List carries a description — the natural home for a Sprint Goal or a Product Goal:
+
+```bash
+PUT /v2/list/{list_id}    # body: {"name": "...", "markdown_content": "## Goal\n\n..."}
+```
+
+Two things to get right:
+
+- **`name` is required**, even when the description is all you are changing. Send the
+  List's current name back verbatim — reconstructing it from memory renames the List, and
+  nothing warns you.
+- Write `markdown_content`; `content` stores the body as plain text. Same split as a task
+  description, and the read side is worse — see below.
+
+**Reads do not return the markdown.** `GET /v2/list/{list_id}` answers with `content`
+holding the _rendered_ text: headings, bold and backticks are gone, not escaped. There is
+no `markdown_content` on the response and no query parameter that brings it back, so the
+source you wrote is not recoverable through the API. Keep it in the repo if it matters.
+See [GOTCHAS.md](GOTCHAS.md#a-list-description-cannot-be-read-back-as-markdown).
 
 ## Tags belong to the Space
 

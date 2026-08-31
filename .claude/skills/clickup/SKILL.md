@@ -29,6 +29,10 @@ see [MCP-VS-REST.md](reference/MCP-VS-REST.md).
 | Non-blocking association                  | Task link, not dependency                              | [TASKS.md#linked-tasks](reference/TASKS.md#linked-tasks)                                                                                                           |
 | List tasks in a list                      | `GET /v2/list/{list_id}/task` — 100/page               | [TASKS.md#reading-tasks](reference/TASKS.md#reading-tasks)                                                                                                         |
 | Search tasks workspace-wide               | `GET /v2/team/{team_id}/task`                          | [TASKS.md#reading-tasks](reference/TASKS.md#reading-tasks)                                                                                                         |
+| Move a task to another List               | `PUT /v3/.../tasks/{task_id}/home_list/{list_id}`      | [TASKS.md#move-a-task-to-another-list](reference/TASKS.md#move-a-task-to-another-list)                                                                             |
+| Write a Sprint or Product Goal            | `PUT /v2/list/{list_id}` — `name` is required too      | [HIERARCHY.md#writing-a-list-description](reference/HIERARCHY.md#writing-a-list-description)                                                                       |
+| List description read back without format | Reads flatten markdown; the source is unrecoverable    | [GOTCHAS.md#a-list-description-cannot-be-read-back-as-markdown](reference/GOTCHAS.md#a-list-description-cannot-be-read-back-as-markdown)                           |
+| `Invalid status mappings` on a move       | Omit `status_mappings` when the name already exists    | [GOTCHAS.md#status_mappings-is-rejected-when-it-is-not-needed](reference/GOTCHAS.md#status_mappings-is-rejected-when-it-is-not-needed)                             |
 | Update a custom field                     | `POST /v2/task/{task_id}/field/{field_id}`             | [CUSTOM-FIELDS.md#setting-values](reference/CUSTOM-FIELDS.md#setting-values)                                                                                       |
 | Custom field won't update                 | Update Task ignores them — use the field endpoint      | [CUSTOM-FIELDS.md#update-task-does-not-touch-custom-fields](reference/CUSTOM-FIELDS.md#update-task-does-not-touch-custom-fields)                                   |
 | Create or delete a field                  | Not possible via API — UI only                         | [CUSTOM-FIELDS.md#the-api-cannot-create-edit-or-delete-a-field](reference/CUSTOM-FIELDS.md#the-api-cannot-create-edit-or-delete-a-field)                           |
@@ -37,6 +41,7 @@ see [MCP-VS-REST.md](reference/MCP-VS-REST.md).
 | `ITEM_247` on a task type                 | Plan quota on custom task types, not a rate limit      | [GOTCHAS.md#custom-task-types-are-capped-by-plan](reference/GOTCHAS.md#custom-task-types-are-capped-by-plan)                                                       |
 | Field write returned 200, nothing changed | The task was deleted — `200` proves nothing            | [GOTCHAS.md#writing-a-custom-field-to-a-deleted-task-returns-200](reference/GOTCHAS.md#writing-a-custom-field-to-a-deleted-task-returns-200)                       |
 | Create a Doc page                         | `POST /v3/.../docs/{doc_id}/pages`                     | [DOCS.md#create-a-page](reference/DOCS.md#create-a-page)                                                                                                           |
+| Rename or delete a Doc                    | Impossible via API — restructure its pages instead     | [DOCS.md#endpoints](reference/DOCS.md#endpoints)                                                                                                                   |
 | Edit a Doc page                           | `PUT /v3/.../pages/{page_id}` + `content_edit_mode`    | [DOCS.md#edit-a-page](reference/DOCS.md#edit-a-page)                                                                                                               |
 | Doc renders as literal `\##`              | Content was written as plain text, not markdown        | [GOTCHAS.md#escaped-markdown-in-docs](reference/GOTCHAS.md#escaped-markdown-in-docs)                                                                               |
 | Doc shows `null.` or `1.1.1.`             | An empty list item — give every item text              | [GOTCHAS.md#empty-list-items-corrupt-silently](reference/GOTCHAS.md#empty-list-items-corrupt-silently)                                                             |
@@ -49,13 +54,19 @@ see [MCP-VS-REST.md](reference/MCP-VS-REST.md).
 ## Base URLs and versions
 
 ```
-https://api.clickup.com/api/v2/...     # everything except Docs
-https://api.clickup.com/api/v3/...     # Docs and Pages only
+https://api.clickup.com/api/v2/...     # most endpoints
+https://api.clickup.com/api/v3/...     # Docs and Pages, plus a few newer task endpoints
 ```
 
-Most of the API is v2. Docs moved to v3 and use a different path shape
+Most of the API is v2. Newer surfaces are v3 and use a different path shape
 (`/v3/workspaces/{workspace_id}/...`) and different vocabulary. Mixing the two up
 produces a 404 with no hint about the version, so check the version before the path.
+
+**v3 is not only Docs.** Docs and Pages were the first to move, but the migration is
+ongoing and it does not follow subject matter — Move Task lives at
+`PUT /v3/workspaces/{workspace_id}/tasks/{task_id}/home_list/{list_id}` while every other
+task endpoint is still v2. Never infer the version from the noun; look the endpoint up in
+`llms.txt` before building the path.
 
 ## Essential Patterns
 

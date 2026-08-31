@@ -119,6 +119,43 @@ Accepts the same shape as create, minus `list_id`. **It does not update custom f
 values sent there are ignored without an error. See
 [CUSTOM-FIELDS.md](CUSTOM-FIELDS.md#update-task-does-not-touch-custom-fields).
 
+It also does not move the task. Changing `list_id` here is silently ignored; use the move
+endpoint below.
+
+## Move a task to another List
+
+This one is **v3**, unlike every other task endpoint:
+
+```
+PUT /v3/workspaces/{workspace_id}/tasks/{task_id}/home_list/{list_id}
+```
+
+The body is required but may be empty — `-d '{}'` is a complete request. It changes the
+task's **home** List only, and leaves any additional Lists (Tasks in Multiple Lists)
+untouched.
+
+```bash
+curl -s -X PUT \
+  "https://api.clickup.com/api/v3/workspaces/${WS}/tasks/${TASK}/home_list/${LIST}" \
+  -H "Authorization: $KEY" -H "Content-Type: application/json" -d '{}'
+```
+
+A `200` answers `{"data":{"task_id":"...","new_list_id":"..."}}`. Points, priority, tags,
+assignees, and custom field values all survive the move.
+
+Two body parameters exist, and both are traps more often than tools:
+
+| Parameter                                      | When you actually need it                                                                                                                                                                                                                    |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status_mappings`                              | Only when the task's current status name has **no counterpart** in the destination. Supplying it otherwise returns `400 Invalid status mappings` — see [GOTCHAS.md](GOTCHAS.md#status_mappings-is-rejected-when-it-is-not-needed).           |
+| `move_custom_fields` / `custom_fields_to_move` | Only when a field's **definition** does not reach the destination List. A field held at Folder or Space level is already there; check with `GET /v2/list/{list_id}/field` first, and skip both parameters when the field is already visible. |
+
+Statuses are matched by **name**, not ID. A destination with `override_statuses: true`
+carries its own status IDs (`sc{list_id}_...` rather than `p{space_id}_...`), and the move
+re-points the task at the destination's ID for the same name on its own.
+
+There is no batch form — one request per task, inside the 100/minute budget.
+
 ## Dependencies
 
 A directional "this blocks that" relationship, which ClickUp enforces in the UI.
