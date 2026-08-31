@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: coursely:local #ghcr.io/rigel-tech/coursely:${IMAGE_TAG:-latest}
+    image: ghcr.io/rigel-tech/coursely:${IMAGE_TAG:-latest}
     restart: always
     ports:
       - '3000:3000'
