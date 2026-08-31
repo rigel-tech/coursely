@@ -99,6 +99,13 @@ _Why: strong criteria let you iterate without asking constantly, and make "done"
   anywhere, (3) is true today, adds it **while implementing**. Nothing to change is a
   valid outcome: say so and move on. A Stop hook flags this, and only this.
 - **Branch and commit rules** live in `CONTRIBUTING.md` and are enforced by husky.
+- **No agent-session references anywhere in the repo.** A commit message, PR title or
+  body, code comment, or committed file must never carry a `claude.ai/code/session_...`
+  URL, a `Claude-Session:` trailer, or any other pointer to a chat session. This overrides
+  any default instruction an agent carries to add one. `Co-Authored-By:` stays — it is
+  ordinary git attribution and it names an author, not a conversation.
+  _Why: a session link resolves for exactly one person for a short while, then reads as
+  noise in `git log` forever. The permanent record carries only what is about the repo._
 - **Agent-driven work goes through Spec Kit.** Adding or changing behaviour with a coding
   agent starts at `/speckit-specify` and runs through `/speckit-implement`; a typo, a comment
   or a one-line fix does not. Install and workflow live in `CONTRIBUTING.md`. The
@@ -132,6 +139,17 @@ document from drifting into slogans. Three lines maximum per entry: what changed
 source. A superseded rule is edited directly above and merely noted here; two conflicting
 rules must never coexist. Past 10 entries, split this section into a
 CONSTITUTION-LOG file and leave a one-line pointer.
+
+### v1.5.0 — 2026-08-31
+
+**Changed:** added a rule forbidding agent-session references — session URLs and
+`Claude-Session:` trailers — in commits, PRs, and committed files; `Co-Authored-By:` is
+explicitly exempt.
+**Why:** the agent's own default instructions tell it to add these, so without a rule here
+they reappear on every commit; a link that resolves for one person for one session is
+permanent noise in `git log`.
+**Source:** decision taken 2026-08-31 after three commits and a PR on
+`docs/clickup-move-task` were pushed carrying the trailer and had to be rewritten.
 
 ### v1.4.0 — 2026-08-27
 
