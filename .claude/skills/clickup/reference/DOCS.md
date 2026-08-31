@@ -26,6 +26,19 @@ A Doc is a container. Content lives on **Pages**, which nest arbitrarily deep vi
 Use `pageListing` to discover structure cheaply; it returns names and IDs without
 dragging every page body across.
 
+**That table is the whole Docs API.** There is no update and no delete for a Doc — it can
+be created, read and searched, and nothing more. Two consequences worth planning around:
+
+- **A Doc's name is fixed at creation.** Renaming one is a UI-only action, so a Doc
+  created under a name that later stops fitting keeps it until a human intervenes.
+- **A Doc cannot be removed.** A wrong or duplicate Doc is permanent as far as the API is
+  concerned, which makes "create a fresh Doc and abandon the old one" a poor recovery
+  plan — it leaves clutter no script can clear.
+
+Pages are the flexible layer: `PUT .../pages/{page_id}` accepts `name`, so a page can be
+renamed and rewritten freely, and `POST .../pages` adds more. When the structure inside a
+Doc needs to change, restructure the pages rather than replacing the Doc.
+
 ## Reading IDs out of a Doc URL
 
 ```
