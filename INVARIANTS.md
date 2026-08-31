@@ -190,6 +190,76 @@ imported by the **readers** `src/providers/Theme/InitTheme/index.tsx:4` (`InitTh
 
 ## Theming
 
+### A region that must stay dark sets `data-theme="dark"`; it never reaches for `bg-black`
+
+**Rule** — Heroes over a photo, the editor bar, a code block: anything deliberately dark in
+both themes wraps in `data-theme="dark"` and then uses ordinary token classes
+(`bg-background text-foreground`). The attribute re-scopes every custom property for the
+subtree, and Tailwind's utilities compile to `var(--token)` rather than a baked hex, so the
+dark values apply.
+
+**Why it breaks silently** — `bg-black text-white` produces the same picture today and quietly
+leaves the palette: change the tokens and that region does not follow. It is also invisible to
+review, because white and black read as neutral defaults rather than colour decisions.
+`theme-guard` now catches them, but only after this repo carried 14 such colours across five
+files (`AdminBar`, `Footer`, both heroes, `Code`) under a guard reporting zero violations —
+the keyword colours end in a word, and the palette rule was shaped around `family-number`.
+
+**Where** — `src/heros/HighImpact/index.tsx`, `src/heros/PostHero/index.tsx`,
+`src/components/public/AdminBar/index.tsx`, `src/blocks/Code/Component.client.tsx`, the
+`KEYWORD_COLOURS` constant in `scripts/theme-guard.mjs`, and the "deliberately dark region"
+section of [`DESIGN.md`](DESIGN.md).
+
+### `--primary` is a surface, not a text colour — links take `--link`
+
+**Rule** — Never paint text or an icon with `--primary` against the page background. It is a
+fill for `bg-primary`, paired with `--primary-foreground`. Anything that reads as a link takes
+`--link`.
+
+**Why it breaks silently** — `--primary` is deliberately the same blue in light and dark, so
+against the dark page background it sits at **2.75:1**, below WCAG AA. In light mode the same
+class is 6.30:1 and looks perfect, so the defect only exists in one theme and never throws.
+The button's `link` variant shipped this way, and the header nav renders exactly that variant;
+`--link` in the same position is 8.59:1.
+
+**Where** — `src/components/public/ui/button.tsx` (the `link` variant),
+`src/Header/Nav/index.tsx` (the search icon), the `PAIRS` list in
+`tests/unit/repo/component-roles.spec.ts`, which excludes `primary` as a foreground and says
+why.
+
+### `--accent` is a hover surface; the brand orange is `--brand-accent`
+
+**Rule** — `bg-accent` / `text-accent-foreground` paint shadcn's subtle hover-and-focus
+state, a pale blue. The signature orange lives at `--brand-accent`. Reach for `accent`
+because you want "the accent colour" and you will get the wrong one.
+
+**Why it breaks silently** — both names resolve, both compile, both render a colour, and
+`theme-guard` is satisfied because neither is hardcoded. The SpeakEdge export this palette
+came from used `--accent` for the orange, so anyone reading `design/src/` — or carrying a
+habit from a stock shadcn project, where `--accent` is a near-white neutral — will map the
+name onto the wrong role. The failure looks like a design choice: a ghost button that flares
+bright orange on hover instead of tinting.
+
+**Where** — `src/app/(frontend)/globals.css` (`--accent`, `--brand-accent`), the "Colors"
+section of [`DESIGN.md`](DESIGN.md), and the consumers that fix the meaning:
+`src/components/public/ui/button.tsx:16,18` (`hover:bg-accent`) and
+`src/components/public/ui/select.tsx:99` (`focus:bg-accent`).
+
+### Semantic colour tokens are pale surfaces; their `-foreground` partner is the readable one
+
+**Rule** — `--success`, `--warning`, `--error` and `--destructive` are background tints. Text
+and borders take the `-foreground` partner: `bg-success text-success-foreground`, and
+`border-success-foreground` — never `border-success`.
+
+**Why it breaks silently** — this is the reverse of stock shadcn, where `--destructive` is
+the saturated colour and the `-foreground` is what sits on top of it. Copy any shadcn recipe
+and `border-destructive` still produces a valid, rendered border — just a near-white one on a
+near-white card, which reads as "no border" and never fails anything.
+
+**Where** — `src/app/(frontend)/globals.css` (the four pairs and the `@source inline`
+entries that keep the classes generated), `src/blocks/Banner/Component.tsx:17-19`, and the
+"Semantic colours are background-first" section of [`DESIGN.md`](DESIGN.md).
+
 ### A dependency that ships its own CSS keeps its own palette until every one of its variables is mapped to a token
 
 **Rule** — When adding a package that brings its own stylesheet — a typography plugin, a
@@ -201,20 +271,27 @@ alone keeps the vendor's colour.
 `node_modules`, so it reports `0 violations` no matter how much vendor colour is on the
 page. Nothing fails, nothing warns, and the result looks deliberate because vendor
 palettes are tasteful greys. Only opening the real page in both light and dark reveals it.
-Live in this repo today: `@tailwindcss/typography` defines 36 `--tw-prose-*` variables from
-its own slate/gray ramps, and `tailwind.config.mjs` maps 2 of them. The other 34 — links,
-bold, quotes, code, bullets, borders, captions, and the entire 18-variable `prose-invert`
-set that dark mode runs on — still come from the plugin. Every `prose` surface is
-therefore only partly on-theme, and nothing in the repo will say so.
+A neutral palette hides it completely: while this project's tokens were placeholder
+greyscale, the plugin's grey ramp blended in perfectly and looked correct.
+
+`@tailwindcss/typography` is the worked example. It defines 36 `--tw-prose-*` variables;
+all 36 are now mapped in `tailwind.config.mjs`, and `tests/unit/repo/prose-tokens.spec.ts`
+reads the installed package to enumerate them, so a plugin upgrade that adds a 37th turns
+red rather than quietly reintroducing vendor grey. Copy that shape for the next dependency:
+enumerate from the package, do not hand-list.
+
+Two things a role's `invert-` twin must respect: it points at the **same** token, because
+the tokens already flip on `[data-theme='dark']` and `dark:prose-invert` would otherwise
+layer a second flip and paint dark-mode text in light-mode colours.
 
 `tests/unit/repo/theme-tokens.spec.ts` catches only the narrower failure next door: a
 `var(--x)` naming a token that does not exist. A variable that is never mapped at all is
 invisible to it, because there is nothing to dangle.
 
-**Where** — `tailwind.config.mjs:9` (`--tw-prose-body`, `--tw-prose-headings` — the two
-that are mapped), `src/app/(frontend)/globals.css` (the token file),
-`src/components/public/RichText/index.tsx:74` (`enableProse`), and the blind-spot note in
-the header of `scripts/theme-guard.mjs`.
+**Where** — `tailwind.config.mjs` (the 36 mappings and the header explaining them),
+`src/app/(frontend)/globals.css` (the token file), the "Rich text (prose)" table in
+[`DESIGN.md`](DESIGN.md), `src/components/public/RichText/index.tsx:74` (`enableProse`,
+`dark:prose-invert`), and the blind-spot note in the header of `scripts/theme-guard.mjs`.
 
 ## Identifiers
 

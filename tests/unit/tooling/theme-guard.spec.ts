@@ -6,7 +6,7 @@
 // regexes finds out immediately what they broke.
 
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -129,6 +129,46 @@ describe('theme-guard', () => {
       rmSync(planted, { force: true })
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+
+  it('case 10: covers root-level config files, not only src/', () => {
+    // tailwind.config.mjs maps the typography plugin's 36 colour variables onto tokens.
+    // It sits at the repo root, so scanning `src/` alone leaves every one of them
+    // unguarded — a hardcoded colour there would pass lint in silence.
+    const target = join(process.cwd(), 'tailwind.config.mjs')
+    const original = readFileSync(target, 'utf8')
+    try {
+      writeFileSync(target, `${original}\nconst probe = '#ff0000'\n`)
+      let code = 0
+      let output = ''
+      try {
+        execFileSync('node', [GUARD], { encoding: 'utf8', stdio: 'pipe' })
+      } catch (err) {
+        const e = err as { status: number; stderr: string }
+        code = e.status
+        output = e.stderr
+      }
+      expect(code).toBe(1)
+      expect(output).toContain('tailwind.config.mjs')
+    } finally {
+      writeFileSync(target, original)
+    }
+  })
+
+  it('case 11: flags the keyword colours, which carry no palette number', () => {
+    // `text-white` and `bg-black` are as hardcoded as `text-gray-500`, but they end in a word
+    // rather than a shade number, so a rule built around `-<number>` walks straight past them.
+    // The footer shipped `bg-black … text-white` under a green guard for exactly this reason.
+    expect(scan('<i className="text-white" />')).toHaveLength(1)
+    expect(scan('<i className="bg-black" />')).toHaveLength(1)
+    expect(scan('<i className="bg-white/90" />')).toHaveLength(1)
+    expect(scan('<i className="border-black/10" />')).toHaveLength(1)
+  })
+
+  it('case 11b: leaves the keyword non-colours alone', () => {
+    // `transparent`, `current` and `inherit` name no colour of their own — they defer to
+    // whatever the surrounding tokens already decided, which is the behaviour we want.
+    expect(scan('<i className="bg-transparent text-current border-inherit" />')).toEqual([])
   })
 
   it('does not mistake non-colour hex-ish runs for colours', () => {
