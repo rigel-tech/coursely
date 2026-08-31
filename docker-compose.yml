@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: ghcr.io/rigel-tech/coursely:${IMAGE_TAG:-latest}
+    image: coursely:local #ghcr.io/rigel-tech/coursely:${IMAGE_TAG:-latest}
     restart: always
     ports:
       - '3000:3000'
@@ -32,7 +32,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-coursely}
     ports:
-      - '127.0.0.1:5432:5432'
+      - '127.0.0.1:5433:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
