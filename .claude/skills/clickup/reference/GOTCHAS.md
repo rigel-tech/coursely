@@ -138,6 +138,29 @@ Setting `custom_item_id` back to `0` releases a slot. A drop-down custom field c
 the same information without touching the quota, at the cost of the type not showing in
 the task header.
 
+## `status_mappings` is rejected when it is not needed
+
+_Observed 2026-08-29 while moving a backlog into a sprint List._
+
+This one fails loudly rather than silently, and is recorded because the documentation
+invites the mistake. The Move Task docs say `status_mappings` is "required if the task's
+current status is not available in the new List" — which reads as permission to send it
+defensively. It is not. When the destination already has a status of that name, a mapping
+naming the correct source and destination IDs still answers:
+
+```json
+{ "status": 400, "message": "Invalid status mappings" }
+```
+
+The same request with `-d '{}'` succeeds and lands the task on the destination's own `to
+do`. What misleads is the ID shape: a List with `override_statuses: true` has status IDs
+(`sc901820738489_jyuatNb3`) that share nothing with the source List's
+(`p901812548912_0VwFQ8z2`), so the two look unrelated and a mapping looks obligatory.
+Matching is by **name**, so it is not.
+
+Read the destination's statuses before deciding — `GET /v2/list/{list_id}` — and send the
+mapping only for names that genuinely have no counterpart there.
+
 ## Lists hide tasks whose home is elsewhere
 
 _Documented behaviour._

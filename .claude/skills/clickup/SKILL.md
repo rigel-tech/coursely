@@ -29,6 +29,8 @@ see [MCP-VS-REST.md](reference/MCP-VS-REST.md).
 | Non-blocking association                  | Task link, not dependency                              | [TASKS.md#linked-tasks](reference/TASKS.md#linked-tasks)                                                                                                           |
 | List tasks in a list                      | `GET /v2/list/{list_id}/task` — 100/page               | [TASKS.md#reading-tasks](reference/TASKS.md#reading-tasks)                                                                                                         |
 | Search tasks workspace-wide               | `GET /v2/team/{team_id}/task`                          | [TASKS.md#reading-tasks](reference/TASKS.md#reading-tasks)                                                                                                         |
+| Move a task to another List               | `PUT /v3/.../tasks/{task_id}/home_list/{list_id}`      | [TASKS.md#move-a-task-to-another-list](reference/TASKS.md#move-a-task-to-another-list)                                                                             |
+| `Invalid status mappings` on a move       | Omit `status_mappings` when the name already exists    | [GOTCHAS.md#status_mappings-is-rejected-when-it-is-not-needed](reference/GOTCHAS.md#status_mappings-is-rejected-when-it-is-not-needed)                             |
 | Update a custom field                     | `POST /v2/task/{task_id}/field/{field_id}`             | [CUSTOM-FIELDS.md#setting-values](reference/CUSTOM-FIELDS.md#setting-values)                                                                                       |
 | Custom field won't update                 | Update Task ignores them — use the field endpoint      | [CUSTOM-FIELDS.md#update-task-does-not-touch-custom-fields](reference/CUSTOM-FIELDS.md#update-task-does-not-touch-custom-fields)                                   |
 | Create or delete a field                  | Not possible via API — UI only                         | [CUSTOM-FIELDS.md#the-api-cannot-create-edit-or-delete-a-field](reference/CUSTOM-FIELDS.md#the-api-cannot-create-edit-or-delete-a-field)                           |
@@ -49,13 +51,19 @@ see [MCP-VS-REST.md](reference/MCP-VS-REST.md).
 ## Base URLs and versions
 
 ```
-https://api.clickup.com/api/v2/...     # everything except Docs
-https://api.clickup.com/api/v3/...     # Docs and Pages only
+https://api.clickup.com/api/v2/...     # most endpoints
+https://api.clickup.com/api/v3/...     # Docs and Pages, plus a few newer task endpoints
 ```
 
-Most of the API is v2. Docs moved to v3 and use a different path shape
+Most of the API is v2. Newer surfaces are v3 and use a different path shape
 (`/v3/workspaces/{workspace_id}/...`) and different vocabulary. Mixing the two up
 produces a 404 with no hint about the version, so check the version before the path.
+
+**v3 is not only Docs.** Docs and Pages were the first to move, but the migration is
+ongoing and it does not follow subject matter — Move Task lives at
+`PUT /v3/workspaces/{workspace_id}/tasks/{task_id}/home_list/{list_id}` while every other
+task endpoint is still v2. Never infer the version from the noun; look the endpoint up in
+`llms.txt` before building the path.
 
 ## Essential Patterns
 
