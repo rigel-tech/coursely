@@ -40,6 +40,20 @@ jobs:
     needs: verify
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: coursely
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
     steps:
@@ -69,6 +83,9 @@ jobs:
         with:
           context: .
           push: true
+          network: host
+          build-args: |
+            DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/coursely
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -117,13 +134,8 @@ jobs:
             export IMAGE_TAG
             docker compose pull app
 
-            # Chạy Database Migrations trước khi start app mới
-            echo "=== Running Database Migrations ==="
-            docker compose run --rm app node node_modules/payload/bin/payload migrate \
-              || { echo "=== Migration Failed ==="; exit 1; }
-
             # Start service và đợi healthcheck
-            docker compose up -d --remove-orphans app \
+            docker compose up -d --remove-orphans --wait --wait-timeout 180 app \
               || { echo "=== Deployment Failed: Compose Status & Logs ==="; docker compose ps; docker compose logs --tail=200; exit 1; }
 
             # Xác minh endpoint phản hồi HTTP 200
