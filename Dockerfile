@@ -20,7 +20,9 @@ COPY . .
 
 # Set placeholder DB URL for build step if needed, or pass via build-args
 ARG DATABASE_URL
+ARG PAYLOAD_SECRET="dummy_secret_key_for_build_only_32_chars_min"
 ENV DATABASE_URL=$DATABASE_URL
+ENV PAYLOAD_SECRET=$PAYLOAD_SECRET
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
