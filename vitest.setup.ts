@@ -3,12 +3,13 @@
 // Load .env files
 import 'dotenv/config'
 
-// jsdom ships no ResizeObserver; Radix primitives (e.g. Checkbox via react-use-size)
-// call it from a layout effect. A no-op stub is enough for component tests.
-if (!globalThis.ResizeObserver) {
+// jsdom implements no ResizeObserver, and Radix's Select and Tabs both construct one while
+// measuring their triggers. Without it the component throws during render and the failure
+// reads as a broken component rather than a missing browser API.
+if (!('ResizeObserver' in globalThis)) {
   globalThis.ResizeObserver = class {
     observe() {}
     unobserve() {}
     disconnect() {}
-  }
+  } as unknown as typeof ResizeObserver
 }

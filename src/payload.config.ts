@@ -6,6 +6,9 @@ import { buildConfig, PayloadRequest } from 'payload'
 import { fileURLToPath } from 'url'
 
 import { Categories } from './collections/Categories'
+import { CourseObjectives } from './collections/CourseObjectives'
+import { CoursePhases } from './collections/CoursePhases'
+import { Courses } from './collections/Courses'
 import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
@@ -15,6 +18,7 @@ import { Header } from './Header/config'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
+import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -62,6 +66,7 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URL || '',
     },
+    prodMigrations: migrations,
   }),
   email: nodemailerAdapter({
     defaultFromAddress: process.env.SMTP_FROM_ADDRESS,
@@ -80,7 +85,7 @@ export default buildConfig({
     // credential surfaces on the first real send instead.
     skipVerify: true,
   }),
-  collections: [Pages, Posts, Media, Categories, Users],
+  collections: [Pages, Posts, Media, Categories, Users, Courses, CourseObjectives, CoursePhases],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins,

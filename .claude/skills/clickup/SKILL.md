@@ -1,0 +1,213 @@
+---
+name: clickup
+description: Use when working with ClickUp — reading or writing tasks, lists, spaces, Docs, custom fields, dependencies, comments, or webhooks, through either the REST API or ClickUp's MCP server. Use when debugging ClickUp auth failures, 429 rate limits, MCP quota exhaustion, or Doc content that renders wrong after a write.
+---
+
+# ClickUp API and MCP
+
+ClickUp exposes the same data through two front doors with very different limits and
+ergonomics: a **REST API** (100 requests/minute) and an **MCP server** (100 calls/day).
+Picking the wrong one is the single most common way to stall mid-task —
+see [MCP-VS-REST.md](reference/MCP-VS-REST.md).
+
+## Quick Reference
+
+| Task                                      | Solution                                               | Details                                                                                                                                                            |
+| ----------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Authenticate a script                     | `Authorization: pk_...` — **no** `Bearer`              | [AUTHENTICATION.md#personal-token](reference/AUTHENTICATION.md#personal-token)                                                                                     |
+| Authenticate an app                       | `Authorization: Bearer <token>`                        | [AUTHENTICATION.md#oauth](reference/AUTHENTICATION.md#oauth)                                                                                                       |
+| Keep a token out of git                   | Read from `.env` at call time, never echo it           | [AUTHENTICATION.md#handling-tokens-safely](reference/AUTHENTICATION.md#handling-tokens-safely)                                                                     |
+| Find a list/space/folder ID               | Walk the hierarchy, or read it from a ClickUp URL      | [HIERARCHY.md#finding-ids](reference/HIERARCHY.md#finding-ids)                                                                                                     |
+| `team_id` vs `workspace_id`               | Same number; v2 says team, v3 says workspace           | [HIERARCHY.md#v2-vs-v3-terminology](reference/HIERARCHY.md#v2-vs-v3-terminology)                                                                                   |
+| Create a task                             | `POST /v2/list/{list_id}/task`                         | [TASKS.md#create-a-task](reference/TASKS.md#create-a-task)                                                                                                         |
+| Set priority                              | Integer `1`–`4`, not a string                          | [TASKS.md#priority](reference/TASKS.md#priority)                                                                                                                   |
+| Set a due date                            | Unix **milliseconds**, UTC                             | [TASKS.md#dates](reference/TASKS.md#dates)                                                                                                                         |
+| Rich task description                     | Write `markdown_content`, read `markdown_description`  | [TASKS.md#descriptions](reference/TASKS.md#descriptions)                                                                                                           |
+| Link tasks as blocking                    | `POST /v2/task/{task_id}/dependency`                   | [TASKS.md#dependencies](reference/TASKS.md#dependencies)                                                                                                           |
+| Merge tasks into one                      | `POST /v2/task/{task_id}/merge` — sources are deleted  | [TASKS.md#merging-tasks](reference/TASKS.md#merging-tasks)                                                                                                         |
+| Merged task lost its description          | Only the target's body survives — write it first       | [GOTCHAS.md#merging-discards-every-source-description](reference/GOTCHAS.md#merging-discards-every-source-description)                                             |
+| Non-blocking association                  | Task link, not dependency                              | [TASKS.md#linked-tasks](reference/TASKS.md#linked-tasks)                                                                                                           |
+| List tasks in a list                      | `GET /v2/list/{list_id}/task` — 100/page               | [TASKS.md#reading-tasks](reference/TASKS.md#reading-tasks)                                                                                                         |
+| Search tasks workspace-wide               | `GET /v2/team/{team_id}/task`                          | [TASKS.md#reading-tasks](reference/TASKS.md#reading-tasks)                                                                                                         |
+| Move a task to another List               | `PUT /v3/.../tasks/{task_id}/home_list/{list_id}`      | [TASKS.md#move-a-task-to-another-list](reference/TASKS.md#move-a-task-to-another-list)                                                                             |
+| Write a Sprint or Product Goal            | `PUT /v2/list/{list_id}` — `name` is required too      | [HIERARCHY.md#writing-a-list-description](reference/HIERARCHY.md#writing-a-list-description)                                                                       |
+| List description read back without format | Reads flatten markdown; the source is unrecoverable    | [GOTCHAS.md#a-list-description-cannot-be-read-back-as-markdown](reference/GOTCHAS.md#a-list-description-cannot-be-read-back-as-markdown)                           |
+| `Invalid status mappings` on a move       | Omit `status_mappings` when the name already exists    | [GOTCHAS.md#status_mappings-is-rejected-when-it-is-not-needed](reference/GOTCHAS.md#status_mappings-is-rejected-when-it-is-not-needed)                             |
+| Update a custom field                     | `POST /v2/task/{task_id}/field/{field_id}`             | [CUSTOM-FIELDS.md#setting-values](reference/CUSTOM-FIELDS.md#setting-values)                                                                                       |
+| Custom field won't update                 | Update Task ignores them — use the field endpoint      | [CUSTOM-FIELDS.md#update-task-does-not-touch-custom-fields](reference/CUSTOM-FIELDS.md#update-task-does-not-touch-custom-fields)                                   |
+| Create or delete a field                  | Not possible via API — UI only                         | [CUSTOM-FIELDS.md#the-api-cannot-create-edit-or-delete-a-field](reference/CUSTOM-FIELDS.md#the-api-cannot-create-edit-or-delete-a-field)                           |
+| Field list comes back empty               | Not shared down to that container yet                  | [CUSTOM-FIELDS.md#a-field-only-appears-once-it-reaches-the-container](reference/CUSTOM-FIELDS.md#a-field-only-appears-once-it-reaches-the-container)               |
+| Drop-down reads back as a number          | Writes take the UUID, reads return `orderindex`        | [CUSTOM-FIELDS.md#reading-a-drop-down-back-is-not-symmetric-with-writing-it](reference/CUSTOM-FIELDS.md#reading-a-drop-down-back-is-not-symmetric-with-writing-it) |
+| `ITEM_247` on a task type                 | Plan quota on custom task types, not a rate limit      | [GOTCHAS.md#custom-task-types-are-capped-by-plan](reference/GOTCHAS.md#custom-task-types-are-capped-by-plan)                                                       |
+| Field write returned 200, nothing changed | The task was deleted — `200` proves nothing            | [GOTCHAS.md#writing-a-custom-field-to-a-deleted-task-returns-200](reference/GOTCHAS.md#writing-a-custom-field-to-a-deleted-task-returns-200)                       |
+| Create a Doc page                         | `POST /v3/.../docs/{doc_id}/pages`                     | [DOCS.md#create-a-page](reference/DOCS.md#create-a-page)                                                                                                           |
+| Rename or delete a Doc                    | Impossible via API — restructure its pages instead     | [DOCS.md#endpoints](reference/DOCS.md#endpoints)                                                                                                                   |
+| Edit a Doc page                           | `PUT /v3/.../pages/{page_id}` + `content_edit_mode`    | [DOCS.md#edit-a-page](reference/DOCS.md#edit-a-page)                                                                                                               |
+| Doc renders as literal `\##`              | Content was written as plain text, not markdown        | [GOTCHAS.md#escaped-markdown-in-docs](reference/GOTCHAS.md#escaped-markdown-in-docs)                                                                               |
+| Doc shows `null.` or `1.1.1.`             | An empty list item — give every item text              | [GOTCHAS.md#empty-list-items-corrupt-silently](reference/GOTCHAS.md#empty-list-items-corrupt-silently)                                                             |
+| Checklist missing from a Doc              | Not supported by the Docs API at all                   | [DOCS.md#what-survives-a-write](reference/DOCS.md#what-survives-a-write)                                                                                           |
+| Hit `429`                                 | Back off; limit is per token, per minute               | [MCP-VS-REST.md#rate-limits](reference/MCP-VS-REST.md#rate-limits)                                                                                                 |
+| MCP says daily limit reached              | Switch to REST — a separate, far higher budget         | [MCP-VS-REST.md#when-mcp-runs-out](reference/MCP-VS-REST.md#when-mcp-runs-out)                                                                                     |
+| MCP "server not connected"                | Session-local drop; CLI health check does not prove it | [GOTCHAS.md#mcp-connection-drops](reference/GOTCHAS.md#mcp-connection-drops)                                                                                       |
+| You learned something not written here    | Record it in this skill, in the same change            | [#maintaining-this-skill](#maintaining-this-skill)                                                                                                                 |
+
+## Base URLs and versions
+
+```
+https://api.clickup.com/api/v2/...     # most endpoints
+https://api.clickup.com/api/v3/...     # Docs and Pages, plus a few newer task endpoints
+```
+
+Most of the API is v2. Newer surfaces are v3 and use a different path shape
+(`/v3/workspaces/{workspace_id}/...`) and different vocabulary. Mixing the two up
+produces a 404 with no hint about the version, so check the version before the path.
+
+**v3 is not only Docs.** Docs and Pages were the first to move, but the migration is
+ongoing and it does not follow subject matter — Move Task lives at
+`PUT /v3/workspaces/{workspace_id}/tasks/{task_id}/home_list/{list_id}` while every other
+task endpoint is still v2. Never infer the version from the noun; look the endpoint up in
+`llms.txt` before building the path.
+
+## Essential Patterns
+
+### A minimal authenticated request
+
+```bash
+KEY=$(grep '^CLICKUP_API_KEY=' .env | cut -d= -f2- | tr -d '"'\''\r')
+
+curl -s "https://api.clickup.com/api/v2/task/86eyrzbtp" \
+  -H "Authorization: $KEY"
+```
+
+The personal token goes in raw. Adding `Bearer` — the reflex from almost every other
+API — fails authentication. See [AUTHENTICATION.md](reference/AUTHENTICATION.md).
+
+### Create a task with a markdown body
+
+```bash
+curl -s -X POST "https://api.clickup.com/api/v2/list/${LIST_ID}/task" \
+  -H "Authorization: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "US-101 · Course catalog page",
+    "markdown_content": "## Acceptance Criteria\n\n- Draft courses stay hidden\n",
+    "priority": 2,
+    "tags": ["sprint-1", "story"]
+  }'
+```
+
+`priority` is an integer (`2` = High), never the word `"high"`. Tags are given by name.
+See [TASKS.md](reference/TASKS.md).
+
+### Declare that one task blocks another
+
+```bash
+curl -s -X POST "https://api.clickup.com/api/v2/task/${BLOCKED}/dependency" \
+  -H "Authorization: $KEY" -H "Content-Type: application/json" \
+  -d "{\"depends_on\":\"${BLOCKER}\"}"
+```
+
+One relationship per request — `depends_on` and `dependency_of` are mutually exclusive.
+
+### Write a Doc page as real markdown
+
+```bash
+curl -s -X PUT \
+  "https://api.clickup.com/api/v3/workspaces/${WS}/docs/${DOC}/pages/${PAGE}" \
+  -H "Authorization: $KEY" -H "Content-Type: application/json" \
+  -d '{"content":"## Heading\n\ntext\n","content_format":"text/md"}'
+```
+
+Omitting `content_format` or sending the body as plain text stores the markdown
+**escaped**, so the page renders `\## Heading` as visible text. This is the most
+common ClickUp Docs defect — [GOTCHAS.md](reference/GOTCHAS.md).
+
+## Verify writes by reading back
+
+ClickUp accepts content its renderer then mangles, and returns `success: true` either
+way. Empty list items become the literal string `null.`, consecutive empty numbered
+items collapse into `1.1.1.`, and checklists are dropped entirely. None of this
+surfaces as an error.
+
+After any Doc or description write, read the object back and check the content before
+calling the work done. [GOTCHAS.md](reference/GOTCHAS.md) lists every trap observed so far.
+
+## Reference
+
+| File                                             | Covers                                                                  |
+| ------------------------------------------------ | ----------------------------------------------------------------------- |
+| [AUTHENTICATION.md](reference/AUTHENTICATION.md) | Personal token vs OAuth, header formats, token hygiene, revocation      |
+| [HIERARCHY.md](reference/HIERARCHY.md)           | Workspace → Space → Folder → List → Task, folderless lists, finding IDs |
+| [TASKS.md](reference/TASKS.md)                   | CRUD, priority, dates, tags, dependencies, links, filtering, pagination |
+| [CUSTOM-FIELDS.md](reference/CUSTOM-FIELDS.md)   | Field types, value shapes per type, setting and filtering               |
+| [DOCS.md](reference/DOCS.md)                     | v3 Docs API, page tree, edit modes, what formatting survives            |
+| [MCP-VS-REST.md](reference/MCP-VS-REST.md)       | Choosing a front door, both rate limits, migrating off MCP mid-task     |
+| [GOTCHAS.md](reference/GOTCHAS.md)               | Silently-breaking behaviour, each with how it was observed              |
+
+## Sources
+
+Written against the official docs, fetched as markdown by appending `.md` to any page
+URL. The full index lives at <https://developer.clickup.com/llms.txt> — start there when
+this skill does not cover something, rather than guessing an endpoint path.
+
+## Maintaining this skill
+
+This file executes nothing. It stays correct only because the agent reading it writes back
+what it learns — the same rule this repo applies to `INVARIANTS.md`.
+
+**Before finishing any ClickUp work, ask what this skill did not tell you that it should
+have.** If the answer is "nothing", say so and move on; that is a valid outcome. If there
+is something, record it in the same change as the work, not later.
+
+An observation earns an entry when all three hold:
+
+1. **It breaks silently** — the API returns success, or a plausible-looking wrong answer,
+   rather than an error.
+2. **It constrains future work**, not only the task in hand.
+3. **It is true now**, checked against the live API or the current docs this session.
+
+Where it goes:
+
+| What you learned                                             | Where it belongs                                    |
+| ------------------------------------------------------------ | --------------------------------------------------- |
+| Behaviour that contradicts the docs, or that no doc mentions | `GOTCHAS.md`, labelled _Observed_ with the date     |
+| A documented fact this skill got wrong, or never covered     | the matching `reference/` file, corrected in place  |
+| Something a future reader needs to find in seconds           | one row in Quick Reference, pointing at the section |
+
+**Supersede, never accumulate.** A corrected fact is rewritten where it stood and the old
+wording deleted. Two contradicting statements in one skill are worse than the gap that
+preceded them.
+
+Keep the two kinds of claim visibly apart. _Observed_ means someone watched the API do it,
+and carries a date so it can be re-tested. Everything else is only as reliable as ClickUp's
+documentation, which has already been caught contradicting itself.
+
+### Checking a claim before writing it down
+
+Endpoint pages embed their OpenAPI definition, so the schema — not the prose — is the
+authority on what a parameter is called and which direction it travels:
+
+```bash
+curl -s https://developer.clickup.com/llms.txt -o index.txt        # every page, by topic
+curl -s https://developer.clickup.com/reference/createtask.md -o ep.md
+
+grep -n '"requestBody"\|"responses"' ep.md    # where the request ends, the response begins
+grep -n '<field name>' ep.md                  # which side of that line the field falls on
+```
+
+A field appearing above `"responses"` is something you send; below it, something you
+receive. Prose guides and request examples on the same page have both been wrong about
+this.
+
+### The mistake this section exists to prevent
+
+The first version of this skill listed `markdown_description` as the field for writing a
+task description. It is the field for **reading** one, and only with
+`?include_markdown_description=true`; writes take `markdown_content`.
+
+Both the guide text and the create-task example pointed the wrong way, and the MCP tool's
+parameter is named after the read field, so three sources agreed with each other and with
+the mistake. Only the request schema disagreed — and it was right.
+
+Trust the schema. When the schema and the prose conflict, the prose is the thing to
+document as a trap.
