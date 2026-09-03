@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
   sassOptions: {
     loadPaths: ['./node_modules/@payloadcms/ui/dist/scss/'],
   },
+  output: 'standalone',
   images: {
     localPatterns: [
       {

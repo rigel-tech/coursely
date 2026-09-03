@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.github
+.claude
+.env
+.env.*
+tests
+playwright-report
+docker-compose*.yml
+Dockerfile

@@ -25,7 +25,12 @@ const COMPOSE_PATTERNS = {
 const composeValue = (key: keyof typeof COMPOSE_PATTERNS): string => {
   const match = readFileSync('docker-compose.yml', 'utf8').match(COMPOSE_PATTERNS[key])
   if (!match) throw new Error(`postgres ${key} not found in docker-compose.yml`)
-  return match[1]
+  let val = match[1]
+  const fallbackMatch = val.match(/\$\{[^:]+:-(.+)\}/)
+  if (fallbackMatch) {
+    val = fallbackMatch[1]
+  }
+  return val
 }
 
 const exampleDatabaseUrl = (): URL => {
