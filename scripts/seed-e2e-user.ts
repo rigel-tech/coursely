@@ -33,7 +33,10 @@ try {
   await payload.delete({ collection: 'users', where: { email: { equals: email } } })
 
   if (command === 'seed') {
-    await payload.create({ collection: 'users', data: { email, password } })
+    await payload.create({
+      collection: 'users',
+      data: { email, password, role: 'ADMIN', status: 'ACTIVE' },
+    })
   }
 } catch (error) {
   console.error(error)

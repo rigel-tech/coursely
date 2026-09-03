@@ -1,0 +1,20 @@
+/**
+ * Thin wrappers over `payload.sendEmail` for the registration flow. The caller
+ * fires these after the DB transaction commits (§5.1 step 7) — never before, or a
+ * rolled-back registration would still have emailed a code for a user that does
+ * not exist.
+ */
+import type { Payload } from 'payload'
+
+import { duplicateRegisterAttemptEmail } from '@/email/templates/duplicate-register-attempt'
+import { verifyOtpEmail } from '@/email/templates/verify-otp'
+
+export async function sendVerifyOtpEmail(payload: Payload, to: string, otp: string): Promise<void> {
+  const { subject, html, text } = verifyOtpEmail(otp)
+  await payload.sendEmail({ to, subject, html, text })
+}
+
+export async function sendDuplicateAttemptEmail(payload: Payload, to: string): Promise<void> {
+  const { subject, html, text } = duplicateRegisterAttemptEmail()
+  await payload.sendEmail({ to, subject, html, text })
+}

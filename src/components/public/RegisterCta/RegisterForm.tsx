@@ -1,21 +1,31 @@
 'use client'
 
 import * as React from 'react'
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { Checkbox } from '@/components/public/ui/checkbox'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
-import { initialRegisterState, registerAction } from '@/actions/auth/register'
+import { registerAction } from '@/actions/auth/register'
+import { initialRegisterState } from '@/actions/auth/register.state'
 import { SubmitButton } from './SubmitButton'
 
 /**
  * Self-registration form (Student). Fields follow the spec: email, password,
  * confirmPassword, optional fullName and phone, and a terms checkbox. Wired to
- * `registerAction` through `useActionState`; the action is a placeholder for now.
+ * `registerAction` through `useActionState`. The redirect to `/verify-otp` runs
+ * here, in an effect after the action resolves — not inside the action — so the
+ * `pending_email` cookie from the action response is already stored before the
+ * target page reads it.
  */
 export const RegisterForm: React.FC = () => {
+  const router = useRouter()
   const [state, formAction] = useActionState(registerAction, initialRegisterState)
+
+  useEffect(() => {
+    if (state.status === 'success') router.push('/verify-otp')
+  }, [state.status, router])
 
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>

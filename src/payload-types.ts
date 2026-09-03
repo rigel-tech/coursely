@@ -72,6 +72,7 @@ export interface Config {
     media: Media;
     categories: Category;
     users: User;
+    notifications: Notification;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -94,6 +95,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -419,7 +421,21 @@ export interface Category {
  */
 export interface User {
   id: number;
-  name?: string | null;
+  fullName?: string | null;
+  phone?: string | null;
+  avatar?: (number | null) | Media;
+  role: 'ADMIN' | 'STUDENT';
+  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
+  /**
+   * Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.
+   */
+  isWalkIn?: boolean | null;
+  verifiedAt?: string | null;
+  lastLoginAt?: string | null;
+  /**
+   * Admin đã tạo tài khoản này. Trống với tài khoản tự đăng ký.
+   */
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -774,6 +790,32 @@ export interface Form {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications".
+ */
+export interface Notification {
+  id: number;
+  user: number | User;
+  type: 'ACCOUNT_CREATED';
+  title: string;
+  content: string;
+  /**
+   * Ngữ cảnh tạo thông báo, ví dụ { ip, userAgent }.
+   */
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  isRead?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -981,6 +1023,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'users';
         value: number | User;
+      } | null)
+    | ({
+        relationTo: 'notifications';
+        value: number | Notification;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1329,7 +1375,15 @@ export interface CategoriesSelect<T extends boolean = true> {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
-  name?: T;
+  fullName?: T;
+  phone?: T;
+  avatar?: T;
+  role?: T;
+  status?: T;
+  isWalkIn?: T;
+  verifiedAt?: T;
+  lastLoginAt?: T;
+  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1346,6 +1400,20 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications_select".
+ */
+export interface NotificationsSelect<T extends boolean = true> {
+  user?: T;
+  type?: T;
+  title?: T;
+  content?: T;
+  metadata?: T;
+  isRead?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

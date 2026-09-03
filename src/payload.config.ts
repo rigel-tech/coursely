@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url'
 
 import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
+import { Notifications } from './collections/Notifications'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
@@ -80,7 +81,7 @@ export default buildConfig({
     // credential surfaces on the first real send instead.
     skipVerify: true,
   }),
-  collections: [Pages, Posts, Media, Categories, Users],
+  collections: [Pages, Posts, Media, Categories, Users, Notifications],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins,

@@ -64,13 +64,15 @@ Payload's relationship population is filtered by access control and `authors` co
 bare IDs rather than user objects. It does not throw and it does not return an error field —
 `author.name` is simply `undefined`, so the byline renders as an empty string and the page
 looks like a post that has no author. The `populateAuthors` afterRead hook exists precisely to
-copy `{ id, name }` past that boundary. GraphQL also refuses to return mutated user data that
-differs from the schema, which is why the copy lives in its own field instead.
+copy `{ id, name }` past that boundary — its `name` is read from the user's `fullName` field,
+so renaming that field silently blanks every byline. GraphQL also refuses to return mutated
+user data that differs from the schema, which is why the copy lives in its own field instead.
 
-**Where** — `src/collections/Users/index.ts:11` (`read: authenticated`),
-`src/collections/Posts/hooks/populateAuthors.ts:4` (`populateAuthors`, and the comment
-explaining the boundary), `src/collections/Posts/index.ts:197` (`populatedAuthors` field,
-`admin.disabled`), consumed at `src/heros/PostHero/index.tsx:12` (`PostHero`).
+**Where** — `src/collections/Users/index.ts` (`read: authenticated` in `access`; the
+`fullName` field the byline is copied from), `src/collections/Posts/hooks/populateAuthors.ts`
+(`populateAuthors`, `name: authorDoc.fullName`, and the comment explaining the boundary),
+`src/collections/Posts/index.ts:197` (`populatedAuthors` field, `admin.disabled`), consumed at
+`src/heros/PostHero/index.tsx:12` (`PostHero`).
 
 ## Cache invalidation
 
