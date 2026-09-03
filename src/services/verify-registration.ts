@@ -1,0 +1,47 @@
+/**
+ * Registration-verification domain logic (§5.2). No HTTP concerns — the caller
+ * owns the `pending_email` cookie. Given an `(email, otp)` pair this checks the
+ * Redis challenge with its 5-try lockout and, on a correct code, flips the
+ * account `PENDING_VERIFICATION -> ACTIVE` and stamps `verifiedAt`. The account
+ * lookup runs before `verifyOtp` so a disabled account never burns the code, and
+ * an already-`ACTIVE` account resolves `ok` without touching Redis.
+ */
+import { getPayload } from 'payload'
+import configPromise from '@payload-config'
+
+import { verifyOtp } from '@/services/otp-store'
+
+export type VerifyRegistrationResult =
+  | { ok: true }
+  | { ok: false; reason: 'session_expired' | 'disabled' | 'expired' | 'locked' }
+  | { ok: false; reason: 'mismatch'; remaining: number }
+
+export async function verifyRegistration(
+  email: string,
+  otp: string,
+): Promise<VerifyRegistrationResult> {
+  const payload = await getPayload({ config: await configPromise })
+
+  const user = (
+    await payload.find({
+      collection: 'users',
+      where: { email: { equals: email } },
+      limit: 1,
+      depth: 0,
+    })
+  ).docs[0]
+
+  if (!user) return { ok: false, reason: 'session_expired' }
+  if (user.status === 'DISABLED') return { ok: false, reason: 'disabled' }
+  if (user.status === 'ACTIVE') return { ok: true }
+
+  const result = await verifyOtp(email, otp)
+  if (!result.ok) return result
+
+  await payload.update({
+    collection: 'users',
+    id: user.id,
+    data: { status: 'ACTIVE', verifiedAt: new Date().toISOString() },
+  })
+  return { ok: true }
+}

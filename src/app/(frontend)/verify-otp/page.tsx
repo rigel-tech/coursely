@@ -1,18 +1,16 @@
 import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import React from 'react'
 
+import { PENDING_EMAIL_COOKIE } from '@/lib/constants/auth'
 import { maskEmail } from '@/lib/mask-email'
 import { OtpForm } from './OtpForm'
 
 /**
- * Server Component. Reads the `pending_email` cookie set by `registerAction`;
- * without it there is nothing to verify, so bounce home. With it, show the masked
- * address and the code form.
+ * Server Component. `proxy` already guaranteed the `pending_email` cookie is
+ * present (it bounces home otherwise); here it is only read to mask the address.
  */
 export default async function VerifyOtpPage() {
-  const pendingEmail = (await cookies()).get('pending_email')?.value
-  if (!pendingEmail) redirect('/')
+  const pendingEmail = (await cookies()).get(PENDING_EMAIL_COOKIE)?.value ?? ''
 
   return (
     <div className="container py-28">

@@ -5,6 +5,7 @@ import path from 'path'
 import { buildConfig, PayloadRequest } from 'payload'
 import { fileURLToPath } from 'url'
 
+import { AuditLogs } from './collections/AuditLogs'
 import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
 import { Notifications } from './collections/Notifications'
@@ -81,7 +82,7 @@ export default buildConfig({
     // credential surfaces on the first real send instead.
     skipVerify: true,
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Notifications],
+  collections: [Pages, Posts, Media, Categories, Users, Notifications, AuditLogs],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins,

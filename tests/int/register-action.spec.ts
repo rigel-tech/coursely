@@ -33,7 +33,7 @@ vi.mock('next/headers', () => ({
 
 // Imported after the mocks are registered.
 const { registerAction } = await import('@/actions/auth/register')
-const { initialRegisterState } = await import('@/actions/auth/register.state')
+const { initialRegisterState } = await import('@/lib/constants/register-state')
 
 let payload: Payload
 

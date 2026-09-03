@@ -5,7 +5,7 @@ import { cookies, headers } from 'next/headers'
 import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_TTL_SEC } from '@/lib/constants/auth'
 import { parseRegisterInput } from '@/lib/validation/register-schema'
 import { registerStudent } from '@/services/register'
-import type { RegisterState } from './register.state'
+import type { RegisterState } from '@/lib/constants/register-state'
 
 /**
  * Server action for self-registration (§5.1). Orchestration only: read request
