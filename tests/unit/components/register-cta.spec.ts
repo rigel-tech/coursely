@@ -1,6 +1,9 @@
 import React from 'react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+
+// RegisterForm calls useRouter() on render; no app-router context under jsdom.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 
 import { RegisterCta } from '@/components/public/RegisterCta'
 

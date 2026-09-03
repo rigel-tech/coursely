@@ -10,6 +10,7 @@ import { CourseObjectives } from './collections/CourseObjectives'
 import { CoursePhases } from './collections/CoursePhases'
 import { Courses } from './collections/Courses'
 import { Media } from './collections/Media'
+import { Notifications } from './collections/Notifications'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
@@ -85,7 +86,18 @@ export default buildConfig({
     // credential surfaces on the first real send instead.
     skipVerify: true,
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Courses, CourseObjectives, CoursePhases],
+  collections: [
+    Pages,
+    Posts,
+    Media,
+    Categories,
+    Users,
+    Courses,
+    CourseObjectives,
+    CoursePhases,
+    Notifications,
+  ],
+
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins,
