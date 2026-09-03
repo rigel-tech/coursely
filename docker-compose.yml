@@ -16,5 +16,19 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    # OTP codes and rate-limit counters are all short-TTL — nothing here is worth
+    # persisting across a restart, so disable both RDB snapshots and the AOF.
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   data:

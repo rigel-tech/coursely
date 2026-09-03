@@ -7,6 +7,7 @@ import React, { useEffect } from 'react'
 import type { Header } from '@/payload-types'
 
 import { Logo } from '@/components/public/Logo/Logo'
+import { RegisterCta } from '@/components/public/RegisterCta'
 import useIsHydrated from '@/utilities/useIsHydrated'
 import { HeaderNav } from './Nav'
 
@@ -33,7 +34,10 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data }) => {
         <Link href="/">
           <Logo loading="eager" priority="high" className="invert dark:invert-0" />
         </Link>
-        <HeaderNav data={data} />
+        <div className="flex items-center gap-4">
+          <HeaderNav data={data} />
+          <RegisterCta />
+        </div>
       </div>
     </header>
   )
