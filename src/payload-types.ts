@@ -87,6 +87,10 @@ export interface Config {
     'payload-migrations': PayloadMigration;
   };
   collectionsJoins: {
+    courses: {
+      objectives: 'course-objectives';
+      phases: 'course-phases';
+    };
     'payload-folders': {
       documentsAndFolders: 'payload-folders' | 'media';
     };
@@ -809,6 +813,16 @@ export interface Course {
   moodleUrl?: string | null;
   registrationStartAt?: string | null;
   registrationEndAt?: string | null;
+  objectives?: {
+    docs?: (number | CourseObjective)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  phases?: {
+    docs?: (number | CoursePhase)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   meta?: {
     title?: string | null;
     /**
@@ -1467,6 +1481,8 @@ export interface CoursesSelect<T extends boolean = true> {
   moodleUrl?: T;
   registrationStartAt?: T;
   registrationEndAt?: T;
+  objectives?: T;
+  phases?: T;
   meta?:
     | T
     | {

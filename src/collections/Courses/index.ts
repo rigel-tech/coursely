@@ -110,6 +110,25 @@ export const Courses: CollectionConfig<'courses'> = {
           ],
         },
         {
+          label: 'Mục tiêu & Lộ trình',
+          fields: [
+            {
+              name: 'objectives',
+              type: 'join',
+              collection: 'course-objectives',
+              on: 'course',
+              label: 'Mục tiêu đầu ra (Course Objectives)',
+            },
+            {
+              name: 'phases',
+              type: 'join',
+              collection: 'course-phases',
+              on: 'course',
+              label: 'Lộ trình các giai đoạn (Course Phases)',
+            },
+          ],
+        },
+        {
           name: 'meta',
           label: 'SEO',
           fields: [
