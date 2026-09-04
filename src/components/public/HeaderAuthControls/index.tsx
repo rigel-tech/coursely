@@ -69,8 +69,8 @@ export const HeaderAuthControls: React.FC = () => {
             href="/tai-khoan"
             className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 hover:bg-muted py-1 pl-1 pr-3.5 transition-colors"
           >
-            <Avatar name={user?.name || 'Minh Anh'} size="sm" className="size-7 text-xs" />
-            <span className="text-sm font-medium text-foreground">{user?.name || 'Minh Anh'}</span>
+            <Avatar name={user?.name || 'Tài khoản'} size="sm" className="size-7 text-xs" />
+            <span className="text-sm font-medium text-foreground">{user?.name || 'Tài khoản'}</span>
           </Link>
         </div>
       ) : (
