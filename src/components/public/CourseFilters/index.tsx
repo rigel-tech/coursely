@@ -11,8 +11,9 @@ import { Input } from '@/components/public/ui/input'
 import type { Category } from '@/payload-types'
 
 export interface CourseFiltersProps {
-  categories: Category[]
+  categories?: Category[]
   activeCategory?: string
+  activeType?: string
   activeQuery?: string
   activeStartDateFrom?: string
   activeStartDateTo?: string
@@ -21,11 +22,12 @@ export interface CourseFiltersProps {
 }
 
 /**
- * Course search, category and date filter controls (US-103 matching UI design).
+ * Course search, type (Offline / Moodle), category and date filter controls.
  */
 export function CourseFilters({
-  categories,
+  categories = [],
   activeCategory,
+  activeType,
   activeQuery = '',
   activeStartDateFrom = '',
   activeStartDateTo = '',
@@ -54,6 +56,7 @@ export function CourseFilters({
   const applyFilters = (overrides?: {
     q?: string
     category?: string | null
+    type?: string | null
     from?: string
     to?: string
   }) => {
@@ -71,6 +74,14 @@ export function CourseFilters({
         params.set('category', overrides.category)
       } else {
         params.delete('category')
+      }
+    }
+
+    if (overrides && 'type' in overrides) {
+      if (overrides.type && overrides.type !== 'all') {
+        params.set('type', overrides.type)
+      } else {
+        params.delete('type')
       }
     }
 
@@ -98,27 +109,43 @@ export function CourseFilters({
     applyFilters()
   }
 
-  const buildCategoryUrl = (slug?: string | null) => {
+  const buildFilterUrl = (options: { type?: string | null; category?: string | null }) => {
     const params = new URLSearchParams(searchParams.toString())
-    if (slug && slug !== 'all') {
-      params.set('category', slug)
-    } else {
-      params.delete('category')
+
+    if ('type' in options) {
+      if (options.type && options.type !== 'all') {
+        params.set('type', options.type)
+      } else {
+        params.delete('type')
+      }
     }
+
+    if ('category' in options) {
+      if (options.category && options.category !== 'all') {
+        params.set('category', options.category)
+      } else {
+        params.delete('category')
+      }
+    }
+
     params.delete('page')
     const qs = params.toString()
     return qs ? `/courses?${qs}` : '/courses'
   }
 
   const hasActiveFilters = Boolean(
-    activeCategory || activeQuery || activeStartDateFrom || activeStartDateTo,
+    activeCategory || activeType || activeQuery || activeStartDateFrom || activeStartDateTo,
   )
 
   const displayCount = allTotalCount ?? totalCount
 
+  const isAllActive = !activeType || activeType === 'all'
+  const isOfflineActive = activeType === 'OFFLINE'
+  const isMoodleActive = activeType === 'MOODLE'
+
   return (
     <div className="flex flex-col gap-5 mb-8">
-      {/* Row 1: Search input + Category Pills */}
+      {/* Row 1: Search input + Type/Category Pills */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="w-full sm:w-80 md:w-96">
           <Input
@@ -133,19 +160,51 @@ export function CourseFilters({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Tất cả (6) */}
           <Button
             asChild
             size="sm"
-            variant={!activeCategory || activeCategory === 'all' ? 'default' : 'outline'}
+            variant={isAllActive ? 'default' : 'outline'}
             className={
-              !activeCategory || activeCategory === 'all'
+              isAllActive
                 ? 'rounded-lg font-medium px-4 h-10 shadow-xs'
                 : 'rounded-lg font-medium px-4 h-10 border-border'
             }
           >
-            <Link href={buildCategoryUrl(null)}>Tất cả ({displayCount})</Link>
+            <Link href={buildFilterUrl({ type: null, category: null })}>
+              Tất cả ({displayCount})
+            </Link>
           </Button>
 
+          {/* Offline tại trung tâm */}
+          <Button
+            asChild
+            size="sm"
+            variant={isOfflineActive ? 'default' : 'outline'}
+            className={
+              isOfflineActive
+                ? 'rounded-lg font-medium px-4 h-10 shadow-xs'
+                : 'rounded-lg font-medium px-4 h-10 border-border text-foreground'
+            }
+          >
+            <Link href={buildFilterUrl({ type: 'OFFLINE' })}>Offline tại trung tâm</Link>
+          </Button>
+
+          {/* Moodle miễn phí */}
+          <Button
+            asChild
+            size="sm"
+            variant={isMoodleActive ? 'default' : 'outline'}
+            className={
+              isMoodleActive
+                ? 'rounded-lg font-medium px-4 h-10 shadow-xs'
+                : 'rounded-lg font-medium px-4 h-10 border-border text-foreground'
+            }
+          >
+            <Link href={buildFilterUrl({ type: 'MOODLE' })}>Moodle miễn phí</Link>
+          </Button>
+
+          {/* Categories if present */}
           {categories.map((cat) => {
             const isActive = activeCategory === cat.slug
             return (
@@ -160,7 +219,7 @@ export function CourseFilters({
                     : 'rounded-lg font-medium px-4 h-10 border-border text-foreground'
                 }
               >
-                <Link href={buildCategoryUrl(cat.slug)}>{cat.title}</Link>
+                <Link href={buildFilterUrl({ category: cat.slug })}>{cat.title}</Link>
               </Button>
             )
           })}

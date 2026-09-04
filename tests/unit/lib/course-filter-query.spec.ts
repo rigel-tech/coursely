@@ -104,4 +104,38 @@ describe('buildCourseWhereQuery', () => {
       ],
     })
   })
+
+  it('filters by courseType when OFFLINE or MOODLE is provided', () => {
+    const offlineWhere = buildCourseWhereQuery({ courseType: 'OFFLINE' })
+    expect(offlineWhere).toEqual({
+      and: [
+        {
+          _status: {
+            equals: 'published',
+          },
+        },
+        {
+          courseType: {
+            equals: 'OFFLINE',
+          },
+        },
+      ],
+    })
+
+    const moodleWhere = buildCourseWhereQuery({ courseType: 'MOODLE' })
+    expect(moodleWhere).toEqual({
+      and: [
+        {
+          _status: {
+            equals: 'published',
+          },
+        },
+        {
+          courseType: {
+            equals: 'MOODLE',
+          },
+        },
+      ],
+    })
+  })
 })

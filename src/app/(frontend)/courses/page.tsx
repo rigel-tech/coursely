@@ -19,6 +19,7 @@ export const dynamic = 'force-dynamic'
 interface CoursesPageProps {
   searchParams: Promise<{
     category?: string
+    type?: string
     q?: string
     from?: string
     to?: string
@@ -27,7 +28,7 @@ interface CoursesPageProps {
 }
 
 export default async function CoursesPage({ searchParams }: CoursesPageProps) {
-  const { category, q, from, to, page } = await searchParams
+  const { category, type, q, from, to, page } = await searchParams
   const pageNumber = page ? parseInt(page, 10) : 1
   const payload = await getPayload({ config: configPromise })
 
@@ -51,9 +52,10 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
     },
   })
 
-  // 3. Xây dựng câu query lọc theo danh mục, từ khóa tìm kiếm & khoảng thời gian
+  // 3. Xây dựng câu query lọc theo danh mục, loại khóa học, từ khóa & ngày khai giảng
   const where = buildCourseWhereQuery({
     categorySlug: category,
+    courseType: type,
     query: q,
     startDateFrom: from,
     startDateTo: to,
@@ -69,7 +71,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
     where,
   })
 
-  const hasActiveFilters = Boolean(category || q || from || to)
+  const hasActiveFilters = Boolean(category || type || q || from || to)
 
   const courses: CourseSummary[] = coursesRes.docs.map((course: Course) => {
     const img =
@@ -117,6 +119,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
         <CourseFilters
           categories={categoriesRes.docs}
           activeCategory={category}
+          activeType={type}
           activeQuery={q}
           activeStartDateFrom={from}
           activeStartDateTo={to}

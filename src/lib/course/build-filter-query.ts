@@ -2,6 +2,7 @@ import type { Where } from 'payload'
 
 export interface CourseFilterParams {
   categorySlug?: string | null
+  courseType?: string | null
   query?: string | null
   startDateFrom?: string | null
   startDateTo?: string | null
@@ -25,6 +26,15 @@ export function buildCourseWhereQuery(params: CourseFilterParams): Where {
     conditions.push({
       'category.slug': {
         equals: category,
+      },
+    })
+  }
+
+  const cType = params.courseType?.trim()?.toUpperCase()
+  if (cType && cType !== 'ALL') {
+    conditions.push({
+      courseType: {
+        equals: cType,
       },
     })
   }
