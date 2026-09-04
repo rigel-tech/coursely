@@ -13,12 +13,22 @@ export const testUser = {
   password: 'test',
 }
 
+/** The public-site student the logout spec signs in as. */
+export const testStudent = {
+  email: 'student-e2e@payloadcms.com',
+  password: 'test',
+}
+
 const SCRIPT = 'scripts/seed-e2e-user.ts'
 
-const run = (command: 'seed' | 'cleanup'): void => {
+const run = (
+  command: 'seed' | 'cleanup',
+  user: { email: string; password: string },
+  role?: 'STUDENT',
+): void => {
   execFileSync(
     'pnpm',
-    ['payload', 'run', SCRIPT, command, testUser.email, testUser.password],
+    ['payload', 'run', SCRIPT, command, user.email, user.password, ...(role ? [role] : [])],
     // shell: true because `pnpm` is a .cmd shim on Windows and execFile will not find it.
     { shell: true, stdio: 'inherit' },
   )
@@ -26,10 +36,20 @@ const run = (command: 'seed' | 'cleanup'): void => {
 
 /** Creates the e2e admin user, replacing any earlier one so reruns are repeatable. */
 export async function seedTestUser(): Promise<void> {
-  run('seed')
+  run('seed', testUser)
 }
 
 /** Removes the e2e admin user. */
 export async function cleanupTestUser(): Promise<void> {
-  run('cleanup')
+  run('cleanup', testUser)
+}
+
+/** Creates the e2e student user (role STUDENT, ACTIVE), replacing any earlier one. */
+export async function seedStudentUser(): Promise<void> {
+  run('seed', testStudent, 'STUDENT')
+}
+
+/** Removes the e2e student user. */
+export async function cleanupStudentUser(): Promise<void> {
+  run('cleanup', testStudent)
 }

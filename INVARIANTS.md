@@ -263,6 +263,28 @@ at :34 and :36). Copy B: `src/providers/Theme/ThemeSelector/types.ts:3` (same tw
 imported by the **readers** `src/providers/Theme/InitTheme/index.tsx:4` (`InitTheme`, reads at
 :30) and `src/providers/Theme/ThemeSelector/index.tsx:16` (`ThemeSelector`, reads at :26).
 
+### Auth-dependent public UI resolves signed-in state client-side, never from `headers()` in a Server Component
+
+**Rule** — Whether the public site treats the visitor as signed in must be decided in the
+browser — `HeaderAuthControls` fetches `GET /next/auth-status`, which reads the
+`coursely-access` cookie and returns `{ authenticated }`. A Server Component on a public
+page must not branch its render on the proxy-forwarded `x-user-*` request headers (or on
+`cookies()`), and must not gate UI on them.
+
+**Why it breaks silently** — `src/app/(frontend)/page.tsx`, `courses/page.tsx`, and
+`posts/page.tsx` set `export const dynamic = 'force-static'`. Under `force-static` Next 16
+makes `headers()`, `cookies()`, and `useSearchParams()` return **empty values** rather than
+erroring. A header/nav Server Component that reads `x-user-id` there still compiles, still
+renders, and simply always looks signed-out — the logout control never appears for a
+signed-in visitor, on exactly the pages that host the header. No warning, no build failure.
+
+**Where** — `src/components/public/HeaderAuthControls/index.tsx` (client check) →
+`src/app/(frontend)/next/auth-status/route.ts` (`GET`, signature-only, no I/O) →
+`verifyAccessToken` in `src/lib/auth/access-token.ts`. Rendered by
+`src/Header/Component.client.tsx`. The `force-static` declarations are in the three
+`src/app/(frontend)/**/page.tsx` files above. Design rationale:
+`specs/002-header-logout-ui/research.md` D1/D4.
+
 ## Theming
 
 ### A region that must stay dark sets `data-theme="dark"`; it never reaches for `bg-black`

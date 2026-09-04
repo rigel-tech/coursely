@@ -5,13 +5,16 @@
 // the Playwright process cannot work: `next` publishes no `exports` map, so the
 // `next/cache` import inside the collection hooks resolves only under a bundler.
 //
-// Usage: payload run scripts/seed-e2e-user.ts <seed|cleanup> <email> <password>
+// Usage: payload run scripts/seed-e2e-user.ts <seed|cleanup> <email> <password> [role]
+//   role defaults to ADMIN (the admin panel specs). Pass STUDENT for the public-site
+//   specs; a STUDENT is still created ACTIVE so it can sign in immediately.
 
 import { getPayload } from 'payload'
 
 import config from '../src/payload.config.js'
 
-const [command, email, password] = process.argv.slice(2)
+const [command, email, password, roleArg] = process.argv.slice(2)
+const role = roleArg === 'STUDENT' ? 'STUDENT' : 'ADMIN'
 
 if (command !== 'seed' && command !== 'cleanup') {
   console.error(`seed-e2e-user: expected "seed" or "cleanup", got "${command}"`)
@@ -35,7 +38,7 @@ try {
   if (command === 'seed') {
     await payload.create({
       collection: 'users',
-      data: { email, password, role: 'ADMIN', status: 'ACTIVE' },
+      data: { email, password, role, status: 'ACTIVE' },
     })
   }
 } catch (error) {
