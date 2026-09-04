@@ -20,12 +20,14 @@ interface CoursesPageProps {
   searchParams: Promise<{
     category?: string
     q?: string
+    from?: string
+    to?: string
     page?: string
   }>
 }
 
 export default async function CoursesPage({ searchParams }: CoursesPageProps) {
-  const { category, q, page } = await searchParams
+  const { category, q, from, to, page } = await searchParams
   const pageNumber = page ? parseInt(page, 10) : 1
   const payload = await getPayload({ config: configPromise })
 
@@ -37,13 +39,27 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
     sort: 'title',
   })
 
-  // 2. Xây dựng câu query lọc theo danh mục & từ khóa tìm kiếm
+  // 2. Lấy tổng số lượng tất cả khóa học published (cho nút "Tất cả")
+  const allCoursesRes = await payload.find({
+    collection: 'courses',
+    depth: 0,
+    limit: 1,
+    where: {
+      _status: {
+        equals: 'published',
+      },
+    },
+  })
+
+  // 3. Xây dựng câu query lọc theo danh mục, từ khóa tìm kiếm & khoảng thời gian
   const where = buildCourseWhereQuery({
     categorySlug: category,
     query: q,
+    startDateFrom: from,
+    startDateTo: to,
   })
 
-  // 3. Truy vấn danh sách khóa học (chỉ lấy published, không bao giờ lấy Class)
+  // 4. Truy vấn danh sách khóa học (chỉ lấy published, không bao giờ lấy Class)
   const coursesRes = await payload.find({
     collection: 'courses',
     depth: 1,
@@ -53,7 +69,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
     where,
   })
 
-  const hasActiveFilters = Boolean(category || q)
+  const hasActiveFilters = Boolean(category || q || from || to)
 
   const courses: CourseSummary[] = coursesRes.docs.map((course: Course) => {
     const img =
@@ -102,7 +118,10 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
           categories={categoriesRes.docs}
           activeCategory={category}
           activeQuery={q}
+          activeStartDateFrom={from}
+          activeStartDateTo={to}
           totalCount={coursesRes.totalDocs}
+          allTotalCount={allCoursesRes.totalDocs}
         />
       </div>
 

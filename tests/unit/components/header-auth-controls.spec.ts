@@ -26,7 +26,7 @@ const jsonOnce = (value: unknown) =>
 
 const signIn = () => screen.queryByRole('button', { name: /đăng nhập/i })
 const register = () => screen.queryByRole('button', { name: /đăng ký/i })
-const account = () => screen.queryByRole('link', { name: /tài khoản/i })
+const account = () => screen.queryByRole('link', { name: /minh anh|tài khoản/i })
 
 describe('HeaderAuthControls', () => {
   it('shows the sign-in / register CTAs before the check resolves', () => {

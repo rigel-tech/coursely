@@ -64,12 +64,7 @@ export const LoginForm: React.FC = () => {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="login-password">Mật khẩu</Label>
-          <Link href="/quen-mat-khau" className="text-xs text-link hover:underline font-medium">
-            Quên mật khẩu?
-          </Link>
-        </div>
+        <Label htmlFor="login-password">Mật khẩu</Label>
         <Input
           id="login-password"
           name="password"
@@ -83,9 +78,16 @@ export const LoginForm: React.FC = () => {
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <Checkbox id="login-remember" name="rememberMe" value="on" />
-        <Label htmlFor="login-remember">Ghi nhớ đăng nhập</Label>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Checkbox id="login-remember" name="rememberMe" value="on" />
+          <Label htmlFor="login-remember" className="text-sm font-normal cursor-pointer">
+            Ghi nhớ đăng nhập
+          </Label>
+        </div>
+        <Link href="/quen-mat-khau" className="text-xs text-link hover:underline font-medium">
+          Quên mật khẩu?
+        </Link>
       </div>
 
       {state.status === 'error' && state.message && (

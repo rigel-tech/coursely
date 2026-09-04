@@ -3,6 +3,8 @@ import type { Where } from 'payload'
 export interface CourseFilterParams {
   categorySlug?: string | null
   query?: string | null
+  startDateFrom?: string | null
+  startDateTo?: string | null
 }
 
 /**
@@ -32,6 +34,24 @@ export function buildCourseWhereQuery(params: CourseFilterParams): Where {
     conditions.push({
       title: {
         like: `%${q}%`,
+      },
+    })
+  }
+
+  const from = params.startDateFrom?.trim()
+  if (from) {
+    conditions.push({
+      registrationStartAt: {
+        greater_than_equal: from,
+      },
+    })
+  }
+
+  const to = params.startDateTo?.trim()
+  if (to) {
+    conditions.push({
+      registrationStartAt: {
+        less_than_equal: to,
       },
     })
   }

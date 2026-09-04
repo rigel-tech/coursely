@@ -78,4 +78,30 @@ describe('buildCourseWhereQuery', () => {
       },
     })
   })
+
+  it('filters by date range when startDateFrom and startDateTo are provided', () => {
+    const where = buildCourseWhereQuery({
+      startDateFrom: '2026-09-01',
+      startDateTo: '2026-09-30',
+    })
+    expect(where).toEqual({
+      and: [
+        {
+          _status: {
+            equals: 'published',
+          },
+        },
+        {
+          registrationStartAt: {
+            greater_than_equal: '2026-09-01',
+          },
+        },
+        {
+          registrationStartAt: {
+            less_than_equal: '2026-09-30',
+          },
+        },
+      ],
+    })
+  })
 })
