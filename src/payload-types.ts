@@ -851,6 +851,13 @@ export interface Course {
     image?: (number | null) | Media;
     description?: string | null;
   };
+  category?: (number | null) | Category;
+  tags?:
+    | {
+        tag: string;
+        id?: string | null;
+      }[]
+    | null;
   courseType: 'MOODLE' | 'OFFLINE';
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
@@ -1585,6 +1592,13 @@ export interface CoursesSelect<T extends boolean = true> {
         title?: T;
         image?: T;
         description?: T;
+      };
+  category?: T;
+  tags?:
+    | T
+    | {
+        tag?: T;
+        id?: T;
       };
   courseType?: T;
   generateSlug?: T;

@@ -26,7 +26,7 @@ const jsonOnce = (value: unknown) =>
 
 const signIn = () => screen.queryByRole('button', { name: /đăng nhập/i })
 const register = () => screen.queryByRole('button', { name: /đăng ký/i })
-const signOut = () => screen.queryByRole('button', { name: /đăng xuất/i })
+const account = () => screen.queryByRole('link', { name: /tài khoản/i })
 
 describe('HeaderAuthControls', () => {
   it('shows the sign-in / register CTAs before the check resolves', () => {
@@ -35,7 +35,7 @@ describe('HeaderAuthControls', () => {
 
     expect(signIn()).toBeTruthy()
     expect(register()).toBeTruthy()
-    expect(signOut()).toBeNull()
+    expect(account()).toBeNull()
   })
 
   it('keeps the CTAs when the check reports not authenticated', async () => {
@@ -44,7 +44,7 @@ describe('HeaderAuthControls', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/next/auth-status'))
     expect(signIn()).toBeTruthy()
-    expect(signOut()).toBeNull()
+    expect(account()).toBeNull()
   })
 
   it('keeps the CTAs when the check fails', async () => {
@@ -53,14 +53,14 @@ describe('HeaderAuthControls', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     expect(signIn()).toBeTruthy()
-    expect(signOut()).toBeNull()
+    expect(account()).toBeNull()
   })
 
-  it('swaps to the sign-out control when the check reports authenticated', async () => {
+  it('swaps to the account control when the check reports authenticated', async () => {
     jsonOnce({ authenticated: true })
     render(React.createElement(HeaderAuthControls))
 
-    await waitFor(() => expect(signOut()).toBeTruthy())
+    await waitFor(() => expect(account()).toBeTruthy())
     expect(signIn()).toBeNull()
     expect(register()).toBeNull()
   })
@@ -69,7 +69,7 @@ describe('HeaderAuthControls', () => {
     jsonOnce({ authenticated: true })
     render(React.createElement(HeaderAuthControls))
 
-    await waitFor(() => expect(signOut()).toBeTruthy())
+    await waitFor(() => expect(account()).toBeTruthy())
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

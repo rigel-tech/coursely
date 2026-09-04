@@ -21,7 +21,7 @@ export const Courses: CollectionConfig<'courses'> = {
     update: authenticated,
   },
   admin: {
-    defaultColumns: ['title', 'courseType', 'duration', '_status', 'updatedAt'],
+    defaultColumns: ['title', 'category', 'courseType', 'duration', '_status', 'updatedAt'],
     useAsTitle: 'title',
   },
   fields: [
@@ -152,6 +152,31 @@ export const Courses: CollectionConfig<'courses'> = {
           ],
         },
       ],
+    },
+    {
+      name: 'category',
+      type: 'relationship',
+      relationTo: 'categories',
+      hasMany: false,
+      label: 'Danh mục khóa học',
+      admin: {
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'tags',
+      type: 'array',
+      label: 'Thẻ tag',
+      fields: [
+        {
+          name: 'tag',
+          type: 'text',
+          required: true,
+        },
+      ],
+      admin: {
+        position: 'sidebar',
+      },
     },
     {
       name: 'courseType',

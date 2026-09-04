@@ -17,19 +17,6 @@ export type EmptyStateProps = {
 
 /**
  * Placeholder for a list, table or search result with nothing in it.
- *
- * Prefer this over rendering nothing: an empty region is indistinguishable from a component
- * that failed to load. Give it an `action` whenever the reader can do something about it.
- *
- * @example
- * ```tsx
- * <EmptyState
- *   icon={BookOpen}
- *   title="Chưa có khoá học nào"
- *   description="Khoá học sẽ hiện ở đây ngay khi được xuất bản."
- *   action={<Button>Tạo khoá học</Button>}
- * />
- * ```
  */
 export function EmptyState({ action, className, description, icon: Icon, title }: EmptyStateProps) {
   return (
