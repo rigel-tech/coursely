@@ -24,7 +24,7 @@ export const AuditLogs: CollectionConfig = {
     {
       name: 'action',
       type: 'select',
-      options: ['LOGIN_SUCCESS'],
+      options: ['LOGIN_SUCCESS', 'LOGOUT', 'LOGOUT_ALL', 'REFRESH_REUSE'],
       required: true,
       index: true,
     },

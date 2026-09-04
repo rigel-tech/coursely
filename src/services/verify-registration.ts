@@ -12,7 +12,7 @@ import configPromise from '@payload-config'
 import { verifyOtp } from '@/services/otp-store'
 
 export type VerifyRegistrationResult =
-  | { ok: true }
+  | { ok: true; user: { id: number; role?: string; status?: string } }
   | { ok: false; reason: 'session_expired' | 'disabled' | 'expired' | 'locked' }
   | { ok: false; reason: 'mismatch'; remaining: number }
 
@@ -33,7 +33,9 @@ export async function verifyRegistration(
 
   if (!user) return { ok: false, reason: 'session_expired' }
   if (user.status === 'DISABLED') return { ok: false, reason: 'disabled' }
-  if (user.status === 'ACTIVE') return { ok: true }
+
+  const asUser = { id: user.id, role: user.role, status: 'ACTIVE' as const }
+  if (user.status === 'ACTIVE') return { ok: true, user: asUser }
 
   const result = await verifyOtp(email, otp)
   if (!result.ok) return result
@@ -43,5 +45,5 @@ export async function verifyRegistration(
     id: user.id,
     data: { status: 'ACTIVE', verifiedAt: new Date().toISOString() },
   })
-  return { ok: true }
+  return { ok: true, user: asUser }
 }

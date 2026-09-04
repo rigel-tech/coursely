@@ -822,7 +822,7 @@ export interface Notification {
  */
 export interface AuditLog {
   id: number;
-  action: 'LOGIN_SUCCESS';
+  action: 'LOGIN_SUCCESS' | 'LOGOUT' | 'LOGOUT_ALL' | 'REFRESH_REUSE';
   user?: (number | null) | User;
   ip: string;
   userAgent: string;

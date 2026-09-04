@@ -2,24 +2,22 @@
 
 import { cookies, headers } from 'next/headers'
 
-import {
-  AUTH_TOKEN_COOKIE,
-  PENDING_EMAIL_COOKIE,
-  PENDING_EMAIL_TTL_SEC,
-  REMEMBER_ME_MAX_AGE_SEC,
-} from '@/lib/constants/auth'
+import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_TTL_SEC } from '@/lib/constants/auth'
 import { parseLoginInput } from '@/lib/validation/login-schema'
 import { authenticateUser } from '@/services/login'
+import { createSession } from '@/services/session-store'
+import { setSessionCookies } from '@/lib/auth/session-cookies'
 import type { LoginState } from '@/lib/constants/login-state'
 
 const BAD_CREDENTIALS = 'Email hoặc mật khẩu không đúng.'
 
 /**
  * Server action for login (§7). Orchestration only: read request context,
- * validate, delegate to `authenticateUser`, then translate the result into
- * cookies + `redirectTo` for `<LoginForm>` to act on. It never calls `redirect()`
- * itself — setting the JWT cookie and redirecting in the same action drops the
- * cookie, so the client owns the navigation.
+ * validate, delegate to `authenticateUser`, mint a session, then translate the
+ * result into the `coursely-access` / `coursely-refresh` cookies + `redirectTo`
+ * for `<LoginForm>` to act on. It never calls `redirect()` itself — setting an
+ * auth cookie and redirecting in the same action drops the cookie, so the client
+ * owns the navigation.
  */
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const h = await headers()
@@ -70,14 +68,12 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     return { status: 'error', code: result.code, message: result.message }
   }
 
-  ;(await cookies()).set(AUTH_TOKEN_COOKIE, result.token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    secure: process.env.NODE_ENV === 'production',
-    // rememberMe → 30 days; otherwise a session cookie (no maxAge).
-    ...(result.rememberMe ? { maxAge: REMEMBER_ME_MAX_AGE_SEC } : {}),
-  })
+  const issued = await createSession(
+    result.user,
+    { ip, userAgent },
+    { rememberMe: result.rememberMe },
+  )
+  setSessionCookies(await cookies(), issued)
 
   return { status: 'success', redirectTo: result.redirectTo }
 }

@@ -16,7 +16,12 @@ import type { LoginInput } from '@/lib/validation/login-schema'
 export type LoginContext = { ip: string; userAgent: string }
 
 export type LoginServiceResult =
-  | { ok: true; token: string; rememberMe: boolean; redirectTo: string }
+  | {
+      ok: true
+      user: { id: number; role?: string; status?: string }
+      rememberMe: boolean
+      redirectTo: string
+    }
   | { ok: false; code: 'AUTH_020' | 'AUTH_021' | 'AUTH_023' | 'AUTH_024'; message: string }
   | { ok: false; code: 'AUTH_022'; message: string; email: string; redirectTo: string }
 
@@ -88,9 +93,8 @@ export async function authenticateUser(
     }
   }
 
-  if (!result.token) throw new Error('payload.login returned no token')
-
-  // §7 success — reset the email counter, stamp the login, leave a trail.
+  // §7 success — reset the email counter, stamp the login, leave a trail. The
+  // caller mints the session tokens (`payload.login`'s own JWT is discarded).
   await clearRate(emailKey(email))
   await payload.update({
     collection: 'users',
@@ -104,7 +108,7 @@ export async function authenticateUser(
 
   return {
     ok: true,
-    token: result.token,
+    user: { id: user.id, role: user.role, status: user.status },
     rememberMe: input.rememberMe,
     redirectTo: user.role === 'ADMIN' ? '/admin' : (input.callbackUrl ?? '/'),
   }
