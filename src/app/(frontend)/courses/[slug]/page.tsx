@@ -136,7 +136,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                 )}
               </div>
 
-              <h1 className="text-foreground mt-4 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+              <h1 className="text-foreground mt-4 text-3xl font-bold tracking-tight">
                 {course.title}
               </h1>
 
@@ -149,7 +149,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
 
             {imageUrl && (
               <div className="lg:col-span-4">
-                <div className="aspect-video overflow-hidden rounded-xl border shadow-lg">
+                <div className="aspect-video overflow-hidden rounded-lg border shadow-lg">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img alt={course.title} className="size-full object-cover" src={imageUrl} />
                 </div>
@@ -166,7 +166,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
           <div className="space-y-12 lg:col-span-8">
             {/* Giới thiệu chi tiết */}
             {course.description && (
-              <section className="border-border/40 rounded-xl border bg-card p-6 sm:p-8">
+              <section className="border-border/40 rounded-lg border bg-card p-6 sm:p-8">
                 <h2 className="text-foreground flex items-center gap-2 text-2xl font-bold">
                   <BookOpen className="text-primary size-6" />
                   Giới thiệu khóa học
@@ -179,7 +179,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
 
             {/* Mục tiêu đầu ra (Objectives) */}
             {objectives.length > 0 && (
-              <section className="border-border/40 rounded-xl border bg-card p-6 sm:p-8">
+              <section className="border-border/40 rounded-lg border bg-card p-6 sm:p-8">
                 <h2 className="text-foreground flex items-center gap-2 text-2xl font-bold">
                   <CheckCircle2 className="text-primary size-6" />
                   Mục tiêu đầu ra của khóa học
@@ -205,7 +205,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
 
             {/* Lộ trình học tập (Phases) */}
             {phases.length > 0 && (
-              <section className="border-border/40 rounded-xl border bg-card p-6 sm:p-8">
+              <section className="border-border/40 rounded-lg border bg-card p-6 sm:p-8">
                 <h2 className="text-foreground flex items-center gap-2 text-2xl font-bold">
                   <Layers className="text-primary size-6" />
                   Lộ trình học tập chi tiết
@@ -216,7 +216,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                       className="border-border/40 bg-muted/20 relative overflow-hidden rounded-lg border p-5 pl-6"
                       key={phase.id}
                     >
-                      <div className="text-primary/10 absolute -right-2 -top-2 text-6xl font-black select-none">
+                      <div className="text-primary/10 absolute -right-2 -top-2 text-3xl font-black select-none">
                         0{idx + 1}
                       </div>
                       <div className="relative">
@@ -239,7 +239,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
 
           {/* Sidebar CTA Card */}
           <div className="lg:col-span-4">
-            <div className="border-border/60 sticky top-24 rounded-2xl border bg-card p-6 shadow-md">
+            <div className="border-border/60 sticky top-24 rounded-lg border bg-card p-6 shadow-md">
               <h3 className="text-foreground text-xl font-bold">Thông tin đăng ký</h3>
 
               <div className="mt-6 space-y-4 text-sm">

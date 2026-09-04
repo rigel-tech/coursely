@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
-import { CourseList } from '@/components/design/blocks/course-list'
-import type { CourseSummary } from '@/components/design/blocks/course-card'
+import { CourseList } from '@/components/public/CourseList'
+import type { CourseSummary } from '@/components/public/CourseCard'
 import { Button } from '@/components/public/ui/button'
 import { PayloadRedirects } from '@/components/public/PayloadRedirects'
 import configPromise from '@payload-config'
@@ -80,7 +80,7 @@ export default async function HomePage() {
       <section className="container mx-auto px-4 my-16">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground">
               Các khóa học nổi bật
             </h2>
             <p className="text-muted-foreground mt-2 text-base">

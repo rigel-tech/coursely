@@ -1,7 +1,7 @@
 import type { Metadata } from 'next/types'
 
-import { CourseList } from '@/components/design/blocks/course-list'
-import type { CourseSummary } from '@/components/design/blocks/course-card'
+import { CourseList } from '@/components/public/CourseList'
+import type { CourseSummary } from '@/components/public/CourseCard'
 import { PageRange } from '@/components/public/PageRange'
 import { Pagination } from '@/components/public/Pagination'
 import configPromise from '@payload-config'
@@ -51,9 +51,7 @@ export default async function CoursesPage() {
       <PageClient />
       <div className="container mb-8">
         <div className="prose dark:prose-invert max-w-none">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Danh sách khóa học
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Danh sách khóa học</h1>
           <p className="text-muted-foreground text-lg">
             Khám phá các khóa học chất lượng cao, từ cơ bản đến nâng cao.
           </p>
