@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import * as React from 'react'
 import { useActionState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
@@ -63,7 +64,12 @@ export const LoginForm: React.FC = () => {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="login-password">Mật khẩu</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="login-password">Mật khẩu</Label>
+          <Link href="/quen-mat-khau" className="text-xs text-link hover:underline font-medium">
+            Quên mật khẩu?
+          </Link>
+        </div>
         <Input
           id="login-password"
           name="password"

@@ -8,6 +8,7 @@ import type { Payload } from 'payload'
 
 import { duplicateRegisterAttemptEmail } from '@/email/templates/duplicate-register-attempt'
 import { verifyOtpEmail } from '@/email/templates/verify-otp'
+import { resetPasswordEmail } from '@/email/templates/reset-password'
 
 export async function sendVerifyOtpEmail(payload: Payload, to: string, otp: string): Promise<void> {
   const { subject, html, text } = verifyOtpEmail(otp)
@@ -16,5 +17,14 @@ export async function sendVerifyOtpEmail(payload: Payload, to: string, otp: stri
 
 export async function sendDuplicateAttemptEmail(payload: Payload, to: string): Promise<void> {
   const { subject, html, text } = duplicateRegisterAttemptEmail()
+  await payload.sendEmail({ to, subject, html, text })
+}
+
+export async function sendResetPasswordEmail(
+  payload: Payload,
+  to: string,
+  resetUrl: string,
+): Promise<void> {
+  const { subject, html, text } = resetPasswordEmail(resetUrl)
   await payload.sendEmail({ to, subject, html, text })
 }
