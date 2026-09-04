@@ -4,26 +4,38 @@ import configPromise from '@payload-config'
 
 import { issueOtp } from '@/services/otp-store'
 import { redis } from '@/lib/redis'
-import { PENDING_EMAIL_COOKIE } from '@/lib/constants/auth'
+import { PENDING_EMAIL_COOKIE, REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
+import { SessionScope } from './helpers/session-keys'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so the
- * cookie jar is mocked; `verifyOtpAction` only ever reads/deletes `pending_email`.
+ * cookie jar and request headers are mocked. A correct OTP now also mints a
+ * session, so the jar records cookie options too.
  */
 const ctx = vi.hoisted(() => ({
   cookieJar: new Map<string, string>(),
+  cookieOptions: new Map<string, unknown>(),
 }))
 
 vi.mock('next/headers', () => ({
   cookies: async () => ({
     get: (name: string) =>
       ctx.cookieJar.has(name) ? { name, value: ctx.cookieJar.get(name) } : undefined,
-    set: (name: string, value: string) => {
+    set: (name: string, value: string, options?: unknown) => {
       ctx.cookieJar.set(name, value)
+      ctx.cookieOptions.set(name, options)
     },
     delete: (name: string) => ctx.cookieJar.delete(name),
   }),
+  headers: async () => ({
+    get: (name: string) =>
+      ({ 'x-forwarded-for': '10.1.2.3', 'user-agent': 'vitest-otp' })[name.toLowerCase()] ?? null,
+  }),
 }))
+
+const ACCESS_COOKIE = 'coursely-access'
+const REFRESH_COOKIE = 'coursely-refresh'
+const scope = new SessionScope()
 
 const { verifyOtpAction } = await import('@/actions/auth/verify-otp')
 const { initialVerifyOtpState } = await import('@/lib/constants/verify-otp-state')
@@ -51,6 +63,7 @@ const seed = async (status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED', tag?
     collection: 'users',
     data: { email, password: 'abcd1234', role: 'STUDENT', status },
   })
+  scope.user(user.id as number)
   ctx.cookieJar.set(PENDING_EMAIL_COOKIE, email)
   return { email, user }
 }
@@ -61,10 +74,12 @@ beforeAll(async () => {
 
 beforeEach(() => {
   ctx.cookieJar.clear()
+  ctx.cookieOptions.clear()
 })
 
 afterEach(async () => {
   vi.restoreAllMocks()
+  await scope.cleanup()
   for (const email of usedEmails) {
     await redis.del(`otp:verify:${email}`, `otp:cooldown:${email}`, `otp:quota:${email}`)
     const { docs } = await payload.find({
@@ -82,24 +97,33 @@ afterEach(async () => {
 })
 
 describe('verifyOtpAction — happy path', () => {
-  it('flips the account to ACTIVE, stamps verifiedAt, clears the cookie, consumes the code', async () => {
+  it('flips the account to ACTIVE, signs the user in, clears the cookie, consumes the code', async () => {
     const { email, user } = await seed('PENDING_VERIFICATION')
     const { otp } = await issueOtp(email)
 
-    expect(await run(form(otp))).toEqual({ status: 'success' })
+    expect(await run(form(otp))).toEqual({ status: 'success', redirectTo: '/' })
 
     const after = await payload.findByID({ collection: 'users', id: user.id, depth: 0 })
     expect(after.status).toBe('ACTIVE')
     expect(after.verifiedAt).toBeTruthy()
     expect(ctx.cookieJar.has(PENDING_EMAIL_COOKIE)).toBe(false)
     expect(await redis.exists(`otp:verify:${email}`)).toBe(0)
+
+    // a fresh session, treated as "remember me" (D10)
+    expect(ctx.cookieJar.get(ACCESS_COOKIE)).toBeTruthy()
+    expect(ctx.cookieJar.get(REFRESH_COOKIE)).toBeTruthy()
+    expect((ctx.cookieOptions.get(REFRESH_COOKIE) as Record<string, unknown>).maxAge).toBe(
+      REMEMBER_ME_MAX_AGE_SEC,
+    )
   })
 
-  it('is idempotent for an already-ACTIVE account and just clears the cookie', async () => {
+  it('is idempotent for an already-ACTIVE account and still issues a session', async () => {
     await seed('ACTIVE')
 
-    expect(await run(form('123456'))).toEqual({ status: 'success' })
+    expect(await run(form('123456'))).toEqual({ status: 'success', redirectTo: '/' })
     expect(ctx.cookieJar.has(PENDING_EMAIL_COOKIE)).toBe(false)
+    expect(ctx.cookieJar.get(ACCESS_COOKIE)).toBeTruthy()
+    expect(ctx.cookieJar.get(REFRESH_COOKIE)).toBeTruthy()
   })
 })
 
@@ -149,7 +173,7 @@ describe('verifyOtpAction — wrong code', () => {
       expect(stale.status).toBe('error')
     }
 
-    expect(await run(form(second))).toEqual({ status: 'success' })
+    expect(await run(form(second))).toEqual({ status: 'success', redirectTo: '/' })
   })
 })
 

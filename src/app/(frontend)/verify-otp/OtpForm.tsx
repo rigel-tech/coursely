@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
 
 import { Button } from '@/components/public/ui/button'
@@ -22,10 +22,15 @@ function SubmitButton() {
 export const OtpForm: React.FC = () => {
   const [state, formAction] = useActionState(verifyOtpAction, initialVerifyOtpState)
 
+  useEffect(() => {
+    // Full-document load so the fresh session cookies are read server-side.
+    if (state.status === 'success') window.location.assign(state.redirectTo ?? '/')
+  }, [state.status, state.redirectTo])
+
   if (state.status === 'success') {
     return (
       <p className="text-sm" role="status">
-        Xác minh thành công. Bây giờ bạn có thể đăng nhập.
+        Xác minh thành công. Đang chuyển hướng…
       </p>
     )
   }

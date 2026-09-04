@@ -7,6 +7,7 @@ import configPromise from '@payload-config'
 
 import { redis } from '@/lib/redis'
 import { REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
+import { SessionScope } from './helpers/session-keys'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so the
@@ -37,10 +38,12 @@ vi.mock('next/headers', () => ({
 const { loginAction } = await import('@/actions/auth/login')
 const { initialLoginState } = await import('@/lib/constants/login-state')
 
-const TOKEN_COOKIE = 'payload-token'
+const ACCESS_COOKIE = 'coursely-access'
+const REFRESH_COOKIE = 'coursely-refresh'
 
 let payload: Payload
 let currentIp: string
+const scope = new SessionScope()
 
 const rnd = () => Math.floor(Math.random() * 255)
 const usedEmails = new Set<string>()
@@ -66,6 +69,7 @@ const makeUser = async (
       status: (over.status ?? 'ACTIVE') as 'ACTIVE',
     },
   })
+  scope.user(user.id as number)
   return { email, password, user }
 }
 
@@ -92,6 +96,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   vi.restoreAllMocks()
+  await scope.cleanup()
   for (const ip of usedIps) await redis.del(`rate:login:ip:${ip}`)
   usedIps.clear()
   for (const email of usedEmails) {
@@ -112,7 +117,7 @@ afterEach(async () => {
 })
 
 describe('loginAction — success', () => {
-  it('ACTIVE user: session JWT cookie, lastLoginAt stamped, one audit row, no notification, home', async () => {
+  it('ACTIVE user: access+refresh cookies, lastLoginAt stamped, one audit row, no notification, home', async () => {
     const { email, password, user } = await makeUser()
     expect(
       (await payload.findByID({ collection: 'users', id: user.id, depth: 0 })).lastLoginAt,
@@ -121,10 +126,19 @@ describe('loginAction — success', () => {
     const res = await run(form({ email, password }))
     expect(res).toMatchObject({ status: 'success', redirectTo: '/' })
 
-    expect(ctx.cookieJar.get(TOKEN_COOKIE)).toBeTruthy()
-    const opts = ctx.cookieOptions.get(TOKEN_COOKIE) as Record<string, unknown>
-    expect(opts).toMatchObject({ httpOnly: true, sameSite: 'lax', path: '/' })
-    expect(opts.maxAge).toBeUndefined()
+    // no payload-token any more — the student flow has its own cookie pair
+    expect(ctx.cookieJar.has('payload-token')).toBe(false)
+    expect(ctx.cookieJar.get(ACCESS_COOKIE)).toBeTruthy()
+    expect(ctx.cookieJar.get(REFRESH_COOKIE)).toBeTruthy()
+
+    const accessOpts = ctx.cookieOptions.get(ACCESS_COOKIE) as Record<string, unknown>
+    expect(accessOpts).toMatchObject({ httpOnly: true, sameSite: 'lax', path: '/' })
+    expect(accessOpts.maxAge).toBeUndefined()
+
+    // no "remember me" → the refresh cookie is a session cookie too
+    const refreshOpts = ctx.cookieOptions.get(REFRESH_COOKIE) as Record<string, unknown>
+    expect(refreshOpts).toMatchObject({ httpOnly: true, sameSite: 'lax', path: '/' })
+    expect(refreshOpts.maxAge).toBeUndefined()
 
     expect(
       (await payload.findByID({ collection: 'users', id: user.id, depth: 0 })).lastLoginAt,
@@ -150,11 +164,13 @@ describe('loginAction — success', () => {
     })
   })
 
-  it('rememberMe extends the JWT cookie to 30 days', async () => {
+  it('rememberMe extends the refresh cookie to 30 days; the access cookie stays a session cookie', async () => {
     const { email, password } = await makeUser()
     await run(form({ email, password, rememberMe: 'on' }))
-    const opts = ctx.cookieOptions.get(TOKEN_COOKIE) as Record<string, unknown>
-    expect(opts.maxAge).toBe(REMEMBER_ME_MAX_AGE_SEC)
+    expect((ctx.cookieOptions.get(REFRESH_COOKIE) as Record<string, unknown>).maxAge).toBe(
+      REMEMBER_ME_MAX_AGE_SEC,
+    )
+    expect((ctx.cookieOptions.get(ACCESS_COOKIE) as Record<string, unknown>).maxAge).toBeUndefined()
   })
 
   it('sends an ADMIN to /admin and ignores callbackUrl', async () => {
@@ -194,7 +210,7 @@ describe('loginAction — bad credentials', () => {
       code: 'AUTH_021',
       message: 'Email hoặc mật khẩu không đúng.',
     })
-    expect(ctx.cookieJar.has(TOKEN_COOKIE)).toBe(false)
+    expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
     expect(await redis.get(`rate:login:ip:${currentIp}`)).toBe('1')
     expect(await redis.get(`rate:login:email:${email}`)).toBe('1')
   })
@@ -240,7 +256,7 @@ describe('loginAction — status gate', () => {
     const res = await run(form({ email, password }))
     expect(res).toMatchObject({ status: 'error', code: 'AUTH_024' })
     expect(res.message).toMatch(/khóa/)
-    expect(ctx.cookieJar.has(TOKEN_COOKIE)).toBe(false)
+    expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
     expect(
       (await payload.findByID({ collection: 'users', id: user.id, depth: 0 })).lastLoginAt,
     ).toBeFalsy()
@@ -251,7 +267,7 @@ describe('loginAction — status gate', () => {
     const res = await run(form({ email, password }))
     expect(res).toMatchObject({ status: 'error', code: 'AUTH_022', redirectTo: '/verify-otp' })
     expect(ctx.cookieJar.get('pending_email')).toBe(email)
-    expect(ctx.cookieJar.has(TOKEN_COOKIE)).toBe(false)
+    expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
   })
 })
 
