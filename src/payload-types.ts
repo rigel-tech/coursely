@@ -72,6 +72,12 @@ export interface Config {
     media: Media;
     categories: Category;
     users: User;
+    courses: Course;
+    'course-objectives': CourseObjective;
+    'course-phases': CoursePhase;
+    classes: Class;
+    notifications: Notification;
+    'audit-logs': AuditLog;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -84,6 +90,10 @@ export interface Config {
     'payload-migrations': PayloadMigration;
   };
   collectionsJoins: {
+    courses: {
+      objectives: 'course-objectives';
+      phases: 'course-phases';
+    };
     'payload-folders': {
       documentsAndFolders: 'payload-folders' | 'media';
     };
@@ -94,6 +104,12 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    courses: CoursesSelect<false> | CoursesSelect<true>;
+    'course-objectives': CourseObjectivesSelect<false> | CourseObjectivesSelect<true>;
+    'course-phases': CoursePhasesSelect<false> | CoursePhasesSelect<true>;
+    classes: ClassesSelect<false> | ClassesSelect<true>;
+    notifications: NotificationsSelect<false> | NotificationsSelect<true>;
+    'audit-logs': AuditLogsSelect<false> | AuditLogsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -419,7 +435,21 @@ export interface Category {
  */
 export interface User {
   id: number;
-  name?: string | null;
+  fullName?: string | null;
+  phone?: string | null;
+  avatar?: (number | null) | Media;
+  role: 'ADMIN' | 'STUDENT';
+  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
+  /**
+   * Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.
+   */
+  isWalkIn?: boolean | null;
+  verifiedAt?: string | null;
+  lastLoginAt?: string | null;
+  /**
+   * Admin đã tạo tài khoản này. Trống với tài khoản tự đăng ký.
+   */
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -774,6 +804,168 @@ export interface Form {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "courses".
+ */
+export interface Course {
+  id: number;
+  title: string;
+  image?: (number | null) | Media;
+  shortDescription?: string | null;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  duration?: string | null;
+  /**
+   * Chỉ hiển thị khi loại khóa học là MOODLE
+   */
+  moodleUrl?: string | null;
+  registrationStartAt?: string | null;
+  registrationEndAt?: string | null;
+  objectives?: {
+    docs?: (number | CourseObjective)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  phases?: {
+    docs?: (number | CoursePhase)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  category?: (number | null) | Category;
+  tags?:
+    | {
+        tag: string;
+        id?: string | null;
+      }[]
+    | null;
+  courseType: 'MOODLE' | 'OFFLINE';
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "course-objectives".
+ */
+export interface CourseObjective {
+  id: number;
+  title: string;
+  description?: string | null;
+  course: number | Course;
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "course-phases".
+ */
+export interface CoursePhase {
+  id: number;
+  title: string;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  course: number | Course;
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "classes".
+ */
+export interface Class {
+  id: number;
+  code: string;
+  course: number | Course;
+  status: 'DRAFT' | 'OPEN' | 'CLOSED' | 'COMPLETED' | 'CANCELLED';
+  startDate: string;
+  endDate?: string | null;
+  scheduleTime?: string | null;
+  location?: string | null;
+  maxStudents: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications".
+ */
+export interface Notification {
+  id: number;
+  user: number | User;
+  type: 'ACCOUNT_CREATED';
+  title: string;
+  content: string;
+  /**
+   * Ngữ cảnh tạo thông báo, ví dụ { ip, userAgent }.
+   */
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  isRead?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "audit-logs".
+ */
+export interface AuditLog {
+  id: number;
+  action: 'LOGIN_SUCCESS' | 'LOGOUT' | 'LOGOUT_ALL' | 'REFRESH_REUSE';
+  user?: (number | null) | User;
+  ip: string;
+  userAgent: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -981,6 +1173,30 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'users';
         value: number | User;
+      } | null)
+    | ({
+        relationTo: 'courses';
+        value: number | Course;
+      } | null)
+    | ({
+        relationTo: 'course-objectives';
+        value: number | CourseObjective;
+      } | null)
+    | ({
+        relationTo: 'course-phases';
+        value: number | CoursePhase;
+      } | null)
+    | ({
+        relationTo: 'classes';
+        value: number | Class;
+      } | null)
+    | ({
+        relationTo: 'notifications';
+        value: number | Notification;
+      } | null)
+    | ({
+        relationTo: 'audit-logs';
+        value: number | AuditLog;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1329,7 +1545,15 @@ export interface CategoriesSelect<T extends boolean = true> {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
-  name?: T;
+  fullName?: T;
+  phone?: T;
+  avatar?: T;
+  role?: T;
+  status?: T;
+  isWalkIn?: T;
+  verifiedAt?: T;
+  lastLoginAt?: T;
+  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1346,6 +1570,108 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "courses_select".
+ */
+export interface CoursesSelect<T extends boolean = true> {
+  title?: T;
+  image?: T;
+  shortDescription?: T;
+  description?: T;
+  duration?: T;
+  moodleUrl?: T;
+  registrationStartAt?: T;
+  registrationEndAt?: T;
+  objectives?: T;
+  phases?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        image?: T;
+        description?: T;
+      };
+  category?: T;
+  tags?:
+    | T
+    | {
+        tag?: T;
+        id?: T;
+      };
+  courseType?: T;
+  generateSlug?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "course-objectives_select".
+ */
+export interface CourseObjectivesSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  course?: T;
+  sortOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "course-phases_select".
+ */
+export interface CoursePhasesSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  course?: T;
+  sortOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "classes_select".
+ */
+export interface ClassesSelect<T extends boolean = true> {
+  code?: T;
+  course?: T;
+  status?: T;
+  startDate?: T;
+  endDate?: T;
+  scheduleTime?: T;
+  location?: T;
+  maxStudents?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications_select".
+ */
+export interface NotificationsSelect<T extends boolean = true> {
+  user?: T;
+  type?: T;
+  title?: T;
+  content?: T;
+  metadata?: T;
+  isRead?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "audit-logs_select".
+ */
+export interface AuditLogsSelect<T extends boolean = true> {
+  action?: T;
+  user?: T;
+  ip?: T;
+  userAgent?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1752,6 +2078,10 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: 'posts';
           value: number | Post;
+        } | null)
+      | ({
+          relationTo: 'courses';
+          value: number | Course;
         } | null);
     global?: string | null;
     user?: (number | null) | User;

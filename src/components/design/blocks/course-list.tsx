@@ -2,7 +2,7 @@ import { BookOpenIcon } from 'lucide-react'
 import * as React from 'react'
 
 import { CourseCard, type CourseSummary } from '@/components/design/blocks/course-card'
-import { EmptyState } from '@/components/design/ui/empty-state'
+import { EmptyState } from '@/components/public/ui/empty-state'
 import { cn } from '@/utilities/ui'
 
 export type CourseListProps = {

@@ -13,8 +13,8 @@ import { CourseForm } from '@/components/design/forms/course-form'
 import { FormField } from '@/components/design/forms/field'
 import { LoginForm } from '@/components/design/forms/login-form'
 import { RegisterForm } from '@/components/design/forms/register-form'
-import { Avatar } from '@/components/design/ui/avatar'
-import { EmptyState } from '@/components/design/ui/empty-state'
+import { Avatar } from '@/components/public/ui/avatar'
+import { EmptyState } from '@/components/public/ui/empty-state'
 import { Modal } from '@/components/design/ui/modal'
 import { Tabs } from '@/components/design/ui/tabs'
 import { Badge } from '@/components/public/ui/badge'
@@ -283,13 +283,10 @@ const PRIMITIVES: Entry[] = [
       </Pagination>
     ),
   },
-]
-
-const STAGED_UI: Entry[] = [
   {
     name: 'Avatar',
-    path: '@/components/design/ui/avatar',
-    origin: 'design',
+    path: '@/components/public/ui/avatar',
+    origin: 'public',
     note: 'Không có ảnh thì hiện chữ cái đầu — không phải trạng thái đang tải.',
     preview: (
       <div className="flex items-center gap-3">
@@ -301,8 +298,8 @@ const STAGED_UI: Entry[] = [
   },
   {
     name: 'EmptyState',
-    path: '@/components/design/ui/empty-state',
-    origin: 'design',
+    path: '@/components/public/ui/empty-state',
+    origin: 'public',
     preview: (
       <EmptyState
         action={<Button variant="outline">Tạo khoá học</Button>}
@@ -312,6 +309,9 @@ const STAGED_UI: Entry[] = [
       />
     ),
   },
+]
+
+const STAGED_UI: Entry[] = [
   {
     name: 'Modal',
     path: '@/components/design/ui/modal',
@@ -361,21 +361,6 @@ const STAGED_UI: Entry[] = [
 
 const STAGED_BLOCKS: Entry[] = [
   {
-    name: 'Stats',
-    path: '@/components/design/blocks/stats',
-    origin: 'design',
-    note: 'Giá trị nhận vào đã format sẵn — component không tự format số.',
-    preview: (
-      <Stats
-        items={[
-          { label: 'Học viên đang học', value: '1.248', hint: '+12% so với tháng trước' },
-          { label: 'Khoá học', value: '36' },
-          { label: 'Tỉ lệ hoàn thành', value: '87%' },
-        ]}
-      />
-    ),
-  },
-  {
     name: 'CourseCard',
     path: '@/components/design/blocks/course-card',
     origin: 'design',
@@ -399,6 +384,21 @@ const STAGED_BLOCKS: Entry[] = [
           emptyTitle="Không có khoá học nào khớp bộ lọc"
         />
       </div>
+    ),
+  },
+  {
+    name: 'Stats',
+    path: '@/components/design/blocks/stats',
+    origin: 'design',
+    note: 'Giá trị nhận vào đã format sẵn — component không tự format số.',
+    preview: (
+      <Stats
+        items={[
+          { label: 'Học viên đang học', value: '1.248', hint: '+12% so với tháng trước' },
+          { label: 'Khoá học', value: '36' },
+          { label: 'Tỉ lệ hoàn thành', value: '87%' },
+        ]}
+      />
     ),
   },
   {

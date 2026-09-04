@@ -17,6 +17,7 @@ const SIZES = {
   sm: 'size-8 text-xs',
   md: 'size-10 text-sm',
   lg: 'size-14 text-base',
+  xl: 'size-20 text-xl',
 } as const
 
 export type AvatarProps = {
