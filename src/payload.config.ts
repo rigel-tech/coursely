@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url'
 
 import { AuditLogs } from './collections/AuditLogs'
 import { Categories } from './collections/Categories'
+import { Classes } from './collections/Classes'
 import { CourseObjectives } from './collections/CourseObjectives'
 import { CoursePhases } from './collections/CoursePhases'
 import { Courses } from './collections/Courses'
@@ -96,6 +97,7 @@ export default buildConfig({
     Courses,
     CourseObjectives,
     CoursePhases,
+    Classes,
     Notifications,
     AuditLogs,
   ],

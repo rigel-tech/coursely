@@ -75,6 +75,7 @@ export interface Config {
     courses: Course;
     'course-objectives': CourseObjective;
     'course-phases': CoursePhase;
+    classes: Class;
     notifications: Notification;
     'audit-logs': AuditLog;
     redirects: Redirect;
@@ -106,6 +107,7 @@ export interface Config {
     courses: CoursesSelect<false> | CoursesSelect<true>;
     'course-objectives': CourseObjectivesSelect<false> | CourseObjectivesSelect<true>;
     'course-phases': CoursePhasesSelect<false> | CoursePhasesSelect<true>;
+    classes: ClassesSelect<false> | ClassesSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     'audit-logs': AuditLogsSelect<false> | AuditLogsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
@@ -901,6 +903,23 @@ export interface CoursePhase {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "classes".
+ */
+export interface Class {
+  id: number;
+  code: string;
+  course: number | Course;
+  status: 'DRAFT' | 'OPEN' | 'CLOSED' | 'COMPLETED' | 'CANCELLED';
+  startDate: string;
+  endDate?: string | null;
+  scheduleTime?: string | null;
+  location?: string | null;
+  maxStudents: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "notifications".
  */
 export interface Notification {
@@ -1159,6 +1178,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'course-phases';
         value: number | CoursePhase;
+      } | null)
+    | ({
+        relationTo: 'classes';
+        value: number | Class;
       } | null)
     | ({
         relationTo: 'notifications';
@@ -1591,6 +1614,22 @@ export interface CoursePhasesSelect<T extends boolean = true> {
   description?: T;
   course?: T;
   sortOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "classes_select".
+ */
+export interface ClassesSelect<T extends boolean = true> {
+  code?: T;
+  course?: T;
+  status?: T;
+  startDate?: T;
+  endDate?: T;
+  scheduleTime?: T;
+  location?: T;
+  maxStudents?: T;
   updatedAt?: T;
   createdAt?: T;
 }
