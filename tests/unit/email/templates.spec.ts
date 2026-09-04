@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest'
-
-import { verifyOtpEmail } from '@/email/templates/verify-otp'
+import { describe, expect, it } from 'vitest'
 import { duplicateRegisterAttemptEmail } from '@/email/templates/duplicate-register-attempt'
 import { resetPasswordEmail } from '@/email/templates/reset-password'
+import { verifyOtpEmail } from '@/email/templates/verify-otp'
+import { getServerSideURL } from '@/utilities/getURL'
 
 describe('verifyOtpEmail', () => {
   it('embeds the exact code and carries a subject', () => {
@@ -25,7 +25,7 @@ describe('duplicateRegisterAttemptEmail', () => {
 
 describe('resetPasswordEmail', () => {
   it('embeds the reset link and carries a subject', () => {
-    const link = 'http://localhost:3000/dat-lai-mat-khau?token=test-token-xyz'
+    const link = `${getServerSideURL()}/dat-lai-mat-khau?token=test-token-xyz`
     const { subject, html, text } = resetPasswordEmail(link)
 
     expect(subject.trim()).not.toBe('')

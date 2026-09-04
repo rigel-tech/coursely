@@ -5,6 +5,7 @@ import configPromise from '@payload-config'
 
 import { parseForgotPasswordInput } from '@/lib/validation/forgot-password-schema'
 import { sendResetPasswordEmail } from '@/email/send'
+import { getServerSideURL } from '@/utilities/getURL'
 
 export type ForgotPasswordFormState = {
   status: 'idle' | 'success' | 'error'
@@ -43,12 +44,7 @@ export async function forgotPasswordAction(
     })
 
     if (token) {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_SERVER_URL ||
-        (process.env.VERCEL_PROJECT_PRODUCTION_URL
-          ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-          : 'http://localhost:3000')
-      const resetUrl = `${baseUrl}/dat-lai-mat-khau?token=${encodeURIComponent(token)}`
+      const resetUrl = `${getServerSideURL()}/dat-lai-mat-khau?token=${encodeURIComponent(token)}`
 
       try {
         await sendResetPasswordEmail(payload, email, resetUrl)
