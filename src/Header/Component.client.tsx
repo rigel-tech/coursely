@@ -7,6 +7,7 @@ import React, { useEffect } from 'react'
 import type { Header } from '@/payload-types'
 
 import { Logo } from '@/components/public/Logo/Logo'
+import { LoginCta } from '@/components/public/LoginCta'
 import { RegisterCta } from '@/components/public/RegisterCta'
 import useIsHydrated from '@/utilities/useIsHydrated'
 import { HeaderNav } from './Nav'
@@ -36,6 +37,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data }) => {
         </Link>
         <div className="flex items-center gap-4">
           <HeaderNav data={data} />
+          <LoginCta />
           <RegisterCta />
         </div>
       </div>

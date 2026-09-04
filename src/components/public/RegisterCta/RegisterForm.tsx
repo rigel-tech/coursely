@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/public/ui/checkbox'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
 import { registerAction } from '@/actions/auth/register'
-import { initialRegisterState } from '@/actions/auth/register.state'
+import { initialRegisterState } from '@/lib/constants/register-state'
 import { SubmitButton } from './SubmitButton'
 
 /**

@@ -5,14 +5,15 @@ import { useState } from 'react'
 
 import { Button } from '@/components/public/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/public/ui/card'
-import { RegisterForm } from './RegisterForm'
+import { LoginForm } from './LoginForm'
 
 /**
- * "Đăng ký" entry point for the public site. The button toggles the registration
- * form in a `Card` anchored beneath it — no navigation, no dialog. The card is
- * absolutely positioned so opening it never reflows the header.
+ * "Đăng nhập" entry point for the public site — sibling to `RegisterCta`. The
+ * button toggles the login form in a `Card` anchored beneath it; no navigation,
+ * no dialog. The card is absolutely positioned so opening it never reflows the
+ * header.
  */
-export const RegisterCta: React.FC = () => {
+export const LoginCta: React.FC = () => {
   const [open, setOpen] = useState(false)
 
   return (
@@ -20,20 +21,20 @@ export const RegisterCta: React.FC = () => {
       <Button
         type="button"
         size="sm"
-        variant={open ? 'outline' : 'default'}
+        variant={open ? 'outline' : 'ghost'}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        Đăng ký
+        Đăng nhập
       </Button>
 
       {open && (
         <Card className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-80 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-lg">Tạo tài khoản mới</CardTitle>
+            <CardTitle className="text-lg">Đăng nhập</CardTitle>
           </CardHeader>
           <CardContent>
-            <RegisterForm />
+            <LoginForm />
           </CardContent>
         </Card>
       )}

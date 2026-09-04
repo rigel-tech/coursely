@@ -5,6 +5,7 @@ import path from 'path'
 import { buildConfig, PayloadRequest } from 'payload'
 import { fileURLToPath } from 'url'
 
+import { AuditLogs } from './collections/AuditLogs'
 import { Categories } from './collections/Categories'
 import { CourseObjectives } from './collections/CourseObjectives'
 import { CoursePhases } from './collections/CoursePhases'
@@ -96,8 +97,8 @@ export default buildConfig({
     CourseObjectives,
     CoursePhases,
     Notifications,
+    AuditLogs,
   ],
-
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins,

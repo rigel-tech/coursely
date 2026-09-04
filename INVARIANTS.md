@@ -169,6 +169,44 @@ no error anywhere.
 `src/blocks/RelatedPosts/Component.tsx:27` (`RelatedPosts`),
 `src/components/public/CollectionArchive/index.tsx:21` (`CollectionArchive`).
 
+## Server actions
+
+### An auth server action that sets a cookie must not `redirect()` — it returns `redirectTo`
+
+**Rule** — When a server action writes an auth cookie (`pending_email`, `payload-token`), it
+must **not** call `redirect()` in the same pass. It returns `{ status: 'success', redirectTo }`
+(or an error `code` alongside `redirectTo`), and the client form navigates from an effect once
+the new state arrives — `router.push` for a same-tree route, `window.location.assign` when the
+destination must re-read the cookie server-side (e.g. `/admin`).
+
+**Why it breaks silently** — `cookies().set()` followed by `redirect()` inside a `useActionState`
+action is a known-fragile Next combination: the redirect can be handled by the client router
+before the `Set-Cookie` from the action response is applied, so the destination loads without
+the cookie. Nothing errors — the action's DB writes all commit, the return value looks right —
+but `/verify-otp` finds no `pending_email` and bounces to `/`, or `/admin` sees no session.
+There is no console warning.
+
+**Where** — `src/actions/auth/register.ts` and `src/actions/auth/login.ts` (return `redirectTo`,
+never `redirect()`); `src/actions/auth/verify-otp.ts` (no redirect at all). Client navigation
+lives in the form: `src/components/public/RegisterCta/RegisterForm.tsx` navigates from a
+`useEffect` on `state.status`.
+
+### `AUTH_TOKEN_COOKIE` must equal `${payloadConfig.cookiePrefix}-token`
+
+**Rule** — `AUTH_TOKEN_COOKIE` in `src/lib/constants/auth.ts` is hard-coded to `'payload-token'`
+because `payload.config.ts` sets no `cookiePrefix` (so the prefix is the default `payload`). If
+a `cookiePrefix` is ever added to the config, update this constant in the same commit.
+
+**Why it breaks silently** — `proxy` runs on the Edge/Node boundary where `getPayload` is not
+available, so it cannot ask Payload for the real cookie name — it reads `AUTH_TOKEN_COOKIE`.
+`loginAction` writes the same constant. If the config prefix and the constant drift apart,
+Payload's own auth still works (it uses the config), but `proxy` reads a cookie that is never
+set: every visitor looks logged-out, `/admin` and the student area silently 302 everyone to
+`/`, and no `x-user-*` header is ever forwarded. Nothing errors.
+
+**Where** — `src/lib/constants/auth.ts` (`AUTH_TOKEN_COOKIE`), read by `src/proxy.ts` and
+`src/actions/auth/login.ts`; the default lives in `payload/dist/index.js` (`cookiePrefix`).
+
 ## Client-side state
 
 ### `themeLocalStorageKey` and `defaultTheme` exist in two modules — change both or neither

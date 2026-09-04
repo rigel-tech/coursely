@@ -8,7 +8,7 @@ import { Button } from '@/components/public/ui/button'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
 import { verifyOtpAction } from '@/actions/auth/verify-otp'
-import { initialVerifyOtpState } from '@/actions/auth/verify-otp.state'
+import { initialVerifyOtpState } from '@/lib/constants/verify-otp-state'
 
 function SubmitButton() {
   const { pending } = useFormStatus()

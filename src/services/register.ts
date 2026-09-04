@@ -11,7 +11,7 @@ import configPromise from '@payload-config'
 import { REGISTER_RATE_LIMIT, REGISTER_RATE_WINDOW_SEC } from '@/lib/constants/auth'
 import { checkRate } from '@/lib/rate-limit'
 import type { RegisterInput } from '@/lib/validation/register-schema'
-import { sendDuplicateAttemptEmail, sendVerifyOtpEmail } from '@/services/email'
+import { sendDuplicateAttemptEmail, sendVerifyOtpEmail } from '@/email/send'
 import { issueOtp } from '@/services/otp-store'
 
 export type RegisterContext = { ip: string; userAgent: string }

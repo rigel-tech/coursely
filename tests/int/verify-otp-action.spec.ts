@@ -26,7 +26,7 @@ vi.mock('next/headers', () => ({
 }))
 
 const { verifyOtpAction } = await import('@/actions/auth/verify-otp')
-const { initialVerifyOtpState } = await import('@/actions/auth/verify-otp.state')
+const { initialVerifyOtpState } = await import('@/lib/constants/verify-otp-state')
 
 let payload: Payload
 
