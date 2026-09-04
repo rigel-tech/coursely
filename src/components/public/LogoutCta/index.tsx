@@ -1,25 +1,29 @@
 'use client'
 
+import { LogOut } from 'lucide-react'
 import * as React from 'react'
 import { useState } from 'react'
 
 import { Button } from '@/components/public/ui/button'
 import { logoutAction } from '@/actions/auth/logout'
 
+export interface LogoutCtaProps {
+  className?: string
+  variant?: 'ghost' | 'outline' | 'destructive' | 'default'
+  size?: 'default' | 'sm' | 'lg'
+  showIcon?: boolean
+}
+
 /**
- * "Đăng xuất" control for the public header — sibling to `LoginCta` / `RegisterCta`,
- * shown by `HeaderAuthControls` once the session check confirms a signed-in visitor.
- *
- * Calls the existing `logoutAction` (this device) and follows its `redirectTo` with a
- * full-document navigation, mirroring `LoginForm`: the destination must re-read session
- * state server-side and `/admin` is a separate route tree, so `router.push` will not do.
- *
- * A plain `pending` flag rather than `useTransition`: on success the button stays
- * disabled through the navigation away; on failure — `logoutAction` clears the session
- * cookies before it could throw, so a rejection only means "no destination reported" —
- * it is reset so the visitor can retry instead of being trapped on a dead control.
+ * "Đăng xuất" control — callable from profile settings or header.
+ * Calls `logoutAction` (this device) and follows its `redirectTo` with a full-document navigation.
  */
-export const LogoutCta: React.FC = () => {
+export const LogoutCta: React.FC<LogoutCtaProps> = ({
+  className,
+  variant = 'ghost',
+  size = 'sm',
+  showIcon = false,
+}) => {
   const [pending, setPending] = useState(false)
 
   const onClick = async () => {
@@ -36,12 +40,14 @@ export const LogoutCta: React.FC = () => {
   return (
     <Button
       type="button"
-      size="sm"
-      variant="ghost"
+      size={size}
+      variant={variant}
       disabled={pending}
       aria-busy={pending}
       onClick={onClick}
+      className={className}
     >
+      {showIcon && <LogOut className="mr-2 size-4" />}
       {pending ? 'Đang đăng xuất…' : 'Đăng xuất'}
     </Button>
   )

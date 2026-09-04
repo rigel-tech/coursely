@@ -23,6 +23,7 @@ import {
 } from '@/components/public/ui/card'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
+import { LogoutCta } from '@/components/public/LogoutCta'
 import { updateProfileAction, type ProfileFormState } from '@/actions/student/profile'
 import type { User, Media } from '@/payload-types'
 
@@ -105,21 +106,32 @@ export function ProfileForm({ user }: ProfileFormProps) {
             </div>
           </CardHeader>
 
-          <CardContent className="pt-4 border-t border-border mt-4 text-sm text-muted-foreground space-y-2">
-            <p className="flex items-center justify-between">
-              <span>Ngày tham gia:</span>
-              <span className="font-medium text-foreground">
-                {user.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN') : '—'}
-              </span>
-            </p>
-            {user.verifiedAt && (
+          <CardContent className="pt-4 border-t border-border mt-4 space-y-4">
+            <div className="text-sm text-muted-foreground space-y-2">
               <p className="flex items-center justify-between">
-                <span>Xác thực email lúc:</span>
+                <span>Ngày tham gia:</span>
                 <span className="font-medium text-foreground">
-                  {new Date(user.verifiedAt).toLocaleDateString('vi-VN')}
+                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN') : '—'}
                 </span>
               </p>
-            )}
+              {user.verifiedAt && (
+                <p className="flex items-center justify-between">
+                  <span>Xác thực email lúc:</span>
+                  <span className="font-medium text-foreground">
+                    {new Date(user.verifiedAt).toLocaleDateString('vi-VN')}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-border">
+              <LogoutCta
+                variant="outline"
+                size="default"
+                showIcon
+                className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
