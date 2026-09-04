@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { Avatar } from '@/components/design/ui/avatar'
+import { Avatar } from '@/components/public/ui/avatar'
 import { Badge } from '@/components/public/ui/badge'
 import { cn } from '@/utilities/ui'
 

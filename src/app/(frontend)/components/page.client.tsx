@@ -13,7 +13,7 @@ import { CourseForm } from '@/components/design/forms/course-form'
 import { FormField } from '@/components/design/forms/field'
 import { LoginForm } from '@/components/design/forms/login-form'
 import { RegisterForm } from '@/components/design/forms/register-form'
-import { Avatar } from '@/components/design/ui/avatar'
+import { Avatar } from '@/components/public/ui/avatar'
 import { EmptyState } from '@/components/design/ui/empty-state'
 import { Modal } from '@/components/design/ui/modal'
 import { Tabs } from '@/components/design/ui/tabs'
@@ -283,13 +283,10 @@ const PRIMITIVES: Entry[] = [
       </Pagination>
     ),
   },
-]
-
-const STAGED_UI: Entry[] = [
   {
     name: 'Avatar',
-    path: '@/components/design/ui/avatar',
-    origin: 'design',
+    path: '@/components/public/ui/avatar',
+    origin: 'public',
     note: 'Không có ảnh thì hiện chữ cái đầu — không phải trạng thái đang tải.',
     preview: (
       <div className="flex items-center gap-3">
@@ -299,6 +296,9 @@ const STAGED_UI: Entry[] = [
       </div>
     ),
   },
+]
+
+const STAGED_UI: Entry[] = [
   {
     name: 'EmptyState',
     path: '@/components/design/ui/empty-state',

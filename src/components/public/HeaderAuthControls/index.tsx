@@ -1,23 +1,17 @@
 'use client'
 
+import Link from 'next/link'
 import * as React from 'react'
 import { useEffect, useState } from 'react'
 
+import { Button } from '@/components/public/ui/button'
 import { LoginCta } from '@/components/public/LoginCta'
 import { RegisterCta } from '@/components/public/RegisterCta'
 import { LogoutCta } from '@/components/public/LogoutCta'
 
 /**
- * Picks the header's auth controls: `LogoutCta` when the visitor has an active
+ * Picks the header's auth controls: `LogoutCta` + Profile link when the visitor has an active
  * public-site session, `LoginCta` + `RegisterCta` otherwise.
- *
- * The decision cannot be made in a Server Component here: `src/app/(frontend)/page.tsx`,
- * `courses/`, and `posts/` are `force-static`, which makes `headers()` / `cookies()`
- * return empty — the proxy-forwarded `x-user-id` would always read as signed-out on
- * exactly the pages that host the header. So the check runs client-side against
- * `GET /next/auth-status` after hydration. Server render and first client render both
- * take the signed-out branch, so hydration matches; the swap to `LogoutCta` happens in
- * the effect. See `specs/002-header-logout-ui/research.md` D1/D4.
  */
 export const HeaderAuthControls: React.FC = () => {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null)
@@ -37,7 +31,16 @@ export const HeaderAuthControls: React.FC = () => {
     }
   }, [])
 
-  if (authenticated === true) return <LogoutCta />
+  if (authenticated === true) {
+    return (
+      <div className="flex items-center gap-2">
+        <Button asChild size="sm" variant="ghost">
+          <Link href="/tai-khoan">Tài khoản</Link>
+        </Button>
+        <LogoutCta />
+      </div>
+    )
+  }
 
   return (
     <>
