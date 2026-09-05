@@ -45,7 +45,7 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="pt-24 pb-24">
+    <div className="pb-24">
       <ProfileForm user={user} />
     </div>
   )
