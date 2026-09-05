@@ -21,14 +21,14 @@ export function decideRoute(
   }
 
   // OTP step needs the cookie `registerAction` / AUTH_022 set.
-  if (pathname === '/verify-otp') {
+  if (pathname === '/xac-thuc-otp') {
     return hasPendingEmail ? NEXT : { type: 'redirect', to: '/' }
   }
 
   // Student area: signed in and verified.
   if (PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     if (user && user.status === 'ACTIVE') return NEXT
-    return { type: 'redirect', to: `/?callbackUrl=${encodeURIComponent(pathname)}` }
+    return { type: 'redirect', to: `/dang-nhap?callbackUrl=${encodeURIComponent(pathname)}` }
   }
 
   return NEXT

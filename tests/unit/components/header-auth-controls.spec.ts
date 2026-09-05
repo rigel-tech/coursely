@@ -24,7 +24,7 @@ afterEach(() => {
 const jsonOnce = (value: unknown) =>
   fetchMock.mockResolvedValueOnce({ ok: true, json: async () => value })
 
-const signIn = () => screen.queryByRole('button', { name: /đăng nhập/i })
+const signIn = () => screen.queryByRole('link', { name: /đăng nhập/i })
 const register = () => screen.queryByRole('button', { name: /đăng ký/i })
 const account = () => screen.queryByRole('link', { name: /minh anh|tài khoản/i })
 

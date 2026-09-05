@@ -35,4 +35,24 @@ describe('RegisterCta', () => {
     fireEvent.click(toggle)
     expect(screen.queryByLabelText('Email')).toBeNull()
   })
+
+  it('closes when clicking outside the card', () => {
+    render(React.createElement(RegisterCta))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng ký' }))
+    expect(screen.getByLabelText('Email')).toBeTruthy()
+
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByLabelText('Email')).toBeNull()
+  })
+
+  it('does not close when clicking inside the card', () => {
+    render(React.createElement(RegisterCta))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng ký' }))
+    const emailInput = screen.getByLabelText('Email')
+
+    fireEvent.pointerDown(emailInput)
+    expect(screen.getByLabelText('Email')).toBeTruthy()
+  })
 })

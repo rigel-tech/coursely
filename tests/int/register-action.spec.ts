@@ -8,7 +8,7 @@ import { redis } from '@/lib/redis'
  * Server-action context. `next/headers` has no request scope under vitest, so it
  * is mocked: cookies land in `ctx.cookieJar`, request headers are read from
  * `ctx.reqHeaders`. The happy path resolves to `{ status: 'success' }` — the
- * client owns the navigation to `/verify-otp`, so nothing here throws.
+ * client owns the navigation to `/xac-thuc-otp`, so nothing here throws.
  */
 const ctx = vi.hoisted(() => ({
   cookieJar: new Map<string, string>(),

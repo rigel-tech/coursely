@@ -14,7 +14,7 @@ import { SubmitButton } from './SubmitButton'
 /**
  * Self-registration form (Student). Fields follow the spec: email, password,
  * confirmPassword, optional fullName and phone, and a terms checkbox. Wired to
- * `registerAction` through `useActionState`. The redirect to `/verify-otp` runs
+ * `registerAction` through `useActionState`. The redirect to `/xac-thuc-otp` runs
  * here, in an effect after the action resolves — not inside the action — so the
  * `pending_email` cookie from the action response is already stored before the
  * target page reads it.
@@ -24,7 +24,7 @@ export const RegisterForm: React.FC = () => {
   const [state, formAction] = useActionState(registerAction, initialRegisterState)
 
   useEffect(() => {
-    if (state.status === 'success') router.push('/verify-otp')
+    if (state.status === 'success') router.push('/xac-thuc-otp')
   }, [state.status, router])
 
   return (

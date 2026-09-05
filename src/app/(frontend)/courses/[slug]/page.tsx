@@ -114,7 +114,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
             <span className="text-muted-foreground/60">/</span>
             <Link
               className="text-muted-foreground hover:text-foreground transition-colors"
-              href="/courses"
+              href="/khoa-hoc"
             >
               Khóa học
             </Link>

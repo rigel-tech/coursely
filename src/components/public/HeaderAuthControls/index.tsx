@@ -6,13 +6,13 @@ import * as React from 'react'
 import { useEffect, useState } from 'react'
 
 import { Avatar } from '@/components/public/ui/avatar'
-import { LoginCta } from '@/components/public/LoginCta'
+import { Button } from '@/components/public/ui/button'
 import { RegisterCta } from '@/components/public/RegisterCta'
 import { ThemeToggle } from '@/components/public/ThemeToggle'
 
 /**
  * Picks the header's auth controls: Profile pill and notification bell when authenticated,
- * `LoginCta` + `RegisterCta` otherwise, plus Hotline and ThemeToggle.
+ * a sign-in link (to `/dang-nhap`) + `RegisterCta` otherwise, plus Hotline and ThemeToggle.
  */
 export const HeaderAuthControls: React.FC = () => {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null)
@@ -75,7 +75,9 @@ export const HeaderAuthControls: React.FC = () => {
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          <LoginCta />
+          <Button asChild size="sm" variant="ghost">
+            <Link href="/dang-nhap">Đăng nhập</Link>
+          </Button>
           <RegisterCta />
         </div>
       )}

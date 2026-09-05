@@ -21,13 +21,13 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('RegisterForm', () => {
-  it('navigates to /verify-otp once the action reports success', async () => {
+  it('navigates to /xac-thuc-otp once the action reports success', async () => {
     registerAction.mockResolvedValue({ status: 'success' })
     render(React.createElement(RegisterForm))
 
     fireEvent.click(screen.getByRole('button', { name: 'Tạo tài khoản' }))
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith('/verify-otp'))
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/xac-thuc-otp'))
   })
 
   // Guard: only 'success' navigates — an error state stays put and renders its message.

@@ -15,7 +15,7 @@ import { renewSession, type IssuedSession } from '@/services/session-store'
 
 /**
  * Auth guard (Next 16 Proxy, formerly Middleware — Node runtime). Gates `/admin`,
- * the student area and `/verify-otp`, and forwards the identity to Server
+ * the student area and `/xac-thuc-otp`, and forwards the identity to Server
  * Components through `x-user-*` request headers, which are always rewritten so a
  * client cannot forge them.
  *

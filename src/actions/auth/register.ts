@@ -11,7 +11,7 @@ import type { RegisterState } from '@/lib/constants/register-state'
  * Server action for self-registration (§5.1). Orchestration only: read request
  * context, validate the form, delegate to `registerStudent`, then translate the
  * result into a `pending_email` cookie + `{ status: 'success' }`, or an `AUTH_00x`
- * error for the form to render. The redirect to `/verify-otp` is the client's job
+ * error for the form to render. The redirect to `/xac-thuc-otp` is the client's job
  * (`<RegisterForm>`): redirecting from here races the `Set-Cookie`, so the target
  * page can load before the cookie exists and bounce straight back.
  */

@@ -24,28 +24,28 @@ describe('decideRoute — /admin', () => {
   })
 })
 
-describe('decideRoute — /verify-otp', () => {
+describe('decideRoute — /xac-thuc-otp', () => {
   it('redirects home without the pending_email cookie', () => {
-    expect(decideRoute('/verify-otp', null, false)).toEqual({ type: 'redirect', to: '/' })
+    expect(decideRoute('/xac-thuc-otp', null, false)).toEqual({ type: 'redirect', to: '/' })
   })
 
   it('passes through with the cookie', () => {
-    expect(decideRoute('/verify-otp', null, true)).toEqual({ type: 'next' })
+    expect(decideRoute('/xac-thuc-otp', null, true)).toEqual({ type: 'next' })
   })
 })
 
 describe('decideRoute — protected student area', () => {
-  it('redirects an anonymous visitor to / with the callbackUrl', () => {
+  it('redirects an anonymous visitor to /dang-nhap with the callbackUrl', () => {
     expect(decideRoute('/tai-khoan', null, false)).toEqual({
       type: 'redirect',
-      to: '/?callbackUrl=%2Ftai-khoan',
+      to: '/dang-nhap?callbackUrl=%2Ftai-khoan',
     })
   })
 
   it('redirects a not-yet-verified account, keeping the deep path', () => {
     expect(decideRoute('/khoa-hoc-cua-toi/abc', pending, false)).toEqual({
       type: 'redirect',
-      to: '/?callbackUrl=%2Fkhoa-hoc-cua-toi%2Fabc',
+      to: '/dang-nhap?callbackUrl=%2Fkhoa-hoc-cua-toi%2Fabc',
     })
   })
 

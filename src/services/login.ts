@@ -12,6 +12,8 @@ import configPromise from '@payload-config'
 import { LOGIN_EMAIL_LIMIT, LOGIN_IP_LIMIT, LOGIN_RATE_WINDOW_SEC } from '@/lib/constants/auth'
 import { bumpRate, clearRate, peekRate } from '@/lib/rate-limit'
 import type { LoginInput } from '@/lib/validation/login-schema'
+import { sendVerifyOtpEmail } from '@/email/send'
+import { resendOtp } from '@/services/otp-store'
 
 export type LoginContext = { ip: string; userAgent: string }
 
@@ -84,12 +86,21 @@ export async function authenticateUser(
     return { ok: false, code: 'AUTH_024', message: DISABLED }
   }
   if (user.status === 'PENDING_VERIFICATION') {
+    // §7 — a returning unverified user needs a working code waiting for them; the
+    // one from registration may already be stale. Fire-and-forget, cooldown-gated,
+    // same shape as `registerStudent`'s own send.
+    const resend = await resendOtp(email)
+    if (resend.ok) {
+      void sendVerifyOtpEmail(payload, email, resend.otp).catch((err) =>
+        payload.logger.error({ err }, 'EMAIL_VERIFY_OTP send failed'),
+      )
+    }
     return {
       ok: false,
       code: 'AUTH_022',
       message: 'Tài khoản chưa xác minh email.',
       email,
-      redirectTo: '/verify-otp',
+      redirectTo: '/xac-thuc-otp',
     }
   }
 
