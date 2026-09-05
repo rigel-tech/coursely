@@ -98,7 +98,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
       categoryName: categoryObj?.title || undefined,
       tags,
       imageUrl: imgUrl,
-      href: `/courses/${course.slug}`,
+      href: `/khoa-hoc/${course.slug}`,
     }
   })
 
@@ -154,7 +154,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
           emptyAction={
             hasActiveFilters ? (
               <Button asChild variant="outline">
-                <Link href="/courses">Xóa bộ lọc</Link>
+                <Link href="/khoa-hoc">Xóa bộ lọc</Link>
               </Button>
             ) : undefined
           }

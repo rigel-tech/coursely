@@ -7,8 +7,11 @@ import type { NextConfig } from 'next'
  * the left, never the folder name on the right.
  */
 export const rewrites: NextConfig['rewrites'] = async () => [
+  { source: '/dang-nhap', destination: '/user/login' },
   { source: '/tai-khoan', destination: '/user/account' },
   { source: '/quen-mat-khau', destination: '/user/forgot-password' },
   { source: '/dat-lai-mat-khau', destination: '/user/reset-password' },
   { source: '/xac-thuc-otp', destination: '/user/verify-otp' },
+  { source: '/khoa-hoc', destination: '/courses' },
+  { source: '/khoa-hoc/:slug', destination: '/courses/:slug' },
 ]

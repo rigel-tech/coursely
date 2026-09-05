@@ -51,7 +51,7 @@ exist and be verified before either story's implementation task runs.
 **⚠️ CRITICAL**: T002 blocks T005 (US1) and T009 (US2).
 
 - [x] T001 [Required] Write failing test: `resendOtp` returns `{ ok: false, reason:
-    'cooldown' }` without touching `otp:verify:{email}` when
+  'cooldown' }` without touching `otp:verify:{email}` when
       `otp:cooldown:{email}` is set, and `{ ok: true, otp }` (delegating to the
       existing `issueOtp` behavior) when it is not — add to
       `tests/int/otp-store.spec.ts`. Run it and confirm it fails because `resendOtp`
@@ -129,11 +129,11 @@ again to confirm the session-expired message — per `quickstart.md` Scenario 2.
 > Write these first; run and observe them fail before touching `resend-otp.ts` /
 > `OtpForm.tsx`.
 
-- [ ] T007 [P] [US2] [Required] Write failing test in new file
+- [x] T007 [P] [US2] [Required] Write failing test in new file
       `tests/int/resend-otp-action.spec.ts`: with a valid `pending_email` cookie and
       no active cooldown, `resendOtpAction` returns `{ status: 'sent', ... }` and
       triggers `sendVerifyOtpEmail`. Confirm it fails (module doesn't exist yet).
-- [ ] T008 [P] [US2] [Required] Write failing test (same file): a second call within
+- [x] T008 [P] [US2] [Required] Write failing test (same file): a second call within
       60s returns `{ status: 'cooldown', message: ... }` and does not call
       `sendVerifyOtpEmail` again (FR-004).
 - [~] T009 [P] [US2] SKIPPED by user at the T000 gate (2026-09-05) — not written this
@@ -145,11 +145,11 @@ again to confirm the session-expired message — per `quickstart.md` Scenario 2.
 
 ### Implementation for User Story 2
 
-- [ ] T011 [P] [US2] Create `src/lib/constants/resend-otp-state.ts` — `ResendOtpState`
+- [x] T011 [P] [US2] Create `src/lib/constants/resend-otp-state.ts` — `ResendOtpState`
       type (`status: 'idle' | 'pending' | 'sent' | 'cooldown' | 'error'`, optional
       `message`) and `initialResendOtpState`, mirroring
       `src/lib/constants/verify-otp-state.ts` (see data-model.md).
-- [ ] T012 [US2] Create `src/actions/auth/resend-otp.ts` (`'use server'`):
+- [x] T012 [US2] Create `src/actions/auth/resend-otp.ts` (`'use server'`):
       `resendOtpAction(_prev: ResendOtpState, _formData: FormData): Promise<ResendOtpState>`
       per `contracts/resend-otp-action.md` — read `PENDING_EMAIL_COOKIE`, on missing
       cookie return the session-expired `error` state (reuse the same message string
@@ -158,7 +158,7 @@ again to confirm the session-expired message — per `quickstart.md` Scenario 2.
       `sent` / `cooldown`, catching unexpected errors into the generic `error` message
       matching `verifyOtpAction`'s catch branch. Depends on T002, T011. Run T007, T008
       and confirm both pass.
-- [ ] T013 [US2] Wire the resend control in
+- [x] T013 [US2] Wire the resend control in
       `src/app/(frontend)/user/verify-otp/OtpForm.tsx`: add a second
       `useActionState(resendOtpAction, initialResendOtpState)`, render the "Gửi lại
       mã" control as its own sibling `<form>` (not nested inside the verify `<form>`)
@@ -175,11 +175,22 @@ resend both reliably deliver a working code, respecting one shared 60s cooldown.
 
 ## Phase 4: Polish & Cross-Cutting Concerns
 
-- [ ] T014 [P] Run `pnpm lint` and `pnpm typecheck` — both green before this feature is
-      considered done (per `CLAUDE.md`).
-- [ ] T015 Run `pnpm test:unit` and `pnpm test:int` (needs
+- [x] T014 [P] Run `pnpm lint` and `pnpm typecheck` — both green before this feature is
+      considered done (per `CLAUDE.md`). **Both green** (lint: 0 errors, 12
+      pre-existing unrelated warnings in `src/migrations/*`; typecheck: clean).
+- [x] T015 Run `pnpm test:unit` and `pnpm test:int` (needs
       `docker compose up -d`) — all green, including every test task above.
+      **All tests for this feature pass.** Two pre-existing, unrelated failures
+      remain in the full suite (not touched by this feature, confirmed via
+      `git log` on those files): `tests/unit/lib/route-guard.spec.ts` (`/admin`
+      gate — `decideRoute` has that branch commented out already) and
+      `tests/int/auth-status-route.spec.ts` (asserts a stale response shape
+      missing a `user` field the route already returns). Flagging per
+      Principle III — not fixed here as out of scope.
 - [ ] T016 Walk through `quickstart.md` Scenarios 1 and 2 manually against `pnpm dev`.
+      Not run this pass — the automated int tests (T003/T004/T005/T007/T008) already
+      exercise these exact code paths with a mocked `sendEmail`; left for the user to
+      confirm against a real mail sink before shipping.
 
 ---
 

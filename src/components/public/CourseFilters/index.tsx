@@ -101,7 +101,7 @@ export function CourseFilters({
 
     params.delete('page')
     const qs = params.toString()
-    router.push(qs ? `/courses?${qs}` : '/courses')
+    router.push(qs ? `/khoa-hoc?${qs}` : '/khoa-hoc')
   }
 
   const handleApplyDates = (e: React.FormEvent) => {
@@ -130,7 +130,7 @@ export function CourseFilters({
 
     params.delete('page')
     const qs = params.toString()
-    return qs ? `/courses?${qs}` : '/courses'
+    return qs ? `/khoa-hoc?${qs}` : '/khoa-hoc'
   }
 
   const hasActiveFilters = Boolean(
@@ -263,7 +263,7 @@ export function CourseFilters({
             variant="ghost"
             className="h-9 text-muted-foreground hover:text-foreground text-xs"
           >
-            <Link href="/courses" className="flex items-center gap-1">
+            <Link href="/khoa-hoc" className="flex items-center gap-1">
               <RotateCcw className="size-3" />
               <span>Xóa bộ lọc</span>
             </Link>

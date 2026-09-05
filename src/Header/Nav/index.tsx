@@ -9,7 +9,7 @@ import { CMSLink } from '@/components/public/Link'
 
 const DEFAULT_NAV = [
   { label: 'Trang chủ', url: '/' },
-  { label: 'Khóa học', url: '/courses' },
+  { label: 'Khóa học', url: '/khoa-hoc' },
   { label: 'Tin tức', url: '/posts' },
   { label: 'Liên hệ', url: '/contact' },
 ]

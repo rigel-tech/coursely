@@ -8,7 +8,7 @@ vi.mock('@/actions/auth/login', () => ({
   loginAction: (...args: unknown[]) => loginAction(...args),
 }))
 
-const { LoginForm } = await import('@/components/public/LoginCta/LoginForm')
+const { LoginForm } = await import('@/app/(frontend)/user/login/LoginForm')
 
 const assign = vi.fn()
 
