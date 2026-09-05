@@ -9,3 +9,4 @@ tests
 playwright-report
 docker-compose*.yml
 Dockerfile
+public/media

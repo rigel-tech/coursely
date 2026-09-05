@@ -4,10 +4,14 @@ services:
     restart: always
     ports:
       - '3000:3000'
+    volumes:
+      - media_data:/app/public/media
     env_file:
       - .env
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test:
@@ -53,3 +57,4 @@ services:
 
 volumes:
   pgdata:
+  media_data:
