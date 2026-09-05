@@ -79,6 +79,7 @@ const PAIRS: readonly [string, string][] = [
   ['link', 'card'],
   ['heading-accent', 'background'],
   ['heading-accent', 'card'],
+  ['primary-foreground', 'hero-accent'],
 ]
 
 const AA = 4.5

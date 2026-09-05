@@ -24,13 +24,13 @@ describe('decideRoute — /admin', () => {
   })
 })
 
-describe('decideRoute — /verify-otp', () => {
+describe('decideRoute — /xac-thuc-otp', () => {
   it('redirects home without the pending_email cookie', () => {
-    expect(decideRoute('/verify-otp', null, false)).toEqual({ type: 'redirect', to: '/' })
+    expect(decideRoute('/xac-thuc-otp', null, false)).toEqual({ type: 'redirect', to: '/' })
   })
 
   it('passes through with the cookie', () => {
-    expect(decideRoute('/verify-otp', null, true)).toEqual({ type: 'next' })
+    expect(decideRoute('/xac-thuc-otp', null, true)).toEqual({ type: 'next' })
   })
 })
 

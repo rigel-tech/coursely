@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { issueOtp, verifyOtp, OTP_MAX_VERIFY_ATTEMPTS } from '@/services/otp-store'
+import { issueOtp, resendOtp, verifyOtp, OTP_MAX_VERIFY_ATTEMPTS } from '@/services/otp-store'
 import { verifyOtpHash } from '@/services/otp'
 import { redis } from '@/lib/redis'
 
@@ -59,6 +59,32 @@ describe('issueOtp', () => {
 
     expect(await redis.get(`otp:quota:${email}`)).toBe('3')
     expect(await redis.ttl(`otp:quota:${email}`)).toBeGreaterThan(0)
+  })
+})
+
+describe('resendOtp', () => {
+  it('issues a fresh code when no send is on cooldown', async () => {
+    const email = freshEmail()
+
+    const result = await resendOtp(email)
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('unreachable')
+    const stored = await redis.hgetall(`otp:verify:${email}`)
+    expect(verifyOtpHash(result.otp, stored.hash)).toBe(true)
+  })
+
+  it('refuses without touching the live challenge when a send is still on cooldown', async () => {
+    const email = freshEmail()
+    const { otp: firstOtp } = await issueOtp(email)
+
+    const result = await resendOtp(email)
+
+    expect(result).toEqual({ ok: false, reason: 'cooldown' })
+    // The original code must still be the one that verifies — resendOtp did not
+    // touch otp:verify:{email} on a cooldown refusal.
+    const stored = await redis.hgetall(`otp:verify:${email}`)
+    expect(verifyOtpHash(firstOtp, stored.hash)).toBe(true)
   })
 })
 

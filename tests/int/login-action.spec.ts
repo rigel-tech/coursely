@@ -100,7 +100,12 @@ afterEach(async () => {
   for (const ip of usedIps) await redis.del(`rate:login:ip:${ip}`)
   usedIps.clear()
   for (const email of usedEmails) {
-    await redis.del(`rate:login:email:${email}`, `otp:verify:${email}`)
+    await redis.del(
+      `rate:login:email:${email}`,
+      `otp:verify:${email}`,
+      `otp:cooldown:${email}`,
+      `otp:quota:${email}`,
+    )
     const { docs } = await payload.find({
       collection: 'users',
       where: { email: { equals: email } },
@@ -262,12 +267,42 @@ describe('loginAction — status gate', () => {
     ).toBeFalsy()
   })
 
-  it('PENDING_VERIFICATION: AUTH_022, pending_email set, points at /verify-otp', async () => {
+  it('PENDING_VERIFICATION: AUTH_022, pending_email set, points at /xac-thuc-otp', async () => {
     const { email, password } = await makeUser({ status: 'PENDING_VERIFICATION' })
     const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_022', redirectTo: '/verify-otp' })
+    expect(res).toMatchObject({ status: 'error', code: 'AUTH_022', redirectTo: '/xac-thuc-otp' })
     expect(ctx.cookieJar.get('pending_email')).toBe(email)
     expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
+  })
+
+  it('PENDING_VERIFICATION: issues a fresh OTP and sends the verification email', async () => {
+    const { email, password } = await makeUser({ status: 'PENDING_VERIFICATION' })
+    const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
+
+    await run(form({ email, password }))
+
+    expect(await redis.exists(`otp:verify:${email}`)).toBe(1)
+    expect(sendEmail).toHaveBeenCalledTimes(1)
+  })
+
+  it('PENDING_VERIFICATION: a second login within the resend cooldown sends no second email', async () => {
+    const { email, password } = await makeUser({ status: 'PENDING_VERIFICATION' })
+    const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
+
+    await run(form({ email, password }))
+    await run(form({ email, password }))
+
+    expect(sendEmail).toHaveBeenCalledTimes(1)
+  })
+
+  it('wrong password against a PENDING_VERIFICATION account never sends a verification email', async () => {
+    const { email } = await makeUser({ status: 'PENDING_VERIFICATION' })
+    const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
+
+    const res = await run(form({ email, password: 'WrongPass1' }))
+
+    expect(res).toMatchObject({ status: 'error', code: 'AUTH_021' })
+    expect(sendEmail).not.toHaveBeenCalled()
   })
 })
 

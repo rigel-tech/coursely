@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/public/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/public/ui/card'
@@ -15,9 +15,23 @@ import { LoginForm } from './LoginForm'
  */
 export const LoginCta: React.FC = () => {
   const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [open])
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <Button
         type="button"
         size="sm"

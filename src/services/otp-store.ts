@@ -22,6 +22,8 @@ const quotaKey = (email: string) => `otp:quota:${email}`
 
 export type IssuedOtp = { otp: string }
 
+export type ResendResult = { ok: true; otp: string } | { ok: false; reason: 'cooldown' }
+
 /**
  * Mint a fresh code for `email`: replace any prior code (the old one stops
  * working immediately), (re)start the 5-minute expiry, arm the 60-second resend
@@ -45,6 +47,18 @@ export async function issueOtp(email: string): Promise<IssuedOtp> {
     .exec()
 
   return { otp }
+}
+
+/**
+ * `issueOtp`, but refuses instead of sending twice inside the resend cooldown.
+ * Shared by every path that can re-send a code outside of a fresh registration
+ * (a login bounce, the verification screen's "resend" control) so none of them can
+ * drift from the cooldown key's own semantics.
+ */
+export async function resendOtp(email: string): Promise<ResendResult> {
+  if (await redis.exists(cooldownKey(email))) return { ok: false, reason: 'cooldown' }
+  const { otp } = await issueOtp(email)
+  return { ok: true, otp }
 }
 
 /** Outcome of a single `verifyOtp` call. `remaining` is only present on a mismatch. */

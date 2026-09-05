@@ -21,7 +21,7 @@ export function decideRoute(
   // }
 
   // OTP step needs the cookie `registerAction` / AUTH_022 set.
-  if (pathname === '/verify-otp') {
+  if (pathname === '/xac-thuc-otp') {
     return hasPendingEmail ? NEXT : { type: 'redirect', to: '/' }
   }
 

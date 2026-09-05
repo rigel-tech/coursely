@@ -32,4 +32,24 @@ describe('LoginCta', () => {
     fireEvent.click(toggle(true))
     expect(screen.queryByLabelText('Email')).toBeNull()
   })
+
+  it('closes when clicking outside the card', () => {
+    render(React.createElement(LoginCta))
+
+    fireEvent.click(toggle(false))
+    expect(screen.getByLabelText('Email')).toBeTruthy()
+
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByLabelText('Email')).toBeNull()
+  })
+
+  it('does not close when clicking inside the card', () => {
+    render(React.createElement(LoginCta))
+
+    fireEvent.click(toggle(false))
+    const emailInput = screen.getByLabelText('Email')
+
+    fireEvent.pointerDown(emailInput)
+    expect(screen.getByLabelText('Email')).toBeTruthy()
+  })
 })
