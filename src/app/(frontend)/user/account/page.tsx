@@ -46,17 +46,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="pt-24 pb-24">
-      <div className="container mx-auto px-4 max-w-5xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Hồ sơ học viên</h1>
-          <p className="text-muted-foreground mt-2 text-base">
-            Xem và cập nhật thông tin cá nhân của bạn để nhận thông báo khóa học và lịch học mới
-            nhất.
-          </p>
-        </div>
-
-        <ProfileForm user={user} />
-      </div>
+      <ProfileForm user={user} />
     </div>
   )
 }

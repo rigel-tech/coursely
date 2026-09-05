@@ -41,19 +41,19 @@ describe('LoginForm', () => {
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/'))
   })
 
-  it('follows redirectTo on an error state too (AUTH_022 → /verify-otp)', async () => {
+  it('follows redirectTo on an error state too (AUTH_022 → /xac-thuc-otp)', async () => {
     loginAction.mockResolvedValue({
       status: 'error',
       code: 'AUTH_022',
       message: 'Tài khoản chưa xác minh email.',
-      redirectTo: '/verify-otp',
+      redirectTo: '/xac-thuc-otp',
     })
     render(React.createElement(LoginForm))
 
     fill()
     submit()
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/verify-otp'))
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/xac-thuc-otp'))
   })
 
   it('shows the message and stays put when there is no redirectTo', async () => {

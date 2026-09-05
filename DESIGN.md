@@ -26,6 +26,7 @@ colors:
   brand-accent-foreground: '#101A31'
   link: '#1650CF'
   heading-accent: '#0B2A6B'
+  hero-accent: '#0B2A6B'
   border: '#E2E8F4'
   input: '#E2E8F4'
   ring: '#1650CF'
@@ -56,6 +57,7 @@ colors:
   brand-accent-foreground-dark: '#101A31'
   link-dark: '#84B0FF'
   heading-accent-dark: '#84B0FF'
+  hero-accent-dark: '#1650CF'
   border-dark: '#2A3350'
   input-dark: '#2A3350'
   ring-dark: '#84B0FF'
@@ -135,7 +137,12 @@ components:
     typography: '{typography.label-md}'
   button-brand:
     background: '{colors.brand-accent}'
-    foreground: '{colors.brand-accent-foreground}'
+    # Deliberately `primary-foreground` (white), not `brand-accent-foreground` (the ink,
+    # #101A31, chosen for its 6.04:1 contrast — see "Every pair must clear WCAG AA"). White on
+    # this orange is 2.87:1, below AA for body text. `Badge`'s brand variant still uses
+    # `brand-accent-foreground`, so it still passes; only the button strayed from the pair on
+    # purpose.
+    foreground: '{colors.primary-foreground}'
     radius: '{rounded.md}'
     typography: '{typography.label-md}'
   button-ghost:
@@ -229,6 +236,7 @@ guarantee; the right-hand column is.
 | `link`                    | `--link`                  | `#1650CF`             | `#84B0FF`             |
 | `heading-accent`          | `--text-accent-strong`    | `#0B2A6B`             | `#84B0FF`             |
 | `primary`                 | `--primary`               | `#1650CF`             | `#1650CF`             |
+| `hero-accent`             | _none — added here_       | `#0B2A6B`             | `#1650CF`             |
 | `border`, `input`         | `--border`                | `#E2E8F4`             | `#2A3350`             |
 | `success` / `-foreground` | `--ok-bg` / `--ok-fg`     | `#E9F7EE` / `#17643A` | `#143324` / `#5FD79E` |
 | `warning` / `-foreground` | `--warn-bg` / `--warn-fg` | `#FFF1E8` / `#B8440A` | `#3A2718` / `#FFA96B` |
@@ -296,6 +304,17 @@ takes `--link`, which does flip.
 `primary` (`#1650CF`) and `brand-accent` (`#FF6A1A`) are identical in light and dark, as in
 the export. Everything that must stay legible against a flipped background — `link`,
 `heading-accent`, `ring`, the chart ramp — does change.
+
+### `hero-accent` is a surface, and it does flip
+
+Full-bleed hero/banner sections (the student profile banner is the first) want the same
+strong navy the `heading-accent` text uses in light mode, not `primary`'s brand blue.
+`heading-accent` itself cannot be reused as a background: in dark mode it flips to `#84B0FF`
+(light blue), a colour meant to read as text on the dark page, not to sit under white text
+as a filled surface. `hero-accent` is a distinct role for exactly that job — `#0B2A6B` in
+light mode (matching `heading-accent`), `#1650CF` in dark mode (matching `primary`, so a
+banner painted with it in dark mode looks like the rest of the brand blue chrome). Pair it
+with `primary-foreground` for text, the same as `primary` itself.
 
 ## Typography
 
