@@ -79,7 +79,7 @@ export default async function HomePage() {
       duration: course.duration || undefined,
       level: 'beginner',
       imageUrl: imgUrl,
-      href: `/courses/${course.slug}`,
+      href: `/khoa-hoc/${course.slug}`,
     }
   })
 
@@ -107,7 +107,7 @@ export default async function HomePage() {
           </div>
           {courses.length > 0 && (
             <Button asChild variant="outline" className="self-start sm:self-auto">
-              <Link href="/courses" className="inline-flex items-center gap-1.5 font-medium">
+              <Link href="/khoa-hoc" className="inline-flex items-center gap-1.5 font-medium">
                 Xem tất cả khóa học
                 <ArrowRight className="size-4" />
               </Link>

@@ -35,17 +35,17 @@ describe('decideRoute — /xac-thuc-otp', () => {
 })
 
 describe('decideRoute — protected student area', () => {
-  it('redirects an anonymous visitor to / with the callbackUrl', () => {
+  it('redirects an anonymous visitor to /dang-nhap with the callbackUrl', () => {
     expect(decideRoute('/tai-khoan', null, false)).toEqual({
       type: 'redirect',
-      to: '/?callbackUrl=%2Ftai-khoan',
+      to: '/dang-nhap?callbackUrl=%2Ftai-khoan',
     })
   })
 
   it('redirects a not-yet-verified account, keeping the deep path', () => {
     expect(decideRoute('/khoa-hoc-cua-toi/abc', pending, false)).toEqual({
       type: 'redirect',
-      to: '/?callbackUrl=%2Fkhoa-hoc-cua-toi%2Fabc',
+      to: '/dang-nhap?callbackUrl=%2Fkhoa-hoc-cua-toi%2Fabc',
     })
   })
 

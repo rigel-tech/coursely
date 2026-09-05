@@ -144,7 +144,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
           <div className="flex shrink-0 items-center gap-3">
             <Button asChild variant="brand">
-              <Link href="/courses">Đăng ký khóa mới</Link>
+              <Link href="/khoa-hoc">Đăng ký khóa mới</Link>
             </Button>
             <LogoutCta
               variant="outline"
@@ -356,7 +356,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                   description="Bạn chưa đăng ký khóa học nào tại Coursely. Khám phá các khóa học đang mở lớp để bắt đầu hành trình học tập."
                   action={
                     <Button asChild>
-                      <Link href="/courses">Khám phá khóa học</Link>
+                      <Link href="/khoa-hoc">Khám phá khóa học</Link>
                     </Button>
                   }
                 />

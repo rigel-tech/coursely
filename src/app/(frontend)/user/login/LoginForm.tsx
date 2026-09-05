@@ -22,7 +22,7 @@ function SubmitButton() {
 }
 
 /**
- * Sign-in form for the header popover, wired to `loginAction` through
+ * Sign-in form for the `/dang-nhap` page, wired to `loginAction` through
  * `useActionState`. Any `redirectTo` the action returns — a success target or the
  * AUTH_022 "verify first" bounce — is followed with a full-document navigation
  * from an effect, so the fresh `payload-token` / `pending_email` cookie reaches
@@ -37,9 +37,9 @@ export const LoginForm: React.FC = () => {
     if (state.redirectTo) window.location.assign(state.redirectTo)
   }, [state.redirectTo])
 
-  // `proxy` bounces a blocked visitor to `/?callbackUrl=<path>`. Fold it into the
-  // submission so a successful login returns there; the server re-validates it
-  // with `safeCallbackUrl`, so a tampered value is harmless.
+  // `route-guard` bounces a blocked visitor to `/dang-nhap?callbackUrl=<path>`. Fold
+  // it into the submission so a successful login returns there; the server
+  // re-validates it with `safeCallbackUrl`, so a tampered value is harmless.
   const submit = (formData: FormData) => {
     const callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl')
     if (callbackUrl) formData.set('callbackUrl', callbackUrl)
