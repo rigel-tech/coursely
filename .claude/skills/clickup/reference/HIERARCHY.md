@@ -70,6 +70,21 @@ GET /v2/list/{list_id}/task             # Tasks
 **Shared hierarchy.** Items shared with the user but living outside their own tree do
 not appear in the walk above. `GET /v2/team/{team_id}/shared` returns those separately.
 
+## Finding a user ID
+
+`assignees` takes numeric user IDs, never names or emails ([TASKS.md](TASKS.md)). There is
+no lookup-by-name endpoint — the IDs arrive as a side effect of the first call in the walk:
+
+```bash
+GET /v2/team          # each team carries a `members[]` array
+                      # members[].user → { id, username, email }
+```
+
+So resolving "assign it to <person>" means reading `members[]` off the workspace and
+matching on `username` or `email` yourself. Match on email when you have it; `username`
+is a display name, it is free text, and it comes back `null` for a member who was invited
+but has not yet set one up.
+
 ## Statuses belong to the List
 
 A List's valid status values come from the List (which may inherit them from its Folder
