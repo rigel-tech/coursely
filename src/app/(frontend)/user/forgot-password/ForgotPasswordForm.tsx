@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { AlertCircle, ArrowLeft, CheckCircle2, Mail } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Mail } from 'lucide-react'
 import * as React from 'react'
 import { useActionState } from 'react'
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
+import { Alert, AlertDescription } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
 import {
   Card,
@@ -70,8 +70,6 @@ export function ForgotPasswordForm() {
         <CardContent className="space-y-4">
           {state.status === 'error' && state.message && !state.fieldErrors?.email && (
             <Alert variant="destructive">
-              <AlertCircle className="size-4 shrink-0" />
-              <AlertTitle>Lỗi</AlertTitle>
               <AlertDescription>{state.message}</AlertDescription>
             </Alert>
           )}
