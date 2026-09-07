@@ -92,9 +92,14 @@ export function ForgotPasswordForm() {
               autoComplete="email"
               required
               aria-invalid={!!state.fieldErrors?.email}
+              aria-describedby={state.fieldErrors?.email ? 'email-error' : undefined}
             />
             {state.fieldErrors?.email && (
-              <p className="text-destructive-foreground text-xs font-medium">
+              <p
+                id="email-error"
+                role="alert"
+                className="text-destructive-foreground text-xs font-medium"
+              >
                 {state.fieldErrors.email}
               </p>
             )}

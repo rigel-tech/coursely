@@ -31,7 +31,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     callbackUrl: formData.get('callbackUrl'),
   })
   if (!parsed.success) {
-    // A malformed field is still just "wrong credentials" to the user.
+    // Return specific field errors for inline UI feedback alongside fallback message.
     return {
       status: 'error',
       code: 'AUTH_021',

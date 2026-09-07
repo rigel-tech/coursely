@@ -109,6 +109,8 @@ const UTILITY_PREFIXES =
  */
 const KEYWORD_COLOURS = 'white|black'
 
+const SEMANTIC_PALE_TOKENS = 'destructive|error|success|warning'
+
 /**
  * Exactly three checks. Each extra check is another source of false positives, and false
  * positives kill a guard far faster than false negatives — one bad failure and someone
@@ -128,6 +130,16 @@ const CHECKS = [
     // message, and one regex cannot disagree with itself about what counts as a colour.
     re: new RegExp(
       String.raw`\b(?:${UTILITY_PREFIXES})-(?:(?:${COLOUR_FAMILIES})-\d{1,3}|${KEYWORD_COLOURS})(?![\w-])`,
+      'g',
+    ),
+  },
+  {
+    name: 'semantic-contrast',
+    // Semantic tokens (--destructive, --error, --success, --warning) are pale surface tints.
+    // Text must take `-foreground`. Bare `border-*` without `-foreground` or alpha is
+    // unreadable or near-invisible.
+    re: new RegExp(
+      String.raw`\b(?:text-(?:${SEMANTIC_PALE_TOKENS})(?!-foreground\b)|border-(?:${SEMANTIC_PALE_TOKENS})(?!-foreground\b|\/))`,
       'g',
     ),
   },

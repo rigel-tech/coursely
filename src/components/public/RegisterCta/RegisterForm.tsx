@@ -42,9 +42,14 @@ export const RegisterForm: React.FC = () => {
           autoComplete="email"
           required
           aria-invalid={state.fieldErrors?.email ? true : undefined}
+          aria-describedby={state.fieldErrors?.email ? 'register-email-error' : undefined}
         />
         {state.fieldErrors?.email && (
-          <p className="text-destructive-foreground font-medium text-xs">
+          <p
+            id="register-email-error"
+            role="alert"
+            className="text-destructive-foreground font-medium text-xs"
+          >
             {state.fieldErrors.email}
           </p>
         )}
@@ -59,9 +64,14 @@ export const RegisterForm: React.FC = () => {
           autoComplete="new-password"
           required
           aria-invalid={state.fieldErrors?.password ? true : undefined}
+          aria-describedby={state.fieldErrors?.password ? 'register-password-error' : undefined}
         />
         {state.fieldErrors?.password && (
-          <p className="text-destructive-foreground font-medium text-xs">
+          <p
+            id="register-password-error"
+            role="alert"
+            className="text-destructive-foreground font-medium text-xs"
+          >
             {state.fieldErrors.password}
           </p>
         )}
@@ -76,9 +86,16 @@ export const RegisterForm: React.FC = () => {
           autoComplete="new-password"
           required
           aria-invalid={state.fieldErrors?.confirmPassword ? true : undefined}
+          aria-describedby={
+            state.fieldErrors?.confirmPassword ? 'register-confirm-password-error' : undefined
+          }
         />
         {state.fieldErrors?.confirmPassword && (
-          <p className="text-destructive-foreground font-medium text-xs">
+          <p
+            id="register-confirm-password-error"
+            role="alert"
+            className="text-destructive-foreground font-medium text-xs"
+          >
             {state.fieldErrors.confirmPassword}
           </p>
         )}
@@ -96,13 +113,23 @@ export const RegisterForm: React.FC = () => {
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <Checkbox id="register-terms" name="terms" value="on" />
+          <Checkbox
+            id="register-terms"
+            name="terms"
+            value="on"
+            aria-invalid={state.fieldErrors?.terms ? true : undefined}
+            aria-describedby={state.fieldErrors?.terms ? 'register-terms-error' : undefined}
+          />
           <Label htmlFor="register-terms" className="cursor-pointer">
             Tôi đồng ý với điều khoản sử dụng
           </Label>
         </div>
         {state.fieldErrors?.terms && (
-          <p className="text-destructive-foreground font-medium text-xs">
+          <p
+            id="register-terms-error"
+            role="alert"
+            className="text-destructive-foreground font-medium text-xs"
+          >
             {state.fieldErrors.terms}
           </p>
         )}

@@ -35,7 +35,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-destructive/20 text-destructive-foreground">
-            <AlertCircle className="size-6 text-destructive" />
+            <AlertCircle className="size-6 text-destructive-foreground" />
           </div>
           <CardTitle className="text-2xl font-bold text-foreground">
             Liên kết không hợp lệ
@@ -68,7 +68,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-success/20 text-success-foreground">
-            <CheckCircle2 className="size-6 text-success" />
+            <CheckCircle2 className="size-6 text-success-foreground" />
           </div>
           <CardTitle className="text-2xl font-bold text-foreground">
             Đặt lại mật khẩu thành công!
@@ -124,9 +124,14 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
               autoComplete="new-password"
               required
               aria-invalid={!!state.fieldErrors?.password}
+              aria-describedby={state.fieldErrors?.password ? 'password-error' : undefined}
             />
             {state.fieldErrors?.password && (
-              <p className="text-destructive-foreground text-xs font-medium">
+              <p
+                id="password-error"
+                role="alert"
+                className="text-destructive-foreground text-xs font-medium"
+              >
                 {state.fieldErrors.password}
               </p>
             )}
@@ -147,9 +152,16 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
               autoComplete="new-password"
               required
               aria-invalid={!!state.fieldErrors?.confirmPassword}
+              aria-describedby={
+                state.fieldErrors?.confirmPassword ? 'confirmPassword-error' : undefined
+              }
             />
             {state.fieldErrors?.confirmPassword && (
-              <p className="text-destructive-foreground text-xs font-medium">
+              <p
+                id="confirmPassword-error"
+                role="alert"
+                className="text-destructive-foreground text-xs font-medium"
+              >
                 {state.fieldErrors.confirmPassword}
               </p>
             )}
