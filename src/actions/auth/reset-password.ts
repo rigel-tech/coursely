@@ -4,7 +4,6 @@ import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 
 import { parseResetPasswordInput } from '@/lib/validation/reset-password-schema'
-import { revokeAllForUser } from '@/services/session-store'
 
 export type ResetPasswordFormState = {
   status: 'idle' | 'success' | 'error'
@@ -41,6 +40,9 @@ export async function resetPasswordAction(
         password,
       },
       overrideAccess: true,
+      // resetPassword auto-logs the user in, which runs `beforeLogin`; this is the
+      // student reset page, so mark the source or `enforceLoginBoundary` rejects it.
+      context: { source: 'student' },
     })
 
     if (!result || !result.user) {
@@ -51,10 +53,15 @@ export async function resetPasswordAction(
       }
     }
 
-    // Revoke all existing active sessions on other devices for this user
+    // Revoke every existing session for this user — a reset invalidates all devices.
     try {
       if (typeof result.user.id === 'number') {
-        await revokeAllForUser(result.user.id)
+        await payload.update({
+          collection: 'users',
+          id: result.user.id,
+          data: { sessions: [] },
+          overrideAccess: true,
+        })
       }
     } catch (err) {
       console.error('Failed to revoke sessions after password reset:', err)

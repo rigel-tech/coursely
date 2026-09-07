@@ -1,12 +1,13 @@
 /**
- * The `coursely-access` / `coursely-refresh` cookie pair, written and cleared
- * through one place so the flags never drift between the login action, the OTP
- * action, the logout actions, and `proxy`'s inline renewal. The setter type is
- * structural: it fits both the `next/headers` `cookies()` jar and
- * `NextResponse.cookies`.
+ * The `coursely-token` cookie — the student surface's session cookie — written
+ * and cleared through one place so the flags never drift between the login action
+ * and the logout actions. The setter type is structural: it fits both the
+ * `next/headers` `cookies()` jar and `NextResponse.cookies`.
+ *
+ * The value is a Payload session JWT (same secret and `users_sessions` backing as
+ * the admin `payload-token`); only the cookie name keeps the two surfaces apart.
  */
-import type { IssuedSession } from '@/services/session-store'
-import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '@/lib/constants/auth'
+import { STUDENT_TOKEN_COOKIE } from '@/lib/constants/auth'
 
 type CookieSetter = {
   set(name: string, value: string, options?: Record<string, unknown>): unknown
@@ -20,16 +21,11 @@ const baseFlags = {
   secure: process.env.NODE_ENV === 'production',
 }
 
-/** Access cookie is always a session cookie; the refresh cookie carries `maxAge` only with "remember me". */
-export function setSessionCookies(jar: CookieSetter, issued: IssuedSession): void {
-  jar.set(ACCESS_TOKEN_COOKIE, issued.accessJwt, { ...baseFlags })
-  jar.set(REFRESH_TOKEN_COOKIE, issued.refreshRaw, {
-    ...baseFlags,
-    ...(issued.refreshCookieMaxAge ? { maxAge: issued.refreshCookieMaxAge } : {}),
-  })
+/** Set `coursely-token`. `maxAgeSec` should be Payload's `tokenExpiration`. */
+export function setStudentCookie(jar: CookieSetter, token: string, maxAgeSec: number): void {
+  jar.set(STUDENT_TOKEN_COOKIE, token, { ...baseFlags, maxAge: maxAgeSec })
 }
 
-export function clearSessionCookies(jar: CookieSetter): void {
-  jar.delete(ACCESS_TOKEN_COOKIE)
-  jar.delete(REFRESH_TOKEN_COOKIE)
+export function clearStudentCookie(jar: CookieSetter): void {
+  jar.delete(STUDENT_TOKEN_COOKIE)
 }

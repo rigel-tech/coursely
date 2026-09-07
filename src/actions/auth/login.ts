@@ -2,22 +2,21 @@
 
 import { cookies, headers } from 'next/headers'
 
-import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_TTL_SEC } from '@/lib/constants/auth'
+import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_TTL_SEC, SESSION_TTL_SEC } from '@/lib/constants/auth'
 import { parseLoginInput } from '@/lib/validation/login-schema'
 import { authenticateUser } from '@/services/login'
-import { createSession } from '@/services/session-store'
-import { setSessionCookies } from '@/lib/auth/session-cookies'
+import { setStudentCookie } from '@/lib/auth/session-cookies'
 import type { LoginState } from '@/lib/constants/login-state'
 
 const BAD_CREDENTIALS = 'Email hoặc mật khẩu không đúng.'
 
 /**
- * Server action for login (§7). Orchestration only: read request context,
- * validate, delegate to `authenticateUser`, mint a session, then translate the
- * result into the `coursely-access` / `coursely-refresh` cookies + `redirectTo`
- * for `<LoginForm>` to act on. It never calls `redirect()` itself — setting an
- * auth cookie and redirecting in the same action drops the cookie, so the client
- * owns the navigation.
+ * Server action for the student sign-in form (§7). Orchestration only: read
+ * request context, validate, delegate to `authenticateUser` (which rejects a
+ * non-STUDENT), then set the `coursely-token` cookie from the session token it
+ * returns + hand `<LoginForm>` a `redirectTo`. It never calls `redirect()`
+ * itself — setting an auth cookie and redirecting in the same action drops the
+ * cookie, so the client owns the navigation. Admins sign in at `/admin/login`.
  */
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const h = await headers()
@@ -27,7 +26,6 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   const parsed = parseLoginInput({
     email: formData.get('email'),
     password: formData.get('password'),
-    rememberMe: formData.get('rememberMe'),
     callbackUrl: formData.get('callbackUrl'),
   })
   if (!parsed.success) {
@@ -68,12 +66,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     return { status: 'error', code: result.code, message: result.message }
   }
 
-  const issued = await createSession(
-    result.user,
-    { ip, userAgent },
-    { rememberMe: result.rememberMe },
-  )
-  setSessionCookies(await cookies(), issued)
+  setStudentCookie(await cookies(), result.token, SESSION_TTL_SEC)
 
   return { status: 'success', redirectTo: result.redirectTo }
 }

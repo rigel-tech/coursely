@@ -3,16 +3,16 @@ import { describe, it, expect } from 'vitest'
 import { parseLoginInput, safeCallbackUrl } from '@/lib/validation/login-schema'
 
 describe('parseLoginInput', () => {
-  it('accepts a valid pair and reads rememberMe from the checkbox value', () => {
-    expect(parseLoginInput({ email: 'a@b.com', password: 'secret', rememberMe: 'on' })).toEqual({
+  it('accepts a valid pair and returns only email, password and callbackUrl', () => {
+    expect(parseLoginInput({ email: 'a@b.com', password: 'secret' })).toEqual({
       success: true,
-      data: { email: 'a@b.com', password: 'secret', rememberMe: true },
+      data: { email: 'a@b.com', password: 'secret', callbackUrl: undefined },
     })
   })
 
-  it('defaults rememberMe to false when the checkbox is absent', () => {
-    const r = parseLoginInput({ email: 'a@b.com', password: 'secret' })
-    expect(r.success && r.data.rememberMe).toBe(false)
+  it('does not carry a rememberMe field', () => {
+    const r = parseLoginInput({ email: 'a@b.com', password: 'secret', rememberMe: 'on' })
+    expect(r.success && 'rememberMe' in r.data).toBe(false)
   })
 
   it('rejects a blank password and a malformed email without revealing which', () => {

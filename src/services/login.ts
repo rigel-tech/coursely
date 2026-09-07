@@ -1,10 +1,15 @@
 /**
  * Login domain logic (§7). No HTTP concerns — the caller owns request headers and
- * writes the cookies. This module owns: the two rate-limit axes (per IP, per
+ * writes the cookie. This module owns: the two rate-limit axes (per IP, per
  * email), the `payload.login` call and its error mapping, the app-level `status`
  * branch Payload does not know about, and — on success — clearing the email
  * counter, stamping `lastLoginAt`, and the audit-log row. No notification: a
  * login is routine and one per sign-in would flood the bell.
+ *
+ * On success it returns Payload's own session `token` (and its `exp`) for the
+ * caller to set as `coursely-token` — `useSessions` means a `users_sessions` row
+ * already backs it. A non-STUDENT is rejected (`AUTH_025`) by the
+ * `enforceLoginBoundary` hook; admins use `/admin/login`.
  */
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
@@ -21,16 +26,22 @@ export type LoginServiceResult =
   | {
       ok: true
       user: { id: number; role?: string; status?: string }
-      rememberMe: boolean
+      token: string
+      exp: number
       redirectTo: string
     }
-  | { ok: false; code: 'AUTH_020' | 'AUTH_021' | 'AUTH_023' | 'AUTH_024'; message: string }
+  | {
+      ok: false
+      code: 'AUTH_020' | 'AUTH_021' | 'AUTH_023' | 'AUTH_024' | 'AUTH_025'
+      message: string
+    }
   | { ok: false; code: 'AUTH_022'; message: string; email: string; redirectTo: string }
 
 const IP_RATE_LIMITED = 'Quá nhiều lần thử từ thiết bị này, vui lòng thử lại sau.'
 const EMAIL_RATE_LIMITED = 'Tài khoản tạm khóa do đăng nhập sai nhiều lần, thử lại sau 15 phút.'
 const BAD_CREDENTIALS = 'Email hoặc mật khẩu không đúng.'
 const DISABLED = 'Tài khoản đã bị khóa, vui lòng liên hệ trung tâm.'
+const ADMIN_AT_STUDENT_FORM = 'Tài khoản quản trị vui lòng đăng nhập tại trang quản trị.'
 
 const ipKey = (ip: string) => `rate:login:ip:${ip}`
 const emailKey = (email: string) => `rate:login:email:${email}`
@@ -56,10 +67,16 @@ export async function authenticateUser(
     result = await payload.login({
       collection: 'users',
       data: { email, password: input.password },
+      // `enforceLoginBoundary` reads this — a non-STUDENT is rejected before the
+      // login transaction commits, so no `users_sessions` row survives.
+      context: { source: 'student' },
     })
   } catch (err) {
     const name = (err as { name?: string })?.name
 
+    if (name === 'LoginBoundaryError') {
+      return { ok: false, code: 'AUTH_025', message: ADMIN_AT_STUDENT_FORM }
+    }
     if (name === 'LockedAuth') {
       const unlockAt = await lockUntil(payload, email)
       return {
@@ -81,7 +98,11 @@ export async function authenticateUser(
 
   const user = result.user as { id: number; role?: string; status?: string }
 
-  // §7 — status lives in our schema, Payload never checked it.
+  // §7 — status lives in our schema, Payload never checked it. A `payload.login`
+  // that got here already minted a session row; the status rejections below leave
+  // it dangling, but it is bounded by `tokenExpiration` and never handed out (no
+  // cookie is set), so it is harmless. (Role is already gated by
+  // `enforceLoginBoundary` — an ADMIN never reaches this point.)
   if (user.status === 'DISABLED') {
     return { ok: false, code: 'AUTH_024', message: DISABLED }
   }
@@ -105,7 +126,7 @@ export async function authenticateUser(
   }
 
   // §7 success — reset the email counter, stamp the login, leave a trail. The
-  // caller mints the session tokens (`payload.login`'s own JWT is discarded).
+  // caller sets `result.token` as `payload-token`.
   await clearRate(emailKey(email))
   await payload.update({
     collection: 'users',
@@ -120,8 +141,9 @@ export async function authenticateUser(
   return {
     ok: true,
     user: { id: user.id, role: user.role, status: user.status },
-    rememberMe: input.rememberMe,
-    redirectTo: user.role === 'ADMIN' ? '/admin' : (input.callbackUrl ?? '/'),
+    token: result.token ?? '',
+    exp: result.exp ?? 0,
+    redirectTo: input.callbackUrl ?? '/',
   }
 }
 

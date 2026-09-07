@@ -1,12 +1,10 @@
 'use server'
 
-import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth'
-import { verifyAccessToken } from '@/lib/auth/access-token'
+import { getSessionUser } from '@/lib/auth/session-user'
 import { parseProfileInput } from '@/lib/validation/profile-schema'
 
 export type ProfileFormState = {
@@ -27,8 +25,7 @@ export async function updateProfileAction(
   _prevState: ProfileFormState,
   formData: FormData,
 ): Promise<ProfileFormState> {
-  const token = (await cookies()).get(ACCESS_TOKEN_COOKIE)?.value
-  const claims = verifyAccessToken(token)
+  const claims = await getSessionUser()
 
   if (!claims || claims.status !== 'ACTIVE') {
     return {

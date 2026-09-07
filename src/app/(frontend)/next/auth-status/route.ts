@@ -1,22 +1,19 @@
 /**
  * `GET /next/auth-status` → `{ authenticated: boolean, user?: { id: number, name: string, email?: string } }`.
  *
- * Exists so the public header can learn whether the browser has an active public-site
- * session and retrieve the current student user's profile info (fullName, email)
- * without a Server Component reading `headers()` / `cookies()`: the header's
- * host pages are `force-static`, which blanks those APIs.
+ * Exists so the public header can learn whether the browser has an active session
+ * and retrieve the current user's profile info (fullName, email) without a Server
+ * Component reading `headers()` / `cookies()`: the header's host pages are
+ * `force-static`, which blanks those APIs.
  */
-import { cookies } from 'next/headers'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth'
-import { verifyAccessToken } from '@/lib/auth/access-token'
+import { getSessionUser } from '@/lib/auth/session-user'
 import type { User } from '@/payload-types'
 
 export async function GET(): Promise<Response> {
-  const token = (await cookies()).get(ACCESS_TOKEN_COOKIE)?.value
-  const claims = verifyAccessToken(token)
+  const claims = await getSessionUser()
 
   if (!claims) {
     return Response.json({ authenticated: false })

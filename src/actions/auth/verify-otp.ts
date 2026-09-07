@@ -1,23 +1,22 @@
 'use server'
 
-import { cookies, headers } from 'next/headers'
+import { cookies } from 'next/headers'
 
 import { PENDING_EMAIL_COOKIE } from '@/lib/constants/auth'
 import type { VerifyOtpState } from '@/lib/constants/verify-otp-state'
 import { verifyRegistration } from '@/services/verify-registration'
-import { createSession } from '@/services/session-store'
-import { setSessionCookies } from '@/lib/auth/session-cookies'
 
 const SESSION_EXPIRED = 'Phiên xác minh đã hết hạn. Vui lòng đăng ký lại.'
 
 /**
  * Server action for the OTP step (§5.2). Validates the request surface — the
  * `pending_email` cookie and the 6-digit shape — then delegates to
- * `verifyRegistration`. A correct code also signs the user in: it clears
- * `pending_email`, mints a session (treated as "remember me" — the register flow
- * has no such control), sets the `coursely-access` / `coursely-refresh` cookies,
- * and returns `redirectTo` for `<OtpForm>` to navigate. It never calls
- * `redirect()` (see INVARIANTS). Every other outcome is a message.
+ * `verifyRegistration`. A correct code does NOT sign the user in — the OTP step
+ * has no password, so there is nothing to hand `payload.login`. It clears
+ * `pending_email` and returns `redirectTo: '/dang-nhap?verified=1'` for
+ * `<OtpForm>` to navigate; `/dang-nhap` shows a "verified, please sign in"
+ * notice. It never calls `redirect()` (see INVARIANTS). Every other outcome is a
+ * message.
  */
 export async function verifyOtpAction(
   _prev: VerifyOtpState,
@@ -55,14 +54,7 @@ export async function verifyOtpAction(
     }
   }
 
-  const h = await headers()
-  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || 'unknown'
-  const userAgent = h.get('user-agent') || 'unknown'
+  ;(await cookies()).delete(PENDING_EMAIL_COOKIE)
 
-  const issued = await createSession(result.user, { ip, userAgent }, { rememberMe: true })
-  const jar = await cookies()
-  jar.delete(PENDING_EMAIL_COOKIE)
-  setSessionCookies(jar, issued)
-
-  return { status: 'success', redirectTo: '/' }
+  return { status: 'success', redirectTo: '/dang-nhap?verified=1' }
 }

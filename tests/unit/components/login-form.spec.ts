@@ -71,7 +71,7 @@ describe('LoginForm', () => {
     expect(assign).not.toHaveBeenCalled()
   })
 
-  it('marks the offending inputs and carries a rememberMe checkbox', async () => {
+  it('marks the offending inputs and renders no rememberMe checkbox', async () => {
     loginAction.mockResolvedValue({
       status: 'error',
       code: 'AUTH_021',
@@ -80,7 +80,7 @@ describe('LoginForm', () => {
     })
     render(React.createElement(LoginForm))
 
-    expect(screen.getByLabelText('Ghi nhớ đăng nhập')).toBeTruthy()
+    expect(screen.queryByLabelText('Ghi nhớ đăng nhập')).toBeNull()
 
     fill()
     submit()

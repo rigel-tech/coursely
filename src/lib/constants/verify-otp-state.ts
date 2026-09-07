@@ -3,10 +3,9 @@
  * `useActionState`. Lives outside the `'use server'` module because that file may
  * only export async functions.
  *
- * A successful verification also signs the user in — the action sets the
- * `coursely-access` / `coursely-refresh` cookies and returns `redirectTo` rather
- * than calling `redirect()` (see INVARIANTS), and `<OtpForm>` navigates from an
- * effect so the fresh cookies reach the destination.
+ * A successful verification does not sign the user in — the action clears
+ * `pending_email` and returns `redirectTo: '/dang-nhap?verified=1'` rather than
+ * calling `redirect()` (see INVARIANTS), and `<OtpForm>` navigates from an effect.
  */
 export type VerifyOtpState = {
   status: 'idle' | 'error' | 'success'

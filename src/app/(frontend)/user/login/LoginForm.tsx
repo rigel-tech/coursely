@@ -6,7 +6,6 @@ import { useActionState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
 
 import { Button } from '@/components/public/ui/button'
-import { Checkbox } from '@/components/public/ui/checkbox'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
 import { loginAction } from '@/actions/auth/login'
@@ -78,13 +77,7 @@ export const LoginForm: React.FC = () => {
         )}
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Checkbox id="login-remember" name="rememberMe" value="on" />
-          <Label htmlFor="login-remember" className="text-sm font-normal cursor-pointer">
-            Ghi nhớ đăng nhập
-          </Label>
-        </div>
+      <div className="flex items-center justify-end">
         <Link href="/quen-mat-khau" className="text-xs text-link hover:underline font-medium">
           Quên mật khẩu?
         </Link>

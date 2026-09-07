@@ -1,6 +1,8 @@
 import type { CollectionConfig } from 'payload'
 
+import { SESSION_TTL_SEC } from '@/lib/constants/auth'
 import { authenticated } from '../../access/authenticated'
+import { enforceLoginBoundary } from './hooks/enforceLoginBoundary'
 
 /**
  * Accounts for the whole platform — Admins and Students, self-registered or
@@ -11,22 +13,35 @@ import { authenticated } from '../../access/authenticated'
  * Email verification is NOT Payload's built-in token flow — it runs through the
  * OTP store in Redis, and `status` is the source of truth for whether an account
  * may sign in (`verifiedAt` only records when it happened).
+ *
+ * Auth is Payload-native and split by surface: `payload.login` mints a session
+ * JWT, the student form stores it as `coursely-token` and the admin panel as
+ * `payload-token`. `useSessions` is Payload's default, so a `users_sessions` row
+ * backs every token and `logout` can revoke it. `tokenExpiration` is the single
+ * session lifetime — no short-access / long-refresh split. `enforceLoginBoundary`
+ * keeps each form to its own role; `admin` access is ADMIN-only so a student can
+ * never enter the panel even if a token leaks across.
  */
 export const Users: CollectionConfig = {
   slug: 'users',
   access: {
-    admin: authenticated,
+    admin: ({ req: { user } }) => user?.role === 'ADMIN',
     create: authenticated,
     delete: authenticated,
     read: authenticated,
     update: authenticated,
+  },
+  hooks: {
+    beforeLogin: [enforceLoginBoundary],
   },
   admin: {
     group: 'Accounts & Notifications',
     defaultColumns: ['email', 'fullName', 'role', 'status'],
     useAsTitle: 'email',
   },
-  auth: true,
+  auth: {
+    tokenExpiration: SESSION_TTL_SEC,
+  },
   fields: [
     {
       name: 'fullName',

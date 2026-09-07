@@ -173,12 +173,12 @@ no error anywhere.
 
 ### An auth server action that sets a cookie must not `redirect()` — it returns `redirectTo`
 
-**Rule** — When a server action writes an auth cookie (`pending_email`, `coursely-access`,
-`coursely-refresh`), it must **not** call `redirect()` in the same pass. It returns
+**Rule** — When a server action writes an auth cookie (`pending_email`, `coursely-token`),
+it must **not** call `redirect()` in the same pass. It returns
 `{ status: 'success', redirectTo }` (or an error `code` alongside `redirectTo`), and the
 client form navigates from an effect once the new state arrives — `router.push` for a
 same-tree route, `window.location.assign` when the destination must re-read the cookie
-server-side. A logout action clears the cookies and returns `redirectTo` the same way.
+server-side. A logout action clears the cookie and returns `redirectTo` the same way.
 
 **Why it breaks silently** — `cookies().set()` followed by `redirect()` inside a `useActionState`
 action is a known-fragile Next combination: the redirect can be handled by the client router
@@ -187,60 +187,43 @@ the cookie. Nothing errors — the action's DB writes all commit, the return val
 but `/verify-otp` finds no `pending_email` and bounces to `/`, or `/admin` sees no session.
 There is no console warning.
 
-**Where** — `src/actions/auth/register.ts`, `src/actions/auth/login.ts`,
-`src/actions/auth/verify-otp.ts` (now sets `coursely-*` + returns `redirectTo`),
-`src/actions/auth/logout.ts` and `src/actions/auth/logout-all.ts` (clear `coursely-*` +
-return `redirectTo`) — all return `redirectTo`, never `redirect()`. Client navigation lives
-in the form: `src/components/public/RegisterCta/RegisterForm.tsx`,
-`src/components/public/LoginCta/LoginForm.tsx` and `src/app/(frontend)/verify-otp/OtpForm.tsx`
-navigate from a `useEffect` on `state.status`.
+**Where** — `src/actions/auth/register.ts`, `src/actions/auth/login.ts` (sets `coursely-token`),
+`src/actions/auth/verify-otp.ts` (clears `pending_email`, sets no auth cookie — the OTP step
+does not sign in), `src/actions/auth/logout.ts` and `src/actions/auth/logout-all.ts` (clear
+`coursely-token` + return `redirectTo`) — all return `redirectTo`, never `redirect()`. Client
+navigation lives in the form: `src/components/public/RegisterCta/RegisterForm.tsx`,
+`src/app/(frontend)/user/login/LoginForm.tsx` and `src/app/(frontend)/user/verify-otp/OtpForm.tsx`
+navigate from a `useEffect` on `state.status` / `state.redirectTo`.
 
-### `AUTH_TOKEN_COOKIE` is the admin cookie and must equal `${payloadConfig.cookiePrefix}-token`
+### Two auth cookies split by area — `payload-token` for `/admin*`, `coursely-token` everywhere else
 
-**Rule** — `AUTH_TOKEN_COOKIE` in `src/lib/constants/auth.ts` is hard-coded to `'payload-token'`
-because `payload.config.ts` sets no `cookiePrefix` (so the prefix is the default `payload`). If
-a `cookiePrefix` is ever added to the config, update this constant in the same commit. Since
-the custom access/refresh scheme shipped, `proxy` reads this cookie **only on `/admin*`**
-(Payload's native sign-in); every other route reads `ACCESS_TOKEN_COOKIE` and, when it is
-absent/expired, renews from `REFRESH_TOKEN_COOKIE`. The two flows must never write each
-other's cookie — a signed-in admin and a signed-in student coexist in one browser.
+**Rule** — Both cookies carry a Payload session JWT (same `PAYLOAD_SECRET`, same
+`users_sessions` backing); only the name and the area differ, so a signed-in admin and a
+signed-in student coexist in one browser and neither reaches the other's routes.
+`AUTH_TOKEN_COOKIE` (`'payload-token'`) is Payload's own — the admin panel writes it, and it
+equals `${payloadConfig.cookiePrefix}-token`; `payload.config.ts` sets no `cookiePrefix`, so
+if one is ever added, update the constant in the same commit. `STUDENT_TOKEN_COOKIE`
+(`'coursely-token'`) is written by `loginAction` and read on every non-admin route.
+`proxy` picks one **by path** (`isAdminPath`), verifying with `verifyAuthToken` and no DB hit.
+`payload.auth` only ever reads Payload's own name, so the logout actions hand it the student
+token through a synthetic `payload-token=…` header.
 
 **Why it breaks silently** — `proxy` cannot ask Payload for the real cookie name (no
-`getPayload` on that path), so it reads `AUTH_TOKEN_COOKIE`. If the config prefix and the
-constant drift apart, Payload's own auth still works (it uses the config) but `proxy` reads
-an admin cookie that is never set: `/admin` silently 302s every admin to `/` and no
-`x-user-*` header is forwarded there. If a login/logout path were changed to write
-`AUTH_TOKEN_COOKIE` for a _student_, `decideRoute`'s `/admin` branch would start bouncing or
-admitting the wrong people. Nothing errors.
+`getPayload` on that path). If a `cookiePrefix` is added and `AUTH_TOKEN_COOKIE` is not
+updated, `/admin` reads a cookie that is never set and 302s every admin to `/`. If the two
+names ever collapse to one, the boundary is gone: a student token starts satisfying `/admin`'s
+guard (still bounced by `decideRoute`'s role check, but the layering is lost) and an admin
+token satisfies the student area. Nothing errors.
 
-**Where** — `src/lib/constants/auth.ts` (`AUTH_TOKEN_COOKIE`, `ACCESS_TOKEN_COOKIE`,
-`REFRESH_TOKEN_COOKIE`), read by `src/proxy.ts` (`resolveIdentity` — admin branch vs. the
-access/refresh branch). The student cookies are written by `src/lib/auth/session-cookies.ts`
-(`setSessionCookies` / `clearSessionCookies`), used from the login/OTP/logout actions and
-`proxy`. The Payload prefix default lives in `payload/dist/index.js` (`cookiePrefix`).
-
-## Sessions
-
-### One active session record per session line — rotation is in place
-
-**Rule** — `renewSession` in `src/services/session-store.ts` rotates a session by `HSET`-ing
-the new refresh-token hash onto the **existing** `session:{sid}` record — same `sid`, same
-`lineId`. It must never `create` a fresh record on renewal. The old token's hash moves to a
-`spent:{hash}` marker; `refresh:{newHash}` points back at the same `sid`.
-
-**Why it breaks silently** — a renewal that writes a _new_ record instead still returns a
-working token pair, so every happy-path test and manual check passes. But the account's
-`session:index:{userId}` set now carries two sids for one browser: `revokeAllForUser`
-(sign-out-everywhere) walks the set and can miss the orphan if it was added after the walk
-started, and the "session line" that reuse-detection revokes as a unit (`spent:` → one
-`sid`) no longer covers every record descended from that sign-in. Nothing throws; a user
-who "signed out everywhere" stays signed in on one device, and a stolen refresh token whose
-line was "revoked" still renews against the orphan.
-
-**Where** — `src/services/session-store.ts` (`rotate`, the single `HSET` on
-`session:{sid}`; `renewSession`'s single-flight lock that keeps two concurrent renewals from
-both creating state). `session:index:{userId}` is the set `revokeAllForUser` walks;
-`spent:{hash}` carries the `sid` that is the line identifier.
+**Where** — `src/lib/constants/auth.ts` (`AUTH_TOKEN_COOKIE`, `STUDENT_TOKEN_COOKIE`,
+`SESSION_TTL_SEC` — which must mirror `tokenExpiration` on the `Users` collection `auth`).
+Read by `src/proxy.ts` (`proxy` — path-split `verifyAuthToken`) and
+`src/lib/auth/session-user.ts` (`getSessionUser`, student surfaces). The student cookie is
+written / cleared by `src/lib/auth/session-cookies.ts` (`setStudentCookie` /
+`clearStudentCookie`) from `src/actions/auth/login.ts`, `logout.ts`, `logout-all.ts`.
+`src/collections/Users/hooks/enforceLoginBoundary.ts` keeps each sign-in form to its own role
+(`context.source === 'student'`), and `Users.access.admin` is ADMIN-only. The Payload prefix
+default lives in `payload/dist/index.js` (`cookiePrefix`).
 
 ## Client-side state
 
@@ -267,7 +250,7 @@ imported by the **readers** `src/providers/Theme/InitTheme/index.tsx:4` (`InitTh
 
 **Rule** — Whether the public site treats the visitor as signed in must be decided in the
 browser — `HeaderAuthControls` fetches `GET /next/auth-status`, which reads the
-`coursely-access` cookie and returns `{ authenticated }`. A Server Component on a public
+`coursely-token` cookie and returns `{ authenticated }`. A Server Component on a public
 page must not branch its render on the proxy-forwarded `x-user-*` request headers (or on
 `cookies()`), and must not gate UI on them.
 
@@ -279,8 +262,9 @@ renders, and simply always looks signed-out — the logout control never appears
 signed-in visitor, on exactly the pages that host the header. No warning, no build failure.
 
 **Where** — `src/components/public/HeaderAuthControls/index.tsx` (client check) →
-`src/app/(frontend)/next/auth-status/route.ts` (`GET`, signature-only, no I/O) →
-`verifyAccessToken` in `src/lib/auth/access-token.ts`. Rendered by
+`src/app/(frontend)/next/auth-status/route.ts` (`GET`) → `getSessionUser` in
+`src/lib/auth/session-user.ts`, which verifies the `coursely-token` signature only (no I/O;
+the profile lookup after it is a separate `payload.findByID`). Rendered by
 `src/Header/Component.client.tsx`. The `force-static` declarations are in the three
 `src/app/(frontend)/**/page.tsx` files above. Design rationale:
 `specs/002-header-logout-ui/research.md` D1/D4.

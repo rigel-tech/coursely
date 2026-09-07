@@ -1,12 +1,10 @@
 import type { Metadata } from 'next'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 import React from 'react'
 
-import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth'
-import { verifyAccessToken } from '@/lib/auth/access-token'
+import { getSessionUser } from '@/lib/auth/session-user'
 import { ProfileForm } from './ProfileForm'
 import type { User } from '@/payload-types'
 
@@ -18,8 +16,7 @@ export const metadata: Metadata = {
 }
 
 export default async function ProfilePage() {
-  const token = (await cookies()).get(ACCESS_TOKEN_COOKIE)?.value
-  const claims = verifyAccessToken(token)
+  const claims = await getSessionUser()
 
   if (!claims || claims.status !== 'ACTIVE') {
     redirect('/?callbackUrl=%2Ftai-khoan')

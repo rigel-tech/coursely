@@ -4,36 +4,47 @@ import { cookies, headers } from 'next/headers'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 
-import { REFRESH_TOKEN_COOKIE } from '@/lib/constants/auth'
-import { clearSessionCookies } from '@/lib/auth/session-cookies'
-import { findSessionByRefresh, revokeAllForUser } from '@/services/session-store'
+import { STUDENT_TOKEN_COOKIE } from '@/lib/constants/auth'
+import { clearStudentCookie } from '@/lib/auth/session-cookies'
 
 /**
- * Sign out of every device (§ access+refresh sessions). Like `logoutAction` but
- * resolves the account from the `coursely-refresh` cookie and revokes every
- * session on it — the invoking one included — then records a `LOGOUT_ALL` audit
- * row. Returns `redirectTo`; never `redirect()` (see INVARIANTS).
+ * Sign out of every device. Like `logoutAction` but resolves the account from the
+ * `coursely-token` cookie via `payload.auth` and empties its `users_sessions`
+ * rows — the invoking one included — then records a `LOGOUT_ALL` audit row.
+ * Returns `redirectTo`; never `redirect()` (see INVARIANTS).
  */
 export async function logoutAllAction(): Promise<{ redirectTo: string }> {
-  const jar = await cookies()
-  const refresh = jar.get(REFRESH_TOKEN_COOKIE)?.value
+  const h = await headers()
+  const token = (await cookies()).get(STUDENT_TOKEN_COOKIE)?.value
 
-  if (refresh) {
-    const found = await findSessionByRefresh(refresh)
-    if (found) {
-      await revokeAllForUser(found.userId)
-
-      const h = await headers()
-      const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || 'unknown'
-      const userAgent = h.get('user-agent') || 'unknown'
+  try {
+    if (token) {
       const payload = await getPayload({ config: await configPromise })
-      await payload.create({
-        collection: 'audit-logs',
-        data: { action: 'LOGOUT_ALL', user: found.userId, ip, userAgent },
+      const { user } = await payload.auth({
+        headers: new Headers({ cookie: `payload-token=${token}` }),
       })
+
+      if (user) {
+        await payload.update({
+          collection: 'users',
+          id: user.id,
+          data: { sessions: [] },
+          overrideAccess: true,
+        })
+
+        const ip =
+          h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || 'unknown'
+        const userAgent = h.get('user-agent') || 'unknown'
+        await payload.create({
+          collection: 'audit-logs',
+          data: { action: 'LOGOUT_ALL', user: user.id, ip, userAgent },
+        })
+      }
     }
+  } catch (err) {
+    console.error('logoutAllAction failed', err)
   }
 
-  clearSessionCookies(jar)
+  clearStudentCookie(await cookies())
   return { redirectTo: '/' }
 }

@@ -4,37 +4,54 @@ import { cookies, headers } from 'next/headers'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 
-import { REFRESH_TOKEN_COOKIE } from '@/lib/constants/auth'
-import { clearSessionCookies } from '@/lib/auth/session-cookies'
-import { findSessionByRefresh, revokeSession } from '@/services/session-store'
+import { STUDENT_TOKEN_COOKIE } from '@/lib/constants/auth'
+import { clearStudentCookie } from '@/lib/auth/session-cookies'
 
 /**
- * Sign out of the current device (§ access+refresh sessions). Resolves the
- * session from the `coursely-refresh` cookie itself — never from `x-user-*`,
- * which a caller could carry from a different tab — revokes it, records a
- * `LOGOUT` audit row, clears both cookies, and returns `redirectTo` for the
- * client to navigate (it must not `redirect()` in the same pass — see INVARIANTS).
+ * Sign out of the current device. Resolves the student and the active session id
+ * from the `coursely-token` cookie via `payload.auth` — never from `x-user-*`,
+ * which a caller could carry from a different tab — drops that one
+ * `users_sessions` row, records a `LOGOUT` audit row, clears the cookie, and
+ * returns `redirectTo` for the client to navigate (it must not `redirect()` in
+ * the same pass — see INVARIANTS). `payload.auth` only reads Payload's own cookie
+ * name, so the student token is handed to it through a synthetic header.
  */
 export async function logoutAction(): Promise<{ redirectTo: string }> {
-  const jar = await cookies()
-  const refresh = jar.get(REFRESH_TOKEN_COOKIE)?.value
+  const h = await headers()
+  const token = (await cookies()).get(STUDENT_TOKEN_COOKIE)?.value
 
-  if (refresh) {
-    const found = await findSessionByRefresh(refresh)
-    if (found) {
-      await revokeSession(found.sid)
-
-      const h = await headers()
-      const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || 'unknown'
-      const userAgent = h.get('user-agent') || 'unknown'
+  try {
+    if (token) {
       const payload = await getPayload({ config: await configPromise })
-      await payload.create({
-        collection: 'audit-logs',
-        data: { action: 'LOGOUT', user: found.userId, ip, userAgent },
+      const { user } = await payload.auth({
+        headers: new Headers({ cookie: `payload-token=${token}` }),
       })
+
+      if (user) {
+        const sid = (user as { _sid?: string })._sid
+        const sessions = ((user as { sessions?: { id: string }[] }).sessions ?? []).filter(
+          (s) => s.id !== sid,
+        )
+        await payload.update({
+          collection: 'users',
+          id: user.id,
+          data: { sessions },
+          overrideAccess: true,
+        })
+
+        const ip =
+          h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || 'unknown'
+        const userAgent = h.get('user-agent') || 'unknown'
+        await payload.create({
+          collection: 'audit-logs',
+          data: { action: 'LOGOUT', user: user.id, ip, userAgent },
+        })
+      }
     }
+  } catch (err) {
+    console.error('logoutAction failed', err)
   }
 
-  clearSessionCookies(jar)
+  clearStudentCookie(await cookies())
   return { redirectTo: '/' }
 }

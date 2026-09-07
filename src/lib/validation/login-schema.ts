@@ -3,9 +3,9 @@
  *
  * `parseLoginInput` takes the raw string bag from a `FormData`. `email` / `password`
  * are the only validated fields — a bad one yields a generic `fieldErrors` entry,
- * never "which" was wrong. `rememberMe` is a checkbox (`'on'` when ticked).
- * `callbackUrl` is kept only when it is a same-site absolute path (`/...`, not
- * `//...`), so a crafted value can never drive an open redirect.
+ * never "which" was wrong. `callbackUrl` is kept only when it is a same-site
+ * absolute path (`/...`, not `//...`), so a crafted value can never drive an open
+ * redirect.
  */
 import { z } from 'zod'
 
@@ -19,7 +19,6 @@ export type LoginFieldErrors = Partial<Record<'email' | 'password', string>>
 export type LoginInput = {
   email: string
   password: string
-  rememberMe: boolean
   callbackUrl?: string
 }
 
@@ -42,14 +41,11 @@ export function parseLoginInput(raw: Record<string, unknown>): LoginParseResult 
     return { success: false, fieldErrors }
   }
 
-  const rememberMe = raw.rememberMe === 'on' || raw.rememberMe === 'true' || raw.rememberMe === true
-
   return {
     success: true,
     data: {
       email: parsed.data.email,
       password: parsed.data.password,
-      rememberMe,
       callbackUrl: safeCallbackUrl(raw.callbackUrl),
     },
   }
