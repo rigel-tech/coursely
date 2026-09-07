@@ -4,8 +4,7 @@ import Link from 'next/link'
 import * as React from 'react'
 import { useActionState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
-import { AlertCircle } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
+import { Alert, AlertDescription } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
 import { Checkbox } from '@/components/public/ui/checkbox'
 import { Input } from '@/components/public/ui/input'
@@ -109,8 +108,6 @@ export const LoginForm: React.FC = () => {
 
       {state.status === 'error' && state.message && !hasFieldErrors && (
         <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertTitle>Lỗi</AlertTitle>
           <AlertDescription>{state.message}</AlertDescription>
         </Alert>
       )}

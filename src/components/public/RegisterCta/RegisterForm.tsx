@@ -4,8 +4,7 @@ import * as React from 'react'
 import { useActionState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-import { AlertCircle } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
+import { Alert, AlertDescription } from '@/components/public/ui/alert'
 import { Checkbox } from '@/components/public/ui/checkbox'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
@@ -137,8 +136,6 @@ export const RegisterForm: React.FC = () => {
 
       {state.status === 'error' && state.message && !hasFieldErrors && (
         <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertTitle>Lỗi</AlertTitle>
           <AlertDescription>{state.message}</AlertDescription>
         </Alert>
       )}
