@@ -36,8 +36,72 @@ jobs:
       - name: Run Unit Tests
         run: pnpm test:unit
 
+  integration-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [auth, registration, platform]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: coursely
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Ephemeral CI datastores — throwaway secrets, real infra is never touched.
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/coursely
+      REDIS_URL: redis://localhost:6379
+      PAYLOAD_SECRET: ci-payload-secret
+      OTP_SECRET: ci-otp-secret
+      NEXT_PUBLIC_SERVER_URL: http://localhost:3000
+      SMTP_HOST: smtp.ci.invalid
+      SMTP_PORT: '587'
+      SMTP_SECURE: 'false'
+      SMTP_USER: ci
+      SMTP_PASS: ci
+      SMTP_FROM_NAME: Coursely CI
+      SMTP_FROM_ADDRESS: ci@ci.invalid
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Payload syncs the schema to the fresh Postgres on the first `getPayload`
+      # (dev push — same path the specs already rely on locally), so no explicit
+      # migrate step is needed here.
+      - name: Run Integration Tests (${{ matrix.module }})
+        run: pnpm test:int:${{ matrix.module }}
+
   build-and-push:
-    needs: verify
+    needs: [verify, integration-tests]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
