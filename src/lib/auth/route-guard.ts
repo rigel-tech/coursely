@@ -16,9 +16,9 @@ export function decideRoute(
 ): RouteDecision {
   // Admin: bounce a signed-in non-admin. An anonymous visitor is left to
   // Payload's own `/admin/login`, so it must not be redirected here.
-  // if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-  //   return user && user.role !== 'ADMIN' ? { type: 'redirect', to: '/' } : NEXT
-  // }
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    return user && user.role !== 'ADMIN' ? { type: 'redirect', to: '/' } : NEXT
+  }
 
   // OTP step needs the cookie `registerAction` / AUTH_022 set.
   if (pathname === '/xac-thuc-otp') {

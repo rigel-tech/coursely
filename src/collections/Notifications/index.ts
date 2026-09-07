@@ -17,6 +17,7 @@ export const Notifications: CollectionConfig = {
     update: authenticated,
   },
   admin: {
+    group: 'Accounts & Notifications',
     defaultColumns: ['title', 'user', 'type', 'isRead', 'createdAt'],
     useAsTitle: 'title',
   },

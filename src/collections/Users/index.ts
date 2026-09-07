@@ -22,6 +22,7 @@ export const Users: CollectionConfig = {
     update: authenticated,
   },
   admin: {
+    group: 'Accounts & Notifications',
     defaultColumns: ['email', 'fullName', 'role', 'status'],
     useAsTitle: 'email',
   },

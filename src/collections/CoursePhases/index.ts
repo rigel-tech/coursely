@@ -12,6 +12,7 @@ export const CoursePhases: CollectionConfig<'course-phases'> = {
     update: authenticated,
   },
   admin: {
+    group: 'Training',
     defaultColumns: ['title', 'course', 'sortOrder', 'updatedAt'],
     useAsTitle: 'title',
   },

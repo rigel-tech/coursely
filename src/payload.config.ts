@@ -89,16 +89,20 @@ export default buildConfig({
     skipVerify: true,
   }),
   collections: [
+    // Training
+    Courses,
+    CoursePhases,
+    CourseObjectives,
+    Classes,
+    // Website Content
     Pages,
     Posts,
-    Media,
     Categories,
+    Media,
+    // Accounts & Notifications
     Users,
-    Courses,
-    CourseObjectives,
-    CoursePhases,
-    Classes,
     Notifications,
+    // System
     AuditLogs,
   ],
   cors: [getServerSideURL()].filter(Boolean),
