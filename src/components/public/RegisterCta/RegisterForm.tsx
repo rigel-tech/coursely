@@ -4,6 +4,8 @@ import * as React from 'react'
 import { useActionState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { AlertCircle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
 import { Checkbox } from '@/components/public/ui/checkbox'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
@@ -27,6 +29,8 @@ export const RegisterForm: React.FC = () => {
     if (state.status === 'success') router.push('/xac-thuc-otp')
   }, [state.status, router])
 
+  const hasFieldErrors = Boolean(state.fieldErrors && Object.keys(state.fieldErrors).length > 0)
+
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
@@ -40,7 +44,9 @@ export const RegisterForm: React.FC = () => {
           aria-invalid={state.fieldErrors?.email ? true : undefined}
         />
         {state.fieldErrors?.email && (
-          <p className="text-destructive text-sm">{state.fieldErrors.email}</p>
+          <p className="text-destructive-foreground font-medium text-xs">
+            {state.fieldErrors.email}
+          </p>
         )}
       </div>
 
@@ -55,7 +61,9 @@ export const RegisterForm: React.FC = () => {
           aria-invalid={state.fieldErrors?.password ? true : undefined}
         />
         {state.fieldErrors?.password && (
-          <p className="text-destructive text-sm">{state.fieldErrors.password}</p>
+          <p className="text-destructive-foreground font-medium text-xs">
+            {state.fieldErrors.password}
+          </p>
         )}
       </div>
 
@@ -70,7 +78,9 @@ export const RegisterForm: React.FC = () => {
           aria-invalid={state.fieldErrors?.confirmPassword ? true : undefined}
         />
         {state.fieldErrors?.confirmPassword && (
-          <p className="text-destructive text-sm">{state.fieldErrors.confirmPassword}</p>
+          <p className="text-destructive-foreground font-medium text-xs">
+            {state.fieldErrors.confirmPassword}
+          </p>
         )}
       </div>
 
@@ -84,18 +94,26 @@ export const RegisterForm: React.FC = () => {
         <Input id="register-phone" name="phone" type="tel" autoComplete="tel" />
       </div>
 
-      <div className="flex items-center gap-2">
-        <Checkbox id="register-terms" name="terms" value="on" />
-        <Label htmlFor="register-terms">Tôi đồng ý với điều khoản sử dụng</Label>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <Checkbox id="register-terms" name="terms" value="on" />
+          <Label htmlFor="register-terms" className="cursor-pointer">
+            Tôi đồng ý với điều khoản sử dụng
+          </Label>
+        </div>
+        {state.fieldErrors?.terms && (
+          <p className="text-destructive-foreground font-medium text-xs">
+            {state.fieldErrors.terms}
+          </p>
+        )}
       </div>
-      {state.fieldErrors?.terms && (
-        <p className="text-destructive text-sm">{state.fieldErrors.terms}</p>
-      )}
 
-      {state.status === 'error' && state.message && (
-        <p className="text-destructive text-sm" role="alert">
-          {state.message}
-        </p>
+      {state.status === 'error' && state.message && !hasFieldErrors && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Lỗi</AlertTitle>
+          <AlertDescription>{state.message}</AlertDescription>
+        </Alert>
       )}
 
       <SubmitButton />

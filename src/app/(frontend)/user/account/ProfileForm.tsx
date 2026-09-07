@@ -204,7 +204,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                       aria-invalid={!!state.fieldErrors?.fullName}
                     />
                     {state.fieldErrors?.fullName && (
-                      <p className="text-destructive text-sm font-medium">
+                      <p className="text-destructive-foreground text-xs font-medium">
                         {state.fieldErrors.fullName}
                       </p>
                     )}
@@ -228,13 +228,13 @@ export function ProfileForm({ user }: ProfileFormProps) {
                       aria-invalid={!!state.fieldErrors?.phone}
                     />
                     {state.fieldErrors?.phone && (
-                      <p className="text-destructive text-sm font-medium">
+                      <p className="text-destructive-foreground text-xs font-medium">
                         {state.fieldErrors.phone}
                       </p>
                     )}
                   </div>
                   {state.fieldErrors?.avatar && (
-                    <p className="text-destructive text-sm font-medium">
+                    <p className="text-destructive-foreground text-xs font-medium">
                       {state.fieldErrors.avatar}
                     </p>
                   )}

@@ -10,8 +10,8 @@
 import { z } from 'zod'
 
 const schema = z.object({
-  email: z.email('Email hoặc mật khẩu không đúng.'),
-  password: z.string().min(1, 'Email hoặc mật khẩu không đúng.'),
+  email: z.string().trim().min(1, 'Vui lòng nhập email').email('Email không đúng định dạng'),
+  password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
 })
 
 export type LoginFieldErrors = Partial<Record<'email' | 'password', string>>

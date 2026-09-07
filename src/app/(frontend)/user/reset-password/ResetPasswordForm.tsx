@@ -5,6 +5,7 @@ import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound, Lock } from 'lucide-rea
 import * as React from 'react'
 import { useActionState } from 'react'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
 import {
   Card,
@@ -100,11 +101,12 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         <input type="hidden" name="token" value={token} />
 
         <CardContent className="space-y-4">
-          {state.status === 'error' && state.message && (
-            <div className="flex items-center gap-2.5 rounded-lg border border-destructive bg-destructive/15 p-3 text-destructive-foreground text-sm">
+          {state.status === 'error' && state.message && !state.fieldErrors && (
+            <Alert variant="destructive">
               <AlertCircle className="size-4 shrink-0" />
-              <span>{state.message}</span>
-            </div>
+              <AlertTitle>Lỗi</AlertTitle>
+              <AlertDescription>{state.message}</AlertDescription>
+            </Alert>
           )}
 
           <div className="space-y-2">
@@ -124,7 +126,9 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
               aria-invalid={!!state.fieldErrors?.password}
             />
             {state.fieldErrors?.password && (
-              <p className="text-destructive text-sm font-medium">{state.fieldErrors.password}</p>
+              <p className="text-destructive-foreground text-xs font-medium">
+                {state.fieldErrors.password}
+              </p>
             )}
           </div>
 
@@ -145,7 +149,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
               aria-invalid={!!state.fieldErrors?.confirmPassword}
             />
             {state.fieldErrors?.confirmPassword && (
-              <p className="text-destructive text-sm font-medium">
+              <p className="text-destructive-foreground text-xs font-medium">
                 {state.fieldErrors.confirmPassword}
               </p>
             )}

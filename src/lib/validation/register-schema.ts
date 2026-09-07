@@ -11,20 +11,25 @@ const PASSWORD_MESSAGE = 'Mật khẩu tối thiểu 8 ký tự, gồm cả ch�
 
 const schema = z
   .object({
-    email: z.email('Email không hợp lệ'),
+    email: z
+      .string()
+      .trim()
+      .min(1, 'Vui lòng nhập địa chỉ email')
+      .email('Email không đúng định dạng (ví dụ: ten@example.com)'),
     password: z
       .string()
+      .min(1, 'Vui lòng nhập mật khẩu')
       .min(8, PASSWORD_MESSAGE)
       .regex(/[A-Za-z]/, PASSWORD_MESSAGE)
       .regex(/\d/, PASSWORD_MESSAGE),
-    confirmPassword: z.string(),
+    confirmPassword: z.string().min(1, 'Vui lòng nhập lại mật khẩu'),
     fullName: z.string().optional(),
     phone: z.string().optional(),
     terms: z.literal('on', { error: 'Bạn cần đồng ý với điều khoản sử dụng' }),
   })
   .refine((d) => d.password === d.confirmPassword, {
     path: ['confirmPassword'],
-    error: 'Mật khẩu nhập lại không khớp',
+    error: 'Mật khẩu nhập lại không khớp với mật khẩu đã nhập',
   })
 
 export type RegisterFieldErrors = Partial<

@@ -4,7 +4,8 @@ import Link from 'next/link'
 import * as React from 'react'
 import { useActionState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
-
+import { AlertCircle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
 import { Checkbox } from '@/components/public/ui/checkbox'
 import { Input } from '@/components/public/ui/input'
@@ -46,6 +47,8 @@ export const LoginForm: React.FC = () => {
     formAction(formData)
   }
 
+  const hasFieldErrors = Boolean(state.fieldErrors && Object.keys(state.fieldErrors).length > 0)
+
   return (
     <form action={submit} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
@@ -59,7 +62,9 @@ export const LoginForm: React.FC = () => {
           aria-invalid={state.fieldErrors?.email ? true : undefined}
         />
         {state.fieldErrors?.email && (
-          <p className="text-destructive text-sm">{state.fieldErrors.email}</p>
+          <p className="text-destructive-foreground text-xs font-medium">
+            {state.fieldErrors.email}
+          </p>
         )}
       </div>
 
@@ -74,7 +79,9 @@ export const LoginForm: React.FC = () => {
           aria-invalid={state.fieldErrors?.password ? true : undefined}
         />
         {state.fieldErrors?.password && (
-          <p className="text-destructive text-sm">{state.fieldErrors.password}</p>
+          <p className="text-destructive-foreground text-xs font-medium">
+            {state.fieldErrors.password}
+          </p>
         )}
       </div>
 
@@ -90,10 +97,12 @@ export const LoginForm: React.FC = () => {
         </Link>
       </div>
 
-      {state.status === 'error' && state.message && (
-        <p className="text-destructive text-sm" role="alert">
-          {state.message}
-        </p>
+      {state.status === 'error' && state.message && !hasFieldErrors && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Lỗi</AlertTitle>
+          <AlertDescription>{state.message}</AlertDescription>
+        </Alert>
       )}
 
       <SubmitButton />

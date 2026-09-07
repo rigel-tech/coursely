@@ -35,7 +35,7 @@ export async function registerAction(
     return {
       status: 'error',
       code: 'AUTH_001',
-      message: 'Dữ liệu không hợp lệ.',
+      message: 'Vui lòng kiểm tra và điền đầy đủ các thông tin bắt buộc bên dưới.',
       fieldErrors: parsed.fieldErrors,
     }
   }
