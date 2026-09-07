@@ -1,11 +1,11 @@
 /**
  * Zod schema + FormData adapter for login (§7).
  *
- * `parseLoginInput` takes the raw string bag from a `FormData`. `email` / `password`
- * are the only validated fields — a bad one yields a generic `fieldErrors` entry,
- * never "which" was wrong. `rememberMe` is a checkbox (`'on'` when ticked).
- * `callbackUrl` is kept only when it is a same-site absolute path (`/...`, not
- * `//...`), so a crafted value can never drive an open redirect.
+ * `parseLoginInput` takes the raw string bag from a `FormData`. `email` and
+ * `password` are validated individually to report specific field errors to the user.
+ * `rememberMe` is a checkbox (`'on'` when ticked). `callbackUrl` is kept only when it
+ * is a same-site absolute path (`/...`, not `//...`), so a crafted value can never drive
+ * an open redirect.
  */
 import { z } from 'zod'
 
@@ -37,7 +37,9 @@ export function parseLoginInput(raw: Record<string, unknown>): LoginParseResult 
     const fieldErrors: LoginFieldErrors = {}
     for (const issue of parsed.error.issues) {
       const key = issue.path[0]
-      if (key === 'email' || key === 'password') fieldErrors[key] = issue.message
+      if ((key === 'email' || key === 'password') && !fieldErrors[key]) {
+        fieldErrors[key] = issue.message
+      }
     }
     return { success: false, fieldErrors }
   }

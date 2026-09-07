@@ -15,9 +15,22 @@ describe('parseLoginInput', () => {
     expect(r.success && r.data.rememberMe).toBe(false)
   })
 
-  it('rejects a blank password and a malformed email without revealing which', () => {
-    expect(parseLoginInput({ email: 'a@b.com', password: '' }).success).toBe(false)
-    expect(parseLoginInput({ email: 'nope', password: 'x' }).success).toBe(false)
+  it('reports specific field errors for blank or invalid inputs', () => {
+    expect(parseLoginInput({ email: 'a@b.com', password: '' })).toEqual({
+      success: false,
+      fieldErrors: { password: 'Vui lòng nhập mật khẩu' },
+    })
+    expect(parseLoginInput({ email: 'nope', password: 'x' })).toEqual({
+      success: false,
+      fieldErrors: { email: 'Email không đúng định dạng' },
+    })
+    expect(parseLoginInput({ email: '', password: '' })).toEqual({
+      success: false,
+      fieldErrors: {
+        email: 'Vui lòng nhập email',
+        password: 'Vui lòng nhập mật khẩu',
+      },
+    })
   })
 
   it('keeps a same-site callbackUrl and drops an off-site one', () => {

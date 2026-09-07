@@ -60,9 +60,14 @@ export const LoginForm: React.FC = () => {
           autoComplete="email"
           required
           aria-invalid={state.fieldErrors?.email ? true : undefined}
+          aria-describedby={state.fieldErrors?.email ? 'login-email-error' : undefined}
         />
         {state.fieldErrors?.email && (
-          <p className="text-destructive-foreground text-xs font-medium">
+          <p
+            id="login-email-error"
+            role="alert"
+            className="text-destructive-foreground text-xs font-medium"
+          >
             {state.fieldErrors.email}
           </p>
         )}
@@ -77,9 +82,14 @@ export const LoginForm: React.FC = () => {
           autoComplete="current-password"
           required
           aria-invalid={state.fieldErrors?.password ? true : undefined}
+          aria-describedby={state.fieldErrors?.password ? 'login-password-error' : undefined}
         />
         {state.fieldErrors?.password && (
-          <p className="text-destructive-foreground text-xs font-medium">
+          <p
+            id="login-password-error"
+            role="alert"
+            className="text-destructive-foreground text-xs font-medium"
+          >
             {state.fieldErrors.password}
           </p>
         )}

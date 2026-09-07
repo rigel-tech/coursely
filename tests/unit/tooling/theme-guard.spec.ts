@@ -189,4 +189,31 @@ describe('theme-guard', () => {
     const found = scan(["// don’t worry — actually: don't", `const c = '#abc'`].join('\n'))
     expect(found.map((v) => v.line)).toEqual([2])
   })
+
+  it('case 12: flags bare text/border on pale semantic tokens without -foreground or alpha', () => {
+    expect(scan('<p className="text-destructive" />')[0]).toMatchObject({
+      name: 'semantic-contrast',
+      text: 'text-destructive',
+    })
+    expect(scan('<p className="text-error" />')[0]).toMatchObject({
+      name: 'semantic-contrast',
+      text: 'text-error',
+    })
+    expect(scan('<p className="border-success" />')[0]).toMatchObject({
+      name: 'semantic-contrast',
+      text: 'border-success',
+    })
+    expect(scan('<p className="dark:border-warning" />')[0]).toMatchObject({
+      name: 'semantic-contrast',
+      text: 'border-warning',
+    })
+  })
+
+  it('case 12b: permits semantic background tints and properly paired -foreground or alpha', () => {
+    expect(
+      scan(
+        '<div className="bg-destructive text-destructive-foreground border-destructive-foreground/30 border-destructive/60 bg-success text-success-foreground" />',
+      ),
+    ).toEqual([])
+  })
 })

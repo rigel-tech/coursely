@@ -166,14 +166,14 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
             <CardContent>
               {state.status === 'success' && (
-                <div className="mb-6 flex items-center gap-3 rounded-lg border border-success bg-success/15 p-4 text-success-foreground text-sm">
+                <div className="mb-6 flex items-center gap-3 rounded-lg border border-success-foreground/30 bg-success/15 p-4 text-success-foreground text-sm">
                   <CheckCircle2 className="size-5 shrink-0" />
                   <span>{state.message}</span>
                 </div>
               )}
 
               {state.status === 'error' && state.message && (
-                <div className="mb-6 flex items-center gap-3 rounded-lg border border-destructive bg-destructive/15 p-4 text-destructive-foreground text-sm">
+                <div className="mb-6 flex items-center gap-3 rounded-lg border border-destructive-foreground/30 bg-destructive/15 p-4 text-destructive-foreground text-sm">
                   <AlertCircle className="size-5 shrink-0" />
                   <span>{state.message}</span>
                 </div>

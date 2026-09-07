@@ -51,7 +51,7 @@ function ResendOtp() {
         </p>
       )}
       {(state.status === 'cooldown' || state.status === 'error') && state.message && (
-        <p className="text-destructive text-xs" role="alert">
+        <p className="text-destructive-foreground font-medium text-xs" role="alert">
           {state.message}
         </p>
       )}

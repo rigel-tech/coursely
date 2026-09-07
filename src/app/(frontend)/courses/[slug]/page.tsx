@@ -277,7 +277,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                     <span className="text-muted-foreground flex items-center gap-2">
                       <Calendar className="size-4" /> Hạn chót:
                     </span>
-                    <span className="text-foreground font-semibold text-destructive">
+                    <span className="font-semibold text-destructive-foreground">
                       {new Date(course.registrationEndAt).toLocaleDateString('vi-VN')}
                     </span>
                   </div>

@@ -207,7 +207,7 @@ const PRIMITIVES: Entry[] = [
     name: 'Badge',
     path: '@/components/public/ui/badge',
     origin: 'public',
-    note: 'Token nền nhạt + chữ -foreground. Không bao giờ dùng border-success.',
+    note: 'Token nền nhạt + chữ -foreground. Không bao giờ dùng border-success.', // theme-guard-ignore: doc explanation
     preview: (
       <div className="flex flex-wrap items-center gap-2">
         <Badge>Mặc định</Badge>
