@@ -128,9 +128,12 @@ async function createUserWithWelcomeNotification(
       data: {
         user: user.id,
         type: 'ACCOUNT_CREATED',
-        title: 'Chào mừng bạn đến với Coursely',
-        content: 'Tài khoản của bạn đã được tạo. Hãy xác minh email để bắt đầu.',
-        metadata: { ip: data.ip, userAgent: data.userAgent },
+        title: 'Có người dùng mới đăng ký',
+        content: 'Một người dùng mới vừa đăng ký tài khoản trên hệ thống.',
+        metadata: {
+          ip: data.ip,
+          userAgent: data.userAgent,
+        },
         isRead: false,
       },
       req,

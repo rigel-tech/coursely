@@ -20,10 +20,6 @@ export function duplicateRegisterAttemptEmail(): EmailBody {
       Vừa có một yêu cầu đăng ký tài khoản Coursely bằng địa chỉ email này, nhưng email
       đã được đăng ký trước đó.
     </p>
-    <p>
-      Nếu đó là bạn, hãy đăng nhập bình thường hoặc dùng chức năng quên mật khẩu.
-      Nếu không phải bạn, bạn có thể bỏ qua email này.
-    </p>
   </body>
 </html>`,
   }
