@@ -1,18 +1,13 @@
-import Link from 'next/link'
+import type { Metadata } from 'next'
 import React from 'react'
 
-import { Button } from '@/components/public/ui/button'
+import { NotFoundView } from '@/components/public/NotFoundView'
+
+export const metadata: Metadata = {
+  title: '404 - Không tìm thấy trang | Coursely',
+  description: 'Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển trên Coursely.',
+}
 
 export default function NotFound() {
-  return (
-    <div className="container py-28">
-      <div className="prose max-w-none">
-        <h1 style={{ marginBottom: 0 }}>404</h1>
-        <p className="mb-4">This page could not be found.</p>
-      </div>
-      <Button asChild variant="default">
-        <Link href="/">Go home</Link>
-      </Button>
-    </div>
-  )
+  return <NotFoundView />
 }
