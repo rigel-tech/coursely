@@ -5,6 +5,7 @@ import { AlertCircle, ArrowLeft, CheckCircle2, Mail } from 'lucide-react'
 import * as React from 'react'
 import { useActionState } from 'react'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
 import {
   Card,
@@ -67,11 +68,12 @@ export function ForgotPasswordForm() {
       </CardHeader>
       <form action={formAction} noValidate>
         <CardContent className="space-y-4">
-          {state.status === 'error' && state.message && (
-            <div className="flex items-center gap-2.5 rounded-lg border border-destructive bg-destructive/15 p-3 text-destructive-foreground text-sm">
+          {state.status === 'error' && state.message && !state.fieldErrors?.email && (
+            <Alert variant="destructive">
               <AlertCircle className="size-4 shrink-0" />
-              <span>{state.message}</span>
-            </div>
+              <AlertTitle>Lỗi</AlertTitle>
+              <AlertDescription>{state.message}</AlertDescription>
+            </Alert>
           )}
 
           <div className="space-y-2">
@@ -92,7 +94,9 @@ export function ForgotPasswordForm() {
               aria-invalid={!!state.fieldErrors?.email}
             />
             {state.fieldErrors?.email && (
-              <p className="text-destructive text-sm font-medium">{state.fieldErrors.email}</p>
+              <p className="text-destructive-foreground text-xs font-medium">
+                {state.fieldErrors.email}
+              </p>
             )}
           </div>
         </CardContent>

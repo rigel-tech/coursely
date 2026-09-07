@@ -4,6 +4,8 @@ import * as React from 'react'
 import { useActionState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
 
+import { AlertCircle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
@@ -92,9 +94,11 @@ export const OtpForm: React.FC = () => {
         </div>
 
         {state.status === 'error' && state.message && (
-          <p className="text-destructive text-sm" role="alert">
-            {state.message}
-          </p>
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertTitle>Lỗi</AlertTitle>
+            <AlertDescription>{state.message}</AlertDescription>
+          </Alert>
         )}
 
         <SubmitButton />
