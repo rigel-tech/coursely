@@ -1,7 +1,9 @@
 'use client'
 
-import { BookOpenIcon } from 'lucide-react'
+import { AlertCircle, BookOpenIcon } from 'lucide-react'
 import * as React from 'react'
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
 
 import { ClassRoster } from '@/components/design/blocks/class-roster'
 import { CourseCard } from '@/components/design/blocks/course-card'
@@ -165,6 +167,25 @@ function Item({ entry }: { entry: Entry }) {
 }
 
 const PRIMITIVES: Entry[] = [
+  {
+    name: 'Alert',
+    path: '@/components/public/ui/alert',
+    origin: 'public',
+    note: 'Hiển thị thông báo trạng thái, hỗ trợ variant mặc định và destructive.',
+    preview: (
+      <div className="flex w-full flex-col gap-3">
+        <Alert>
+          <AlertTitle>Thông báo</AlertTitle>
+          <AlertDescription>Hệ thống đang hoạt động bình thường.</AlertDescription>
+        </Alert>
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Lỗi</AlertTitle>
+          <AlertDescription>Email hoặc mật khẩu không chính xác.</AlertDescription>
+        </Alert>
+      </div>
+    ),
+  },
   {
     name: 'Button',
     path: '@/components/public/ui/button',
