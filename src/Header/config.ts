@@ -12,11 +12,6 @@ export const Header: GlobalConfig = {
     {
       name: 'navItems',
       type: 'array',
-      fields: [
-        link({
-          appearances: false,
-        }),
-      ],
       maxRows: 6,
       admin: {
         initCollapsed: true,
@@ -24,6 +19,24 @@ export const Header: GlobalConfig = {
           RowLabel: '@/components/admin/RowLabel/Header#RowLabel',
         },
       },
+      fields: [
+        link({
+          appearances: false,
+        }),
+        {
+          name: 'subMenuItems',
+          label: 'Menu con (Submenu)',
+          type: 'array',
+          fields: [
+            link({
+              appearances: false,
+            }),
+          ],
+          admin: {
+            initCollapsed: true,
+          },
+        },
+      ],
     },
   ],
   hooks: {
