@@ -20,6 +20,18 @@ them and nothing creates or removes them.
 Plan for this when scripting a migration: the field has to exist before any of it runs.
 Fail loudly if the lookup comes back empty rather than writing to a guessed ID.
 
+## Writes stop dead once the plan's usage cap is reached
+
+```json
+{ "err": "Custom field usages exceeded for your plan", "ECODE": "FIELD_033" }
+```
+
+From then on every `POST /v2/task/{task_id}/field/{field_id}` is a `400`, even one setting
+the value the task already holds. Reads are unaffected and `DELETE` still clears a value
+without returning the quota, so the fields are frozen rather than merely full — a cleared
+value cannot be put back. Details and the substitute in
+[GOTCHAS.md](GOTCHAS.md#custom-field-writes-are-capped-by-plan).
+
 ## A field only appears once it reaches the container
 
 A field created elsewhere in the Workspace is invisible to a List until it is moved or

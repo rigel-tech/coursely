@@ -134,9 +134,31 @@ _Observed 2026-08-29: 19 tasks carried a custom type, the 20th write was rejecte
 type, not a rate limit, so waiting does not help. The cap counts across the whole
 Workspace, including Spaces unrelated to the work at hand.
 
-Setting `custom_item_id` back to `0` releases a slot. A drop-down custom field carries
-the same information without touching the quota, at the cost of the type not showing in
-the task header.
+Setting `custom_item_id` back to `0` releases a slot — this quota counts what is held
+right now, unlike the custom field cap below. A drop-down custom field carries the same
+information at the cost of the type not showing in the task header, but it has a plan cap
+of its own; on a plan that has spent it, reach for a tag instead.
+
+## Custom field writes are capped by plan
+
+_Observed 2026-09-07: a Workspace holding 2 fields and 30 values rejected every write._
+
+```json
+{ "err": "Custom field usages exceeded for your plan", "ECODE": "FIELD_033" }
+```
+
+`HTTP 400` from `POST /v2/task/{task_id}/field/{field_id}`, including a write that sets the
+value the task already holds. Reads are untouched — `GET` returns every stored value and
+the UI still shows them — so the fields look healthy right up until something writes.
+
+The counter is **cumulative uses, not values currently held**: the Workspace above sat far
+under the plan's headline allowance and was still blocked. `DELETE` on a value answers
+`200` and does clear it, but frees no quota, so a cleared value **cannot be written back**.
+Never clear a field to make room — the data goes and the slot does not come back.
+
+Tags cost nothing on any plan and stay writable through
+`POST /v2/task/{task_id}/tag/{tag_name}`, which makes them the substitute for a
+`drop_down` that survives the cap.
 
 ## `status_mappings` is rejected when it is not needed
 
