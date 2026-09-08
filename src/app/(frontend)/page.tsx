@@ -32,7 +32,7 @@ import { homeStatic } from '@/endpoints/seed/home-static'
 import { RenderBlocks } from '@/blocks/RenderBlocks'
 import { RenderHero } from '@/heros/RenderHero'
 import { generateMeta } from '@/utilities/generateMeta'
-import PageClient from './[slug]/page.client'
+import PageClient from './[...slug]/page.client'
 import { LivePreviewListener } from '@/components/public/LivePreviewListener'
 import { ArrowRight } from 'lucide-react'
 

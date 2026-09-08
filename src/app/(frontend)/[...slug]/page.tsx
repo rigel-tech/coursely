@@ -31,7 +31,7 @@ export async function generateStaticParams() {
       return doc.slug !== 'home'
     })
     .map(({ slug }) => {
-      return { slug }
+      return { slug: [slug] }
     })
 
   return params
@@ -39,14 +39,15 @@ export async function generateStaticParams() {
 
 type Args = {
   params: Promise<{
-    slug?: string
+    slug?: string[]
   }>
 }
 
 export default async function Page({ params: paramsPromise }: Args) {
   const { isEnabled: draft } = await draftMode()
-  const { slug = 'home' } = await paramsPromise
-  const decodedSlug = decodeURIComponent(slug)
+  const { slug = ['home'] } = await paramsPromise
+  const rawSlug = Array.isArray(slug) ? slug.join('/') : slug
+  const decodedSlug = decodeURIComponent(rawSlug)
   const url = '/' + decodedSlug
 
   let page: RequiredDataFromCollectionSlug<'pages'> | null = null
@@ -56,7 +57,7 @@ export default async function Page({ params: paramsPromise }: Args) {
   })
 
   // Remove this code once your website is seeded
-  if (!page && slug === 'home') {
+  if (!page && decodedSlug === 'home') {
     page = homeStatic
   }
 
@@ -79,8 +80,9 @@ export default async function Page({ params: paramsPromise }: Args) {
 }
 
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
-  const { slug = 'home' } = await paramsPromise
-  const decodedSlug = decodeURIComponent(slug)
+  const { slug = ['home'] } = await paramsPromise
+  const rawSlug = Array.isArray(slug) ? slug.join('/') : slug
+  const decodedSlug = decodeURIComponent(rawSlug)
   const page = await queryPageBySlug({
     slug: decodedSlug,
   })
