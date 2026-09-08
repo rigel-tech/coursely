@@ -6,11 +6,11 @@ import { Button } from '@/components/public/ui/button'
 
 export function NotFoundView() {
   return (
-    <main className="container mx-auto flex min-h-[65vh] flex-col items-center justify-center px-4 py-16 text-center sm:py-24">
+    <main className="container mx-auto flex min-h-[calc(100vh-200px)] flex-col items-center justify-center px-4 py-16 text-center sm:py-24">
       {/* 404 Visual Display */}
       <div className="mb-4 flex flex-col items-center">
         <span
-          className="text-brand-accent text-3xl font-extrabold tracking-tight select-none"
+          className="text-brand-accent text-3xl font-black tracking-tight select-none"
           aria-hidden="true"
         >
           404
