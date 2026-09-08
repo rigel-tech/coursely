@@ -81,6 +81,24 @@ _Documented behaviour._
 Use `POST /v2/task/{task_id}/field/{field_id}`, one call per field. See
 [CUSTOM-FIELDS.md](CUSTOM-FIELDS.md).
 
+## A subtask cannot be converted back to a task
+
+_Observed 2026-09-08 trying to lift five tasks out of a parent they had been dropped into._
+
+`PUT /v2/task/{task_id}` with `{"parent": null}` answers `HTTP 200` and returns the whole
+task object — with `parent` unchanged. The request schema states it in a single line that
+is easy to read past: a subtask moves to a _different_ parent by id, and `null` does not
+detach it.
+
+The obvious workaround is closed as well.
+`PUT /v3/workspaces/{ws}/tasks/{task_id}/home_list/{list_id}` answers
+`400 Only root tasks can be moved to a new home list`, even when the destination is the
+List the subtask already lives in. The MCP server exposes no `parent` parameter at all, so
+it is not a way round either.
+
+Detaching is UI-only. A script that nests a task wrongly therefore cannot undo its own
+change — check the parent before writing one, because `200` here means nothing happened.
+
 ## Writing a custom field to a deleted task returns 200
 
 _Observed 2026-08-29 while backfilling a drop-down across a backlog._
