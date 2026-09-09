@@ -4,7 +4,42 @@ Behaviour that breaks without raising an error. Each entry says how it was obser
 the claim can be re-tested rather than trusted.
 
 The unifying rule: **ClickUp returns `success: true` for content its renderer then
-mangles.** A write result is not evidence the write is correct. Read it back.
+mangles.** A write result is not evidence the write is correct. Read it back — and, per
+the entry below, read it back more than once before believing a corruption.
+
+## `markdown_description` mangles a character at random, on read
+
+_Observed 2026-09-08 verifying Vietnamese task bodies; five identical `GET`s of one task
+returned three clean copies and two corrupted ones._
+
+`GET /v2/task/{id}?include_markdown_description=true` sometimes decodes the stored text on
+a broken byte boundary, turning **one** multi-byte UTF-8 character into one replacement
+character (`U+FFFD`) per byte. `ê` (2 bytes) comes back as two; `ả` (3 bytes) as three.
+
+The same request, repeated, alternates between clean and corrupt — so it is the read that
+is flaky, not the stored data. Position is stable per task, occurrence is not.
+
+Two traps follow:
+
+- **A length check will not catch it.** One JS character in, one or more out — a 2-byte
+  character produces a length delta of 1, easily lost among trailing-newline noise. Test
+  for `�` explicitly, never for length alone.
+- **It reads exactly like data loss.** Anyone verifying a write will see mangled text and
+  conclude the write corrupted the task. Re-read before acting: rewriting the task "fixes"
+  it only because the next read happens to be clean, and the next verification of an
+  untouched task will light up instead.
+
+Read until a copy comes back without `�` (four or five attempts is plenty) and judge
+that one. Only if every attempt is corrupt is the stored content actually suspect.
+
+## Table cells drop bold and italic
+
+_Observed 2026-09-08 writing a task description whose table cell contained `**…**`._
+
+`**bold**` and `*italic*` survive a round trip in ordinary paragraphs but are stripped
+inside a markdown table cell — the text stays, the emphasis does not, and the write still
+returns `200`. Budget for it: a warning that reads as emphatic in the source arrives flat.
+Put the words that must stand out in a paragraph, not in a cell.
 
 ## Empty list items corrupt silently
 
@@ -80,6 +115,24 @@ _Documented behaviour._
 `PUT /v2/task/{task_id}` accepts custom field values and drops them, returning success.
 Use `POST /v2/task/{task_id}/field/{field_id}`, one call per field. See
 [CUSTOM-FIELDS.md](CUSTOM-FIELDS.md).
+
+## A subtask cannot be converted back to a task
+
+_Observed 2026-09-08 trying to lift five tasks out of a parent they had been dropped into._
+
+`PUT /v2/task/{task_id}` with `{"parent": null}` answers `HTTP 200` and returns the whole
+task object — with `parent` unchanged. The request schema states it in a single line that
+is easy to read past: a subtask moves to a _different_ parent by id, and `null` does not
+detach it.
+
+The obvious workaround is closed as well.
+`PUT /v3/workspaces/{ws}/tasks/{task_id}/home_list/{list_id}` answers
+`400 Only root tasks can be moved to a new home list`, even when the destination is the
+List the subtask already lives in. The MCP server exposes no `parent` parameter at all, so
+it is not a way round either.
+
+Detaching is UI-only. A script that nests a task wrongly therefore cannot undo its own
+change — check the parent before writing one, because `200` here means nothing happened.
 
 ## Writing a custom field to a deleted task returns 200
 
