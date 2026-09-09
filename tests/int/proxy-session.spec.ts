@@ -88,7 +88,7 @@ describe('proxy — student session', () => {
 
     const res = await proxy(req(`${REFRESH_COOKIE}=${captured}`))
 
-    expect(res.headers.get('location')).toContain('/?callbackUrl=')
+    expect(res.headers.get('location')).toContain('/dang-nhap?callbackUrl=')
     expect(res.cookies.get(ACCESS_COOKIE)?.value).toBe('')
     expect(res.cookies.get(REFRESH_COOKIE)?.value).toBe('')
   })
