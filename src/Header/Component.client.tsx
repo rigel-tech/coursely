@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React, { useEffect } from 'react'
 
-import type { Header } from '@/payload-types'
+import type { Header, SiteSetting } from '@/payload-types'
 import { Logo } from '@/components/public/Logo/Logo'
 import { HeaderAuthControls } from '@/components/public/HeaderAuthControls'
 import { useHeaderTheme } from '@/providers/HeaderTheme'
@@ -13,9 +13,10 @@ import { HeaderNav } from './Nav'
 
 interface HeaderClientProps {
   data: Header
+  siteSettings?: SiteSetting | null
 }
 
-export const HeaderClient: React.FC<HeaderClientProps> = ({ data }) => {
+export const HeaderClient: React.FC<HeaderClientProps> = ({ data, siteSettings }) => {
   const { headerTheme, setHeaderTheme } = useHeaderTheme()
   const pathname = usePathname()
 
@@ -34,7 +35,11 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data }) => {
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
         {/* Left: SpeakEdge Logo */}
         <Link href="/" className="shrink-0 flex items-center">
-          <Logo />
+          <Logo
+            logo={siteSettings?.logo}
+            siteName={siteSettings?.siteName}
+            tagline={siteSettings?.tagline}
+          />
         </Link>
 
         {/* Center: Navigation Links */}
