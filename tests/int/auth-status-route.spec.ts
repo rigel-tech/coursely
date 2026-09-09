@@ -30,7 +30,13 @@ describe('GET /next/auth-status', () => {
       signAccessToken({ sub: 123, role: 'STUDENT', status: 'ACTIVE' }),
     )
 
-    expect(await read(await GET())).toEqual({ authenticated: true })
+    expect(await read(await GET())).toEqual({
+      authenticated: true,
+      user: {
+        id: 123,
+        name: 'Tài khoản',
+      },
+    })
   })
 
   it('reports not authenticated when the cookie is absent', async () => {
