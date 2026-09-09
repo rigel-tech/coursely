@@ -18,6 +18,7 @@ import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
+import { SiteSettings } from './SiteSettings/config'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
@@ -29,6 +30,10 @@ const dirname = path.dirname(filename)
 export default buildConfig({
   admin: {
     components: {
+      graphics: {
+        Logo: '@/components/admin/Graphics/Logo#Logo',
+        Icon: '@/components/admin/Graphics/Icon#Icon',
+      },
       // The `BeforeLogin` component renders a message that you see while logging into your admin panel.
       // Feel free to delete this at any time. Simply remove the line below.
       beforeLogin: ['@/components/admin/BeforeLogin'],
@@ -102,7 +107,7 @@ export default buildConfig({
     AuditLogs,
   ],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer],
+  globals: [Header, Footer, SiteSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET,
   sharp,

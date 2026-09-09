@@ -12,6 +12,8 @@ import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 
 import './globals.css'
 import { getServerSideURL } from '@/utilities/getURL'
+import { getCachedGlobal } from '@/utilities/getGlobals'
+import type { Media } from '@/payload-types'
 
 // The `vietnamese` subset is not optional here: without it every accented character falls
 // out to a fallback face mid-word, which reads as a rendering glitch rather than a bug.
@@ -33,6 +35,10 @@ const jetBrainsMono = JetBrains_Mono({
 })
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const siteSettings = await getCachedGlobal('site-settings', 1)().catch(() => null)
+  const favicon = siteSettings?.favicon as Media | undefined
+  const faviconUrl = favicon?.url || null
+
   return (
     <html
       className={cn(beVietnamPro.variable, jetBrainsMono.variable)}
@@ -41,8 +47,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <head>
         <InitTheme />
-        <link href="/favicon.ico" rel="icon" sizes="32x32" />
-        <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
+        <link href={faviconUrl || '/favicon.ico'} rel="icon" sizes="32x32" />
+        <link href={faviconUrl || '/favicon.svg'} rel="icon" type="image/svg+xml" />
       </head>
       <body>
         <Providers>
