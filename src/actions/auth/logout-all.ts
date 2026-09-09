@@ -1,8 +1,6 @@
 'use server'
 
-import { cookies, headers } from 'next/headers'
-import { getPayload } from 'payload'
-import configPromise from '@payload-config'
+import { cookies } from 'next/headers'
 
 import { REFRESH_TOKEN_COOKIE } from '@/lib/constants/auth'
 import { clearSessionCookies } from '@/lib/auth/session-cookies'
@@ -11,8 +9,12 @@ import { findSessionByRefresh, revokeAllForUser } from '@/services/session-store
 /**
  * Sign out of every device (§ access+refresh sessions). Like `logoutAction` but
  * resolves the account from the `coursely-refresh` cookie and revokes every
- * session on it — the invoking one included — then records a `LOGOUT_ALL` audit
- * row. Returns `redirectTo`; never `redirect()` (see INVARIANTS).
+ * session on it — the invoking one included. Returns `redirectTo`; never
+ * `redirect()` (see INVARIANTS).
+ *
+ * Other devices lose their refresh token at once, but their access token is
+ * stateless: each keeps working until it expires (`ACCESS_TTL_SEC`). Sign-out
+ * everywhere is therefore immediate for renewal and bounded for reads.
  */
 export async function logoutAllAction(): Promise<{ redirectTo: string }> {
   const jar = await cookies()
@@ -20,18 +22,7 @@ export async function logoutAllAction(): Promise<{ redirectTo: string }> {
 
   if (refresh) {
     const found = await findSessionByRefresh(refresh)
-    if (found) {
-      await revokeAllForUser(found.userId)
-
-      const h = await headers()
-      const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || 'unknown'
-      const userAgent = h.get('user-agent') || 'unknown'
-      const payload = await getPayload({ config: await configPromise })
-      await payload.create({
-        collection: 'audit-logs',
-        data: { action: 'LOGOUT_ALL', user: found.userId, ip, userAgent },
-      })
-    }
+    if (found) await revokeAllForUser(found.userId)
   }
 
   clearSessionCookies(jar)

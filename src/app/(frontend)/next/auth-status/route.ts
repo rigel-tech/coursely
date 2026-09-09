@@ -5,51 +5,29 @@
  * session and retrieve the current student user's profile info (fullName, email)
  * without a Server Component reading `headers()` / `cookies()`: the header's
  * host pages are `force-static`, which blanks those APIs.
+ *
+ * Anything short of a resolvable student — no cookie, a bad token, an account that
+ * is gone — reports `authenticated: false`. The header then offers sign-in, which is
+ * the only action that can help.
  */
-import { cookies } from 'next/headers'
-import configPromise from '@payload-config'
-import { getPayload } from 'payload'
-
-import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth'
-import { verifyAccessToken } from '@/lib/auth/access-token'
-import type { User } from '@/payload-types'
+import { getStudentSession } from '@/lib/auth/student-session'
 
 export async function GET(): Promise<Response> {
-  const token = (await cookies()).get(ACCESS_TOKEN_COOKIE)?.value
-  const claims = verifyAccessToken(token)
+  const student = await getStudentSession()
 
-  if (!claims) {
+  if (!student) {
     return Response.json({ authenticated: false })
   }
 
-  try {
-    const payload = await getPayload({ config: configPromise })
-    const user = (await payload.findByID({
-      collection: 'users',
-      id: claims.id,
-      depth: 0,
-      overrideAccess: true,
-    })) as User
+  const displayName =
+    student.fullName?.trim() || (student.email ? student.email.split('@')[0] : 'Tài khoản')
 
-    const displayName =
-      user?.fullName?.trim() || (user?.email ? user.email.split('@')[0] : 'Tài khoản')
-
-    return Response.json({
-      authenticated: true,
-      user: {
-        id: claims.id,
-        name: displayName,
-        email: user?.email,
-      },
-    })
-  } catch (err) {
-    console.error('Failed to resolve auth-status user:', err)
-    return Response.json({
-      authenticated: true,
-      user: {
-        id: claims.id,
-        name: 'Tài khoản',
-      },
-    })
-  }
+  return Response.json({
+    authenticated: true,
+    user: {
+      id: student.id,
+      name: displayName,
+      email: student.email,
+    },
+  })
 }

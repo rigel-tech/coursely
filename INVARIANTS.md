@@ -57,7 +57,9 @@ valid; it just contains posts nobody published yet. Nothing in the response says
 ### The front end reads `post.populatedAuthors`, never `post.authors`
 
 **Rule** — Render bylines from `populatedAuthors`. Do not read `post.authors` in any front-end
-component, and do not "simplify" it to `authors` with a depth bump.
+component, and do not "simplify" it to `authors` with a depth bump. `users.fullName` is part
+of this rule, not a profile field that happens to sit there: it must not be renamed **or
+removed**, however staff-only `users` becomes.
 
 **Why it breaks silently** — `users` has `read: authenticated`, so for an anonymous request
 Payload's relationship population is filtered by access control and `authors` comes back as
@@ -68,11 +70,63 @@ copy `{ id, name }` past that boundary — its `name` is read from the user's `f
 so renaming that field silently blanks every byline. GraphQL also refuses to return mutated
 user data that differs from the schema, which is why the copy lives in its own field instead.
 
+The removal case is the live one. `users` shed every student field when students moved to
+their own collection, and `fullName` reads like one more of them — it is the single field
+left on a collection that is otherwise pure auth. `Posts.authors` still points at `users`,
+so the byline still comes from here; delete the field and the site renders authorless posts
+with a green build and a green test suite.
+
 **Where** — `src/collections/Users/index.ts` (`read: authenticated` in `access`; the
-`fullName` field the byline is copied from), `src/collections/Posts/hooks/populateAuthors.ts`
+`fullName` field the byline is copied from, pinned by
+`tests/unit/collections/users-notifications-config.spec.ts`),
+`src/collections/Posts/hooks/populateAuthors.ts`
 (`populateAuthors`, `name: authorDoc.fullName`, and the comment explaining the boundary),
 `src/collections/Posts/index.ts:197` (`populatedAuthors` field, `admin.disabled`), consumed at
 `src/heros/PostHero/index.tsx:12` (`PostHero`).
+
+### `Students.access.admin` must stay `() => false`
+
+**Rule** — Every auth collection that is not `admin.user` declares `access.admin: () => false`.
+Never copy an `access` block from `Users` onto one of them, and never "simplify" that line to
+`authenticated` because every other entry in the block says `authenticated`.
+
+**Why it breaks silently** — `canAccessAdmin` gives a principal collection's own `access.admin`
+the final say: when that function exists it decides, and the branch comparing the principal's
+collection against `config.admin.user` sits behind an `else if` and never runs. So
+`admin.user: Users.slug` does **not** keep other collections out of `/admin` — it is only
+consulted for a collection that declares no `access.admin` at all. A student principal whose
+collection said `admin: authenticated` would pass the gate and load the admin panel: no error,
+no log, the build stays green, the test suite stays green, and in review the line is one word
+different from its four neighbours.
+
+**Where** — `src/collections/Students/index.ts` (`access.admin`), pinned by
+`tests/unit/collections/students-config.spec.ts`. The override itself is
+`node_modules/payload/dist/utilities/canAccessAdmin.js` (`canAccessAdmin`, the `else if` after
+`adminAccessFn`); `src/payload.config.ts` (`admin.user`) is what it overrides.
+
+### An access predicate for a staff-only collection must check `user.collection`, not `Boolean(user)`
+
+**Rule** — Any `access` function guarding a collection that only staff may touch tests
+`user?.collection === 'users'`. Never gate it on `Boolean(user)` alone. `authenticated`
+(`src/access/authenticated.ts`) already does this and is the predicate to reach for; a new one
+copies that check, never the truthiness shortcut.
+
+**Why it breaks silently** — every Payload auth collection has its own `POST /api/{slug}/login`
+that signs a `payload-token`, and `proxy`'s matcher excludes `/api/`, so `proxy` never sees
+those requests. Once a second auth collection exists (`students`), a signed-in student holds a
+valid `payload-token`. A `Boolean(user)` predicate cannot tell it apart from a staff token, so
+it grants the student every collection it guards over REST — reading the whole `users` table,
+minting staff accounts, resetting an admin password. Nothing throws, the build and tests stay
+green, and `Students.access.admin: () => false` does not help because that only gates the
+`/admin` UI, not the REST API. The `AccessArgs<User>` type actively hides it: it says the
+principal is a `User`, but at runtime it is whichever collection signed the token.
+
+**Where** — `src/access/authenticated.ts` (the `user?.collection === 'users'` check), used by
+every admin-content collection (`Users`, `Students`, `Media`, `Posts`, `Pages`, `Categories`,
+`Courses`, `CoursePhases`, `CourseObjectives`, `Classes`, `Notifications`). Pinned by
+`tests/unit/access/authenticated.spec.ts` and `tests/int/rest-access-isolation.spec.ts`.
+`src/access/authenticatedOrPublished.ts` has the same `Boolean(user)` shape for `pages`/`posts`
+reads and leaks drafts to a student token — narrower (no PII), still open, not yet fixed.
 
 ## Cache invalidation
 
@@ -241,6 +295,29 @@ line was "revoked" still renews against the orphan.
 `session:{sid}`; `renewSession`'s single-flight lock that keeps two concurrent renewals from
 both creating state). `session:index:{userId}` is the set `revokeAllForUser` walks;
 `spent:{hash}` carries the `sid` that is the line identifier.
+
+### The Redis session store holds `students` ids and nothing else
+
+**Rule** — Every `createSession` call passes a document from the `students` collection. No
+sign-in path may mint a `coursely-access` / `coursely-refresh` pair for a `users` row, and
+nothing may write a `users` id into `session:index:{userId}`. Staff sessions are Payload's
+own `payload-token` and never enter this keyspace.
+
+**Why it breaks silently** — `users` and `students` are separate Postgres tables with
+independent `serial` primary keys, so their ids collide: `users.id = 7` and
+`students.id = 7` both exist and are different people. The session store keys purely by that
+number. A staff id landing in `session:index:{7}` therefore merges two accounts onto one
+session line — `revokeAllForUser` signs the wrong person out, `revokeAllForUser` after a
+password reset kills a stranger's sessions, and a `LOGOUT_ALL` audit row is written against
+the wrong account. Nothing throws, nothing logs, and every test that exercises one account
+at a time stays green. This is not hypothetical: before the split, `loginAction` issued the
+student cookie pair to anyone who authenticated at `/dang-nhap`, admins included.
+
+**Where** — the only two call sites are `src/actions/auth/login.ts` (`loginAction`) and
+`src/actions/auth/verify-otp.ts` (`verifyOtpAction`); both take their user from
+`src/services/login.ts` / `src/services/verify-registration.ts`, which query `students`.
+`src/services/session-store.ts` (`indexKey`, `createSession`, `revokeAllForUser`) is the
+keyspace this protects.
 
 ## Client-side state
 

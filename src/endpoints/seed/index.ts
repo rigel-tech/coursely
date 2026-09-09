@@ -105,8 +105,6 @@ export const seed = async ({
         fullName: 'Demo Author',
         email: 'demo-author@example.com',
         password: 'password',
-        role: 'ADMIN',
-        status: 'ACTIVE',
       },
     }),
     payload.create({

@@ -3,24 +3,28 @@ import { describe, it, expect } from 'vitest'
 import { decideRoute } from '@/lib/auth/route-guard'
 import type { AuthUser } from '@/lib/auth/verify-token'
 
-const admin: AuthUser = { id: 1, role: 'ADMIN', status: 'ACTIVE' }
-const student: AuthUser = { id: 2, role: 'STUDENT', status: 'ACTIVE' }
-const pending: AuthUser = { id: 3, role: 'STUDENT', status: 'PENDING_VERIFICATION' }
+const staff: AuthUser = { id: 1, status: 'ACTIVE' }
+const student: AuthUser = { id: 2, status: 'ACTIVE' }
+const pending: AuthUser = { id: 3, status: 'PENDING_VERIFICATION' }
 
-describe('decideRoute — /admin', () => {
-  it('bounces a signed-in non-admin to /', () => {
-    expect(decideRoute('/admin/collections/users', student, false)).toEqual({
-      type: 'redirect',
-      to: '/',
-    })
+// The admin branch is gone. `verifyAuthToken` now rejects any token whose `collection`
+// claim is not `users`, so by the time a user object reaches here it is already staff —
+// and Payload's own `canAccessAdmin` is what actually guards the panel. Routing never
+// was authorisation; this asserts it has stopped pretending to be.
+describe('decideRoute — /admin is no longer routed here', () => {
+  it('passes through for a signed-in principal', () => {
+    expect(decideRoute('/admin', staff, false)).toEqual({ type: 'next' })
+    expect(decideRoute('/admin/collections/users', staff, false)).toEqual({ type: 'next' })
   })
 
-  it('lets an admin through', () => {
-    expect(decideRoute('/admin', admin, false)).toEqual({ type: 'next' })
-  })
-
-  it("leaves an anonymous visitor to Payload's own login", () => {
+  it("passes through for an anonymous visitor, leaving Payload's own login to answer", () => {
     expect(decideRoute('/admin/login', null, false)).toEqual({ type: 'next' })
+  })
+
+  it('never redirects an /admin path, whoever is asking', () => {
+    for (const user of [null, staff, student, pending]) {
+      expect(decideRoute('/admin/collections/posts', user, false)).toEqual({ type: 'next' })
+    }
   })
 })
 

@@ -9,38 +9,38 @@ const named = (fields: Field[]) =>
 
 const field = (fields: Field[], name: string) => fields.find((f) => 'name' in f && f.name === name)
 
-describe('Users collection config', () => {
+describe('Users collection config — staff only', () => {
   const names = named(Users.fields)
 
-  it('replaces the bare "name" field with the DBML profile + status fields', () => {
-    expect(names).not.toContain('name')
-    expect(names).toEqual(
-      expect.arrayContaining([
-        'fullName',
-        'phone',
-        'avatar',
-        'role',
-        'status',
-        'isWalkIn',
-        'verifiedAt',
-        'lastLoginAt',
-        'createdBy',
-      ]),
-    )
+  it('has no role column: the collection itself says what a principal is', () => {
+    expect(names).not.toContain('role')
   })
 
-  it('constrains role and status to the DBML enums with the right defaults', () => {
-    const role = field(Users.fields, 'role') as Extract<Field, { type: 'select' }>
-    const status = field(Users.fields, 'status') as Extract<Field, { type: 'select' }>
-
-    expect(role.options).toEqual(['ADMIN', 'STUDENT'])
-    expect(role.defaultValue).toBe('STUDENT')
-    expect(status.options).toEqual(['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'])
-    expect(status.defaultValue).toBe('PENDING_VERIFICATION')
+  it('has shed every student-only field', () => {
+    for (const gone of [
+      'phone',
+      'avatar',
+      'status',
+      'isWalkIn',
+      'verifiedAt',
+      'lastLoginAt',
+      'createdBy',
+    ]) {
+      expect(names).not.toContain(gone)
+    }
   })
 
-  it('titles rows by email', () => {
+  // Not a leftover. `populateAuthors` copies `fullName` onto `post.populatedAuthors`, which
+  // is the only thing the public byline reads — drop it and every byline renders blank with
+  // no error anywhere. See INVARIANTS.
+  it('keeps fullName, because the post byline is built from it', () => {
+    expect(names).toContain('fullName')
+  })
+
+  it('titles rows by email and no longer lists role or status as columns', () => {
     expect(Users.admin?.useAsTitle).toBe('email')
+    expect(Users.admin?.defaultColumns).not.toContain('role')
+    expect(Users.admin?.defaultColumns).not.toContain('status')
   })
 })
 
@@ -55,6 +55,12 @@ describe('Notifications collection config', () => {
     expect(names).toEqual(
       expect.arrayContaining(['user', 'type', 'title', 'content', 'metadata', 'isRead']),
     )
+  })
+
+  it('belongs to a student — notifications are addressed to the public site, not to staff', () => {
+    const user = field(Notifications.fields, 'user') as Extract<Field, { type: 'relationship' }>
+
+    expect(user.relationTo).toBe('students')
   })
 
   it('requires user, title and content', () => {

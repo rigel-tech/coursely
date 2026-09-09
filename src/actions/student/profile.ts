@@ -1,12 +1,10 @@
 'use server'
 
-import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth'
-import { verifyAccessToken } from '@/lib/auth/access-token'
+import { getStudentSession } from '@/lib/auth/student-session'
 import { parseProfileInput } from '@/lib/validation/profile-schema'
 
 export type ProfileFormState = {
@@ -27,10 +25,9 @@ export async function updateProfileAction(
   _prevState: ProfileFormState,
   formData: FormData,
 ): Promise<ProfileFormState> {
-  const token = (await cookies()).get(ACCESS_TOKEN_COOKIE)?.value
-  const claims = verifyAccessToken(token)
+  const student = await getStudentSession()
 
-  if (!claims || claims.status !== 'ACTIVE') {
+  if (!student || student.status !== 'ACTIVE') {
     return {
       status: 'error',
       message: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
@@ -103,8 +100,8 @@ export async function updateProfileAction(
 
   try {
     await payload.update({
-      collection: 'users',
-      id: claims.id,
+      collection: 'students',
+      id: student.id,
       data: {
         fullName: parsed.data.fullName,
         phone: parsed.data.phone,

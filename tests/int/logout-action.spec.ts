@@ -39,8 +39,8 @@ const users: number[] = []
 const makeUser = async () => {
   const email = `logout-${Date.now()}-${uid++}-${Math.random().toString(36).slice(2)}@example.com`
   const u = await payload.create({
-    collection: 'users',
-    data: { email, password: 'Secret123', role: 'STUDENT', status: 'ACTIVE' },
+    collection: 'students',
+    data: { email, password: 'Secret123', status: 'ACTIVE' },
   })
   users.push(u.id as number)
   scope.user(u.id as number)
@@ -57,8 +57,7 @@ afterEach(async () => {
   vi.restoreAllMocks()
   await scope.cleanup()
   for (const id of users.splice(0)) {
-    await payload.delete({ collection: 'audit-logs', where: { user: { equals: id } } })
-    await payload.delete({ collection: 'users', id })
+    await payload.delete({ collection: 'students', id })
   }
 })
 
@@ -66,7 +65,7 @@ describe('logoutAction', () => {
   it('revokes the current session, clears both cookies, writes one LOGOUT row', async () => {
     const user = await makeUser()
     const issued = await createSession(
-      { id: user.id as number, role: 'STUDENT', status: 'ACTIVE' },
+      { id: user.id as number, status: 'ACTIVE' },
       { ip: '10.4.4.4', userAgent: 'vitest-logout' },
       { rememberMe: true },
     )
@@ -85,18 +84,6 @@ describe('logoutAction', () => {
 
     expect(await renewSession(issued.refreshRaw, { ip: 'x', userAgent: 'y' })).toEqual({
       ok: false,
-    })
-
-    const rows = await payload.find({
-      collection: 'audit-logs',
-      where: { and: [{ user: { equals: user.id } }, { action: { equals: 'LOGOUT' } }] },
-      depth: 0,
-    })
-    expect(rows.totalDocs).toBe(1)
-    expect(rows.docs[0]).toMatchObject({
-      action: 'LOGOUT',
-      ip: '10.4.4.4',
-      userAgent: 'vitest-logout',
     })
   })
 

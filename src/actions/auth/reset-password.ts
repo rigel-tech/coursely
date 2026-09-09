@@ -35,7 +35,7 @@ export async function resetPasswordAction(
     const payload = await getPayload({ config: configPromise })
 
     const result = await payload.resetPassword({
-      collection: 'users',
+      collection: 'students',
       data: {
         token,
         password,

@@ -64,6 +64,7 @@ export type SupportedTimezones =
 export interface Config {
   auth: {
     users: UserAuthOperations;
+    students: StudentAuthOperations;
   };
   blocks: {};
   collections: {
@@ -72,12 +73,12 @@ export interface Config {
     media: Media;
     categories: Category;
     users: User;
+    students: Student;
     courses: Course;
     'course-objectives': CourseObjective;
     'course-phases': CoursePhase;
     classes: Class;
     notifications: Notification;
-    'audit-logs': AuditLog;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -104,12 +105,12 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    students: StudentsSelect<false> | StudentsSelect<true>;
     courses: CoursesSelect<false> | CoursesSelect<true>;
     'course-objectives': CourseObjectivesSelect<false> | CourseObjectivesSelect<true>;
     'course-phases': CoursePhasesSelect<false> | CoursePhasesSelect<true>;
     classes: ClassesSelect<false> | ClassesSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
-    'audit-logs': AuditLogsSelect<false> | AuditLogsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -137,7 +138,7 @@ export interface Config {
   widgets: {
     collections: CollectionsWidget;
   };
-  user: User;
+  user: User | Student;
   jobs: {
     tasks: {
       schedulePublish: TaskSchedulePublish;
@@ -150,6 +151,24 @@ export interface Config {
   };
 }
 export interface UserAuthOperations {
+  forgotPassword: {
+    email: string;
+    password: string;
+  };
+  login: {
+    email: string;
+    password: string;
+  };
+  registerFirstUser: {
+    email: string;
+    password: string;
+  };
+  unlock: {
+    email: string;
+    password: string;
+  };
+}
+export interface StudentAuthOperations {
   forgotPassword: {
     email: string;
     password: string;
@@ -436,20 +455,6 @@ export interface Category {
 export interface User {
   id: number;
   fullName?: string | null;
-  phone?: string | null;
-  avatar?: (number | null) | Media;
-  role: 'ADMIN' | 'STUDENT';
-  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
-  /**
-   * Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.
-   */
-  isWalkIn?: boolean | null;
-  verifiedAt?: string | null;
-  lastLoginAt?: string | null;
-  /**
-   * Admin đã tạo tài khoản này. Trống với tài khoản tự đăng ký.
-   */
-  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -804,6 +809,38 @@ export interface Form {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "students".
+ */
+export interface Student {
+  id: number;
+  fullName?: string | null;
+  phone?: string | null;
+  avatar?: (number | null) | Media;
+  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
+  /**
+   * Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.
+   */
+  isWalkIn?: boolean | null;
+  verifiedAt?: string | null;
+  lastLoginAt?: string | null;
+  /**
+   * Nhân sự đã tạo tài khoản này. Trống với tài khoản tự đăng ký.
+   */
+  createdBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  password?: string | null;
+  collection: 'students';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "courses".
  */
 export interface Course {
@@ -931,7 +968,7 @@ export interface Class {
  */
 export interface Notification {
   id: number;
-  user: number | User;
+  user: number | Student;
   type: 'ACCOUNT_CREATED';
   title: string;
   content: string;
@@ -948,19 +985,6 @@ export interface Notification {
     | boolean
     | null;
   isRead?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "audit-logs".
- */
-export interface AuditLog {
-  id: number;
-  action: 'LOGIN_SUCCESS' | 'LOGOUT' | 'LOGOUT_ALL' | 'REFRESH_REUSE';
-  user?: (number | null) | User;
-  ip: string;
-  userAgent: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -1175,6 +1199,10 @@ export interface PayloadLockedDocument {
         value: number | User;
       } | null)
     | ({
+        relationTo: 'students';
+        value: number | Student;
+      } | null)
+    | ({
         relationTo: 'courses';
         value: number | Course;
       } | null)
@@ -1193,10 +1221,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'notifications';
         value: number | Notification;
-      } | null)
-    | ({
-        relationTo: 'audit-logs';
-        value: number | AuditLog;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1219,10 +1243,15 @@ export interface PayloadLockedDocument {
         value: number | FolderInterface;
       } | null);
   globalSlug?: string | null;
-  user: {
-    relationTo: 'users';
-    value: number | User;
-  };
+  user:
+    | {
+        relationTo: 'users';
+        value: number | User;
+      }
+    | {
+        relationTo: 'students';
+        value: number | Student;
+      };
   updatedAt: string;
   createdAt: string;
 }
@@ -1232,10 +1261,15 @@ export interface PayloadLockedDocument {
  */
 export interface PayloadPreference {
   id: number;
-  user: {
-    relationTo: 'users';
-    value: number | User;
-  };
+  user:
+    | {
+        relationTo: 'users';
+        value: number | User;
+      }
+    | {
+        relationTo: 'students';
+        value: number | Student;
+      };
   key?: string | null;
   value?:
     | {
@@ -1546,14 +1580,6 @@ export interface CategoriesSelect<T extends boolean = true> {
  */
 export interface UsersSelect<T extends boolean = true> {
   fullName?: T;
-  phone?: T;
-  avatar?: T;
-  role?: T;
-  status?: T;
-  isWalkIn?: T;
-  verifiedAt?: T;
-  lastLoginAt?: T;
-  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1570,6 +1596,29 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "students_select".
+ */
+export interface StudentsSelect<T extends boolean = true> {
+  fullName?: T;
+  phone?: T;
+  avatar?: T;
+  status?: T;
+  isWalkIn?: T;
+  verifiedAt?: T;
+  lastLoginAt?: T;
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1658,18 +1707,6 @@ export interface NotificationsSelect<T extends boolean = true> {
   content?: T;
   metadata?: T;
   isRead?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "audit-logs_select".
- */
-export interface AuditLogsSelect<T extends boolean = true> {
-  action?: T;
-  user?: T;
-  ip?: T;
-  userAgent?: T;
   updatedAt?: T;
   createdAt?: T;
 }

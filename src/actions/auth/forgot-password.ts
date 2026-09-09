@@ -38,7 +38,7 @@ export async function forgotPasswordAction(
 
     // Payload generates a resetPasswordToken on the user record when found
     const token = await payload.forgotPassword({
-      collection: 'users',
+      collection: 'students',
       data: { email },
       disableEmail: true,
     })

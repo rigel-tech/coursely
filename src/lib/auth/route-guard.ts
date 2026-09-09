@@ -14,11 +14,10 @@ export function decideRoute(
   user: AuthUser | null,
   hasPendingEmail: boolean,
 ): RouteDecision {
-  // Admin: bounce a signed-in non-admin. An anonymous visitor is left to
-  // Payload's own `/admin/login`, so it must not be redirected here.
-  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-    return user && user.role !== 'ADMIN' ? { type: 'redirect', to: '/' } : NEXT
-  }
+  // No `/admin` branch. `verifyAuthToken` rejects any token whose `collection` claim
+  // is not `users`, so a student reaches this function as `null` and Payload's own
+  // `canAccessAdmin` — backed by `Students.access.admin` — is what refuses the panel.
+  // Routing was never authorisation; it only looked like it.
 
   // OTP step needs the cookie `registerAction` / AUTH_022 set.
   if (pathname === '/xac-thuc-otp') {

@@ -83,14 +83,14 @@ afterEach(async () => {
   for (const email of usedEmails) {
     await redis.del(`otp:verify:${email}`, `otp:cooldown:${email}`, `otp:quota:${email}`)
     const { docs } = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 10,
       depth: 0,
     })
     for (const u of docs) {
       await payload.delete({ collection: 'notifications', where: { user: { equals: u.id } } })
-      await payload.delete({ collection: 'users', id: u.id })
+      await payload.delete({ collection: 'students', id: u.id })
     }
   }
   usedEmails.clear()
@@ -104,13 +104,21 @@ describe('registerAction — new email', () => {
     expect(await run(validForm(email))).toEqual({ status: 'success' })
 
     const { docs } = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       depth: 0,
     })
     expect(docs).toHaveLength(1)
     expect(docs[0].status).toBe('PENDING_VERIFICATION')
-    expect(docs[0].role).toBe('STUDENT')
+
+    // The whole point of the split: registration writes to `students` and leaves
+    // `users` — the staff table — untouched.
+    const staff = await payload.find({
+      collection: 'users',
+      where: { email: { equals: email } },
+      limit: 0,
+    })
+    expect(staff.totalDocs).toBe(0)
 
     const notes = await payload.find({
       collection: 'notifications',
@@ -131,15 +139,15 @@ describe('registerAction — existing ACTIVE email', () => {
   it('does not reveal the collision: no new user, duplicate-attempt email, still cookie + success', async () => {
     const email = uniqueEmail('active')
     await payload.create({
-      collection: 'users',
-      data: { email, password: 'abcd1234', role: 'STUDENT', status: 'ACTIVE' },
+      collection: 'students',
+      data: { email, password: 'abcd1234', status: 'ACTIVE' },
     })
     const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
 
     expect(await run(validForm(email))).toEqual({ status: 'success' })
 
     const { totalDocs } = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 0,
     })
@@ -154,11 +162,11 @@ describe('registerAction — existing PENDING_VERIFICATION email', () => {
   it('updates credentials, issues a fresh OTP, and does not add a second notification', async () => {
     const email = uniqueEmail('pending')
     const existing = await payload.create({
-      collection: 'users',
-      data: { email, password: 'oldpass123', role: 'STUDENT', status: 'PENDING_VERIFICATION' },
+      collection: 'students',
+      data: { email, password: 'oldpass123', status: 'PENDING_VERIFICATION' },
     })
     const before = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       showHiddenFields: true,
       depth: 0,
@@ -178,7 +186,7 @@ describe('registerAction — existing PENDING_VERIFICATION email', () => {
 
     // Credentials were refreshed: the stored hash changed.
     const after = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       showHiddenFields: true,
       depth: 0,
@@ -192,8 +200,8 @@ describe('registerAction — DISABLED email', () => {
   it('does nothing but still sets the cookie and returns success', async () => {
     const email = uniqueEmail('disabled')
     await payload.create({
-      collection: 'users',
-      data: { email, password: 'abcd1234', role: 'STUDENT', status: 'DISABLED' },
+      collection: 'students',
+      data: { email, password: 'abcd1234', status: 'DISABLED' },
     })
     const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
 
@@ -221,7 +229,7 @@ describe('registerAction — transaction atomicity', () => {
 
     vi.restoreAllMocks()
     const { totalDocs } = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 0,
     })
@@ -237,7 +245,7 @@ describe('registerAction — guards', () => {
     expect(result.code).toBe('AUTH_001')
     expect(result.fieldErrors).toBeTruthy()
     const { totalDocs } = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 0,
     })

@@ -2,7 +2,7 @@
  * Registration domain logic (§5.1 steps 3–7). No HTTP concerns here — the caller
  * owns request headers, the `pending_email` cookie and the redirect. This module
  * owns: the per-IP rate check, email normalisation, the branch on any existing
- * account, the user + welcome-notification transaction, and issuing / emailing
+ * account, the student + welcome-notification transaction, and issuing / emailing
  * the OTP after that transaction commits.
  */
 import { getPayload, type Payload, type PayloadRequest } from 'payload'
@@ -22,7 +22,7 @@ export type RegisterServiceResult =
 /**
  * Runs a self-registration attempt. Returns the normalised email on success (for
  * the caller's cookie); `{ ok: false, reason: 'rate_limited' }` when the IP is
- * over quota. Throws on an unexpected failure — the user/notification write is
+ * over quota. Throws on an unexpected failure — the student/notification write is
  * rolled back before it propagates.
  */
 export async function registerStudent(
@@ -46,7 +46,7 @@ export async function registerStudent(
   // §5.1 step 4 — branch on any existing account
   const existing = (
     await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 1,
       depth: 0,
@@ -56,7 +56,7 @@ export async function registerStudent(
   let sendOtp = false
 
   if (!existing) {
-    await createUserWithWelcomeNotification(payload, {
+    await createStudentWithWelcomeNotification(payload, {
       email,
       password,
       fullName,
@@ -73,7 +73,7 @@ export async function registerStudent(
   } else if (existing.status === 'PENDING_VERIFICATION') {
     // treat as a resend: refresh credentials, no second notification
     await payload.update({
-      collection: 'users',
+      collection: 'students',
       id: existing.id,
       data: { password, fullName, phone },
     })
@@ -95,8 +95,8 @@ export async function registerStudent(
   return { ok: true, email }
 }
 
-/** §5.1 step 5 — user + welcome notification, atomically. */
-async function createUserWithWelcomeNotification(
+/** §5.1 step 5 — student + welcome notification, atomically. */
+async function createStudentWithWelcomeNotification(
   payload: Payload,
   data: {
     email: string
@@ -110,14 +110,13 @@ async function createUserWithWelcomeNotification(
   const transactionID = (await payload.db.beginTransaction()) ?? undefined
   const req = { transactionID } as PayloadRequest
   try {
-    const user = await payload.create({
-      collection: 'users',
+    const student = await payload.create({
+      collection: 'students',
       data: {
         email: data.email,
         password: data.password,
         fullName: data.fullName,
         phone: data.phone,
-        role: 'STUDENT',
         status: 'PENDING_VERIFICATION',
         isWalkIn: false,
       },
@@ -126,7 +125,7 @@ async function createUserWithWelcomeNotification(
     await payload.create({
       collection: 'notifications',
       data: {
-        user: user.id,
+        user: student.id,
         type: 'ACCOUNT_CREATED',
         title: 'Chào mừng bạn đến với Coursely',
         content: 'Tài khoản của bạn đã được tạo. Hãy xác minh email để bắt đầu.',

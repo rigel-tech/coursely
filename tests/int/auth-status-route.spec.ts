@@ -1,5 +1,8 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from 'vitest'
+// `payload.create` signs with jose, which rejects jsdom's Uint8Array realm.
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { getPayload, type Payload } from 'payload'
+import configPromise from '@payload-config'
 
 import { signAccessToken } from '@/services/session-token'
 
@@ -16,21 +19,62 @@ const { GET } = await import('@/app/(frontend)/next/auth-status/route')
 
 const ACCESS_COOKIE = 'coursely-access'
 
-const read = async (res: Response) => (await res.json()) as { authenticated: boolean }
+const read = async (res: Response) =>
+  (await res.json()) as {
+    authenticated: boolean
+    user?: { id: number; name: string; email?: string }
+  }
 
-afterEach(() => {
+let payload: Payload
+const madeIds = new Set<number>()
+
+const uniqueEmail = () => `auth-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`
+
+const seedStudent = async (fullName?: string) => {
+  const student = await payload.create({
+    collection: 'students',
+    data: { email: uniqueEmail(), password: 'Secret123', fullName, status: 'ACTIVE' },
+  })
+  madeIds.add(student.id as number)
+  return student
+}
+
+beforeAll(async () => {
+  payload = await getPayload({ config: await configPromise })
+})
+
+afterEach(async () => {
   ctx.cookieJar.clear()
   vi.useRealTimers()
+  for (const id of madeIds) {
+    await payload.delete({ collection: 'students', id }).catch(() => {})
+  }
+  madeIds.clear()
 })
 
 describe('GET /next/auth-status', () => {
-  it('reports authenticated for a valid, unexpired access cookie', async () => {
-    ctx.cookieJar.set(
-      ACCESS_COOKIE,
-      signAccessToken({ sub: 123, role: 'STUDENT', status: 'ACTIVE' }),
-    )
+  it('reports the signed-in student, named by fullName', async () => {
+    const student = await seedStudent('Nguyễn Văn A')
+    ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken({ sub: student.id as number }))
 
-    expect(await read(await GET())).toEqual({ authenticated: true })
+    expect(await read(await GET())).toEqual({
+      authenticated: true,
+      user: { id: student.id, name: 'Nguyễn Văn A', email: student.email },
+    })
+  })
+
+  it('falls back to the local part of the email when fullName is blank', async () => {
+    const student = await seedStudent()
+    ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken({ sub: student.id as number }))
+
+    const body = await read(await GET())
+    expect(body.user?.name).toBe(student.email.split('@')[0])
+  })
+
+  it('reports not authenticated when the token is valid but no such student exists', async () => {
+    ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken({ sub: 2_000_000_000 }))
+
+    expect(await read(await GET())).toEqual({ authenticated: false })
   })
 
   it('reports not authenticated when the cookie is absent', async () => {

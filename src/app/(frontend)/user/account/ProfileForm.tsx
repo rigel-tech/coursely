@@ -28,7 +28,7 @@ import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
 import { LogoutCta } from '@/components/public/LogoutCta'
 import { updateProfileAction, type ProfileFormState } from '@/actions/student/profile'
-import type { User, Media } from '@/payload-types'
+import type { Student, Media } from '@/payload-types'
 
 const initialState: ProfileFormState = {
   status: 'idle',
@@ -53,7 +53,7 @@ const COURSE_TABS = [
 type CourseTab = (typeof COURSE_TABS)[number]['key']
 
 interface ProfileFormProps {
-  user: User
+  user: Student
 }
 
 export function ProfileForm({ user }: ProfileFormProps) {

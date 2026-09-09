@@ -35,8 +35,8 @@ const users: number[] = []
 const makeUser = async () => {
   const email = `logoutall-${Date.now()}-${uid++}-${Math.random().toString(36).slice(2)}@example.com`
   const u = await payload.create({
-    collection: 'users',
-    data: { email, password: 'Secret123', role: 'STUDENT', status: 'ACTIVE' },
+    collection: 'students',
+    data: { email, password: 'Secret123', status: 'ACTIVE' },
   })
   users.push(u.id as number)
   scope.user(u.id as number)
@@ -53,15 +53,14 @@ afterEach(async () => {
   vi.restoreAllMocks()
   await scope.cleanup()
   for (const id of users.splice(0)) {
-    await payload.delete({ collection: 'audit-logs', where: { user: { equals: id } } })
-    await payload.delete({ collection: 'users', id })
+    await payload.delete({ collection: 'students', id })
   }
 })
 
 describe('logoutAllAction', () => {
-  it('revokes every session on the account incl. the caller, clears the index, audits once', async () => {
+  it('revokes every session on the account incl. the caller, clears the index', async () => {
     const user = await makeUser()
-    const su = { id: user.id as number, role: 'STUDENT', status: 'ACTIVE' }
+    const su = { id: user.id as number, status: 'ACTIVE' }
     const a = await createSession(su, { ip: '1.1.1.1', userAgent: 'dev-a' }, { rememberMe: true })
     const b = await createSession(su, { ip: '2.2.2.2', userAgent: 'dev-b' }, { rememberMe: true })
     const c = await createSession(su, { ip: '3.3.3.3', userAgent: 'dev-c' }, { rememberMe: false })
@@ -76,17 +75,5 @@ describe('logoutAllAction', () => {
       expect(await renewSession(t.refreshRaw, { ip: 'x', userAgent: 'y' })).toEqual({ ok: false })
     }
     expect(ctx.cookieJar.has(REFRESH_COOKIE)).toBe(false)
-
-    const rows = await payload.find({
-      collection: 'audit-logs',
-      where: { and: [{ user: { equals: user.id } }, { action: { equals: 'LOGOUT_ALL' } }] },
-      depth: 0,
-    })
-    expect(rows.totalDocs).toBe(1)
-    expect(rows.docs[0]).toMatchObject({
-      action: 'LOGOUT_ALL',
-      ip: '10.5.5.5',
-      userAgent: 'vitest-logout-all',
-    })
   })
 })

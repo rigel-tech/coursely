@@ -1,14 +1,9 @@
 import type { Metadata } from 'next'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import configPromise from '@payload-config'
-import { getPayload } from 'payload'
 import React from 'react'
 
-import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth'
-import { verifyAccessToken } from '@/lib/auth/access-token'
+import { getStudentSession } from '@/lib/auth/student-session'
 import { ProfileForm } from './ProfileForm'
-import type { User } from '@/payload-types'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,35 +13,17 @@ export const metadata: Metadata = {
 }
 
 export default async function ProfilePage() {
-  const token = (await cookies()).get(ACCESS_TOKEN_COOKIE)?.value
-  const claims = verifyAccessToken(token)
+  const student = await getStudentSession()
 
-  if (!claims || claims.status !== 'ACTIVE') {
+  // `status` is read from the document, not from the token: an account disabled
+  // mid-session loses the page on its next navigation rather than at token expiry.
+  if (!student || student.status !== 'ACTIVE') {
     redirect('/?callbackUrl=%2Ftai-khoan')
-  }
-
-  const payload = await getPayload({ config: configPromise })
-
-  let user: User | null = null
-  try {
-    user = (await payload.findByID({
-      collection: 'users',
-      id: claims.id,
-      depth: 1,
-      overrideAccess: true,
-    })) as User
-  } catch (err) {
-    console.error('Failed to fetch student profile:', err)
-    redirect('/')
-  }
-
-  if (!user) {
-    redirect('/')
   }
 
   return (
     <div className="pt-24 pb-24">
-      <ProfileForm user={user} />
+      <ProfileForm user={student} />
     </div>
   )
 }

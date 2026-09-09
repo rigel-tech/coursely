@@ -24,7 +24,7 @@ export async function verifyRegistration(
 
   const user = (
     await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 1,
       depth: 0,
@@ -34,14 +34,14 @@ export async function verifyRegistration(
   if (!user) return { ok: false, reason: 'session_expired' }
   if (user.status === 'DISABLED') return { ok: false, reason: 'disabled' }
 
-  const asUser = { id: user.id, role: user.role, status: 'ACTIVE' as const }
+  const asUser = { id: user.id, status: 'ACTIVE' as const }
   if (user.status === 'ACTIVE') return { ok: true, user: asUser }
 
   const result = await verifyOtp(email, otp)
   if (!result.ok) return result
 
   await payload.update({
-    collection: 'users',
+    collection: 'students',
     id: user.id,
     data: { status: 'ACTIVE', verifiedAt: new Date().toISOString() },
   })

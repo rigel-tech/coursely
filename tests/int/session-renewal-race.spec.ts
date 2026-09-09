@@ -23,8 +23,8 @@ const users: number[] = []
 const makeUser = async () => {
   const email = `race-${Date.now()}-${uid++}-${Math.random().toString(36).slice(2)}@example.com`
   const u = await payload.create({
-    collection: 'users',
-    data: { email, password: 'Secret123', role: 'STUDENT', status: 'ACTIVE' },
+    collection: 'students',
+    data: { email, password: 'Secret123', status: 'ACTIVE' },
   })
   users.push(u.id as number)
   scope.user(u.id as number)
@@ -38,21 +38,16 @@ beforeAll(async () => {
 afterEach(async () => {
   await scope.cleanup()
   for (const id of users.splice(0)) {
-    await payload.delete({ collection: 'audit-logs', where: { user: { equals: id } } })
-    await payload.delete({ collection: 'users', id })
+    await payload.delete({ collection: 'students', id })
   }
 })
 
 describe('renewSession — concurrent double-submit', () => {
-  it('both calls succeed with the SAME fresh tokens, one spent marker, no reuse audit', async () => {
+  it('both calls succeed with the SAME fresh tokens, one spent marker, no reuse', async () => {
     const user = await makeUser()
-    const first = await createSession(
-      { id: user.id as number, role: 'STUDENT', status: 'ACTIVE' },
-      ctx,
-      {
-        rememberMe: true,
-      },
-    )
+    const first = await createSession({ id: user.id as number, status: 'ACTIVE' }, ctx, {
+      rememberMe: true,
+    })
     const sid = (await redis.get(`refresh:${hashRefreshToken(first.refreshRaw)}`))!
 
     const [a, b] = await Promise.all([
@@ -75,12 +70,5 @@ describe('renewSession — concurrent double-submit', () => {
     expect(rec.refreshHash).toBe(hashRefreshToken(a.refreshRaw))
     expect(await redis.exists(`spent:${hashRefreshToken(first.refreshRaw)}`)).toBe(1)
     expect(await redis.exists(`spent:${hashRefreshToken(a.refreshRaw)}`)).toBe(0)
-
-    const reuse = await payload.find({
-      collection: 'audit-logs',
-      where: { and: [{ user: { equals: user.id } }, { action: { equals: 'REFRESH_REUSE' } }] },
-      limit: 0,
-    })
-    expect(reuse.totalDocs).toBe(0)
   })
 })

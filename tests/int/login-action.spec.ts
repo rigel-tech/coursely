@@ -47,6 +47,7 @@ const scope = new SessionScope()
 
 const rnd = () => Math.floor(Math.random() * 255)
 const usedEmails = new Set<string>()
+const staffIds = new Set<number>()
 const usedIps = new Set<string>()
 
 const uniqueEmail = (tag = 'login') => {
@@ -55,21 +56,26 @@ const uniqueEmail = (tag = 'login') => {
   return e
 }
 
-const makeUser = async (
-  over: { tag?: string; role?: 'ADMIN' | 'STUDENT'; status?: string; password?: string } = {},
-) => {
+const makeUser = async (over: { tag?: string; status?: string; password?: string } = {}) => {
   const email = uniqueEmail(over.tag)
   const password = over.password ?? 'Secret123'
   const user = await payload.create({
-    collection: 'users',
-    data: {
-      email,
-      password,
-      role: over.role ?? 'STUDENT',
-      status: (over.status ?? 'ACTIVE') as 'ACTIVE',
-    },
+    collection: 'students',
+    data: { email, password, status: (over.status ?? 'ACTIVE') as 'ACTIVE' },
   })
   scope.user(user.id as number)
+  return { email, password, user }
+}
+
+/** A staff account. `/dang-nhap` must treat it as an address it has never seen. */
+const makeStaff = async (tag = 'staff') => {
+  const email = uniqueEmail(tag)
+  const password = 'Secret123'
+  const user = await payload.create({
+    collection: 'users',
+    data: { email, password },
+  })
+  staffIds.add(user.id as number)
   return { email, password, user }
 }
 
@@ -107,25 +113,26 @@ afterEach(async () => {
       `otp:quota:${email}`,
     )
     const { docs } = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 10,
       depth: 0,
     })
     for (const u of docs) {
       await payload.delete({ collection: 'notifications', where: { user: { equals: u.id } } })
-      await payload.delete({ collection: 'audit-logs', where: { user: { equals: u.id } } })
-      await payload.delete({ collection: 'users', id: u.id })
+      await payload.delete({ collection: 'students', id: u.id })
     }
   }
   usedEmails.clear()
+  for (const id of staffIds) await payload.delete({ collection: 'users', id }).catch(() => {})
+  staffIds.clear()
 })
 
 describe('loginAction — success', () => {
-  it('ACTIVE user: access+refresh cookies, lastLoginAt stamped, one audit row, no notification, home', async () => {
+  it('ACTIVE user: access+refresh cookies, lastLoginAt stamped, no notification, home', async () => {
     const { email, password, user } = await makeUser()
     expect(
-      (await payload.findByID({ collection: 'users', id: user.id, depth: 0 })).lastLoginAt,
+      (await payload.findByID({ collection: 'students', id: user.id, depth: 0 })).lastLoginAt,
     ).toBeFalsy()
 
     const res = await run(form({ email, password }))
@@ -146,7 +153,7 @@ describe('loginAction — success', () => {
     expect(refreshOpts.maxAge).toBeUndefined()
 
     expect(
-      (await payload.findByID({ collection: 'users', id: user.id, depth: 0 })).lastLoginAt,
+      (await payload.findByID({ collection: 'students', id: user.id, depth: 0 })).lastLoginAt,
     ).toBeTruthy()
 
     const notes = await payload.find({
@@ -155,18 +162,6 @@ describe('loginAction — success', () => {
       limit: 0,
     })
     expect(notes.totalDocs).toBe(0)
-
-    const audit = await payload.find({
-      collection: 'audit-logs',
-      where: { user: { equals: user.id } },
-      depth: 0,
-    })
-    expect(audit.totalDocs).toBe(1)
-    expect(audit.docs[0]).toMatchObject({
-      action: 'LOGIN_SUCCESS',
-      ip: currentIp,
-      userAgent: 'vitest-login',
-    })
   })
 
   it('rememberMe extends the refresh cookie to 30 days; the access cookie stays a session cookie', async () => {
@@ -178,15 +173,7 @@ describe('loginAction — success', () => {
     expect((ctx.cookieOptions.get(ACCESS_COOKIE) as Record<string, unknown>).maxAge).toBeUndefined()
   })
 
-  it('sends an ADMIN to /admin and ignores callbackUrl', async () => {
-    const { email, password } = await makeUser({ role: 'ADMIN' })
-    expect(await run(form({ email, password, callbackUrl: '/khoa-hoc' }))).toMatchObject({
-      status: 'success',
-      redirectTo: '/admin',
-    })
-  })
-
-  it('sends a STUDENT to a same-site callbackUrl, else home', async () => {
+  it('sends a student to a same-site callbackUrl, else home', async () => {
     const a = await makeUser()
     expect(
       await run(form({ email: a.email, password: a.password, callbackUrl: '/khoa-hoc/abc' })),
@@ -203,6 +190,26 @@ describe('loginAction — success', () => {
     await redis.set(`rate:login:email:${email}`, '3')
     await run(form({ email, password }))
     expect(await redis.exists(`rate:login:email:${email}`)).toBe(0)
+  })
+})
+
+describe('loginAction — a staff account is not a principal here', () => {
+  it('refuses a users row with its own correct password, exactly like an unknown email', async () => {
+    const { email, password } = await makeStaff()
+
+    const res = await run(form({ email, password }))
+    expect(res).toMatchObject({
+      status: 'error',
+      code: 'AUTH_021',
+      message: 'Email hoặc mật khẩu không đúng.',
+    })
+
+    // No student session may ever be minted for a `users` document: the two tables
+    // have colliding serial ids, so one leaking into `session:index:{id}` puts two
+    // different accounts on one session line. See INVARIANTS.
+    expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
+    expect(ctx.cookieJar.has(REFRESH_COOKIE)).toBe(false)
+    expect(res).not.toHaveProperty('redirectTo')
   })
 })
 
@@ -263,7 +270,7 @@ describe('loginAction — status gate', () => {
     expect(res.message).toMatch(/khóa/)
     expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
     expect(
-      (await payload.findByID({ collection: 'users', id: user.id, depth: 0 })).lastLoginAt,
+      (await payload.findByID({ collection: 'students', id: user.id, depth: 0 })).lastLoginAt,
     ).toBeFalsy()
   })
 

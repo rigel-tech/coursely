@@ -22,8 +22,8 @@ const users: number[] = []
 const makeUser = async () => {
   const email = `proxy-${Date.now()}-${uid++}-${Math.random().toString(36).slice(2)}@example.com`
   const u = await payload.create({
-    collection: 'users',
-    data: { email, password: 'Secret123', role: 'STUDENT', status: 'ACTIVE' },
+    collection: 'students',
+    data: { email, password: 'Secret123', status: 'ACTIVE' },
   })
   users.push(u.id as number)
   scope.user(u.id as number)
@@ -39,15 +39,14 @@ beforeAll(async () => {
 afterEach(async () => {
   await scope.cleanup()
   for (const id of users.splice(0)) {
-    await payload.delete({ collection: 'audit-logs', where: { user: { equals: id } } })
-    await payload.delete({ collection: 'users', id })
+    await payload.delete({ collection: 'students', id })
   }
 })
 
 describe('proxy — student session', () => {
   it('valid access token: serves the page, no renewal, no Set-Cookie', async () => {
     const user = await makeUser()
-    const access = signAccessToken({ sub: user.id as number, role: 'STUDENT', status: 'ACTIVE' })
+    const access = signAccessToken({ sub: user.id as number, status: 'ACTIVE' })
 
     const res = await proxy(req(`${ACCESS_COOKIE}=${access}`))
 
@@ -59,7 +58,7 @@ describe('proxy — student session', () => {
   it('no access token but a valid refresh: renews inline, serves authenticated, sets fresh cookies', async () => {
     const user = await makeUser()
     const issued = await createSession(
-      { id: user.id as number, role: 'STUDENT', status: 'ACTIVE' },
+      { id: user.id as number, status: 'ACTIVE' },
       { ip: '10.0.0.9', userAgent: 'seed' },
       { rememberMe: true },
     )
@@ -77,7 +76,7 @@ describe('proxy — student session', () => {
   it('a reused refresh token: redirects to sign-in and clears both cookies', async () => {
     const user = await makeUser()
     const issued = await createSession(
-      { id: user.id as number, role: 'STUDENT', status: 'ACTIVE' },
+      { id: user.id as number, status: 'ACTIVE' },
       { ip: '10.0.0.9', userAgent: 'seed' },
       { rememberMe: true },
     )
@@ -88,7 +87,10 @@ describe('proxy — student session', () => {
 
     const res = await proxy(req(`${REFRESH_COOKIE}=${captured}`))
 
-    expect(res.headers.get('location')).toContain('/?callbackUrl=')
+    // `decideRoute` sends a signed-out visitor to the sign-in page, carrying the path
+    // it bounced them off. This asserted `/?callbackUrl=` — the shape `account/page.tsx`
+    // uses — from before the guard owned that redirect.
+    expect(res.headers.get('location')).toContain('/dang-nhap?callbackUrl=')
     expect(res.cookies.get(ACCESS_COOKIE)?.value).toBe('')
     expect(res.cookies.get(REFRESH_COOKIE)?.value).toBe('')
   })

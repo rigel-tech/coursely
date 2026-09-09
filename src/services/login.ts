@@ -3,8 +3,14 @@
  * writes the cookies. This module owns: the two rate-limit axes (per IP, per
  * email), the `payload.login` call and its error mapping, the app-level `status`
  * branch Payload does not know about, and — on success — clearing the email
- * counter, stamping `lastLoginAt`, and the audit-log row. No notification: a
- * login is routine and one per sign-in would flood the bell.
+ * counter and stamping `lastLoginAt`. No notification: a login is routine and one
+ * per sign-in would flood the bell.
+ *
+ * This is the **students** door. A `users` row — staff — is not a principal here:
+ * `payload.login` on `students` cannot find it, so it is refused with the same
+ * `AUTH_021` as an address that does not exist. That is deliberate, and it is also
+ * what keeps `session:index:{userId}` free of `users` ids; the two tables have
+ * colliding serial ids. Staff sign in at Payload's own `/admin/login`.
  */
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
@@ -20,7 +26,7 @@ export type LoginContext = { ip: string; userAgent: string }
 export type LoginServiceResult =
   | {
       ok: true
-      user: { id: number; role?: string; status?: string }
+      user: { id: number; status?: string }
       rememberMe: boolean
       redirectTo: string
     }
@@ -37,7 +43,8 @@ const emailKey = (email: string) => `rate:login:email:${email}`
 
 export async function authenticateUser(
   input: LoginInput,
-  { ip, userAgent }: LoginContext,
+  // `userAgent` stays on `LoginContext` — the caller still needs it for `createSession`.
+  { ip }: LoginContext,
 ): Promise<LoginServiceResult> {
   const email = input.email.trim().toLowerCase()
 
@@ -54,7 +61,7 @@ export async function authenticateUser(
   let result: Awaited<ReturnType<Payload['login']>>
   try {
     result = await payload.login({
-      collection: 'users',
+      collection: 'students',
       data: { email, password: input.password },
     })
   } catch (err) {
@@ -79,7 +86,7 @@ export async function authenticateUser(
     throw err
   }
 
-  const user = result.user as { id: number; role?: string; status?: string }
+  const user = result.user as { id: number; status?: string }
 
   // §7 — status lives in our schema, Payload never checked it.
   if (user.status === 'DISABLED') {
@@ -108,20 +115,16 @@ export async function authenticateUser(
   // caller mints the session tokens (`payload.login`'s own JWT is discarded).
   await clearRate(emailKey(email))
   await payload.update({
-    collection: 'users',
+    collection: 'students',
     id: user.id,
     data: { lastLoginAt: new Date().toISOString() },
-  })
-  await payload.create({
-    collection: 'audit-logs',
-    data: { action: 'LOGIN_SUCCESS', user: user.id, ip, userAgent },
   })
 
   return {
     ok: true,
-    user: { id: user.id, role: user.role, status: user.status },
+    user: { id: user.id, status: user.status },
     rememberMe: input.rememberMe,
-    redirectTo: user.role === 'ADMIN' ? '/admin' : (input.callbackUrl ?? '/'),
+    redirectTo: input.callbackUrl ?? '/',
   }
 }
 
@@ -129,7 +132,7 @@ export async function authenticateUser(
 async function lockUntil(payload: Payload, email: string): Promise<Date | null> {
   const doc = (
     await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 1,
       depth: 0,

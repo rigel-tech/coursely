@@ -18,8 +18,11 @@
  *
  * Renewal is Redis-only: `role`/`status` are stamped onto the record at sign-in
  * and carried forward on each rotation. An account disabled mid-session is out of
- * scope here — a Users afterChange hook that calls `revokeAllForUser` is the
+ * scope here — a `students` afterChange hook that calls `revokeAllForUser` is the
  * clean follow-up; renewal deliberately does no Payload read (spec Q2 → B).
+ *
+ * Nothing in this module writes to the database: reuse detection revokes the line
+ * and logs, and that log is the only record it leaves.
  */
 import { randomBytes } from 'node:crypto'
 
@@ -215,14 +218,21 @@ export async function renewSession(rawRefresh: string, ctx: SessionCtx): Promise
     if (cached) return { ok: true, ...cached }
 
     await revokeSession(info.sid)
-    await writeReuseAudit(info.userId, ctx)
+    // The line is revoked either way; this log is the only trace the detection
+    // leaves behind, so it carries everything an investigation would want.
+    console.error('refresh token reuse detected', {
+      userId: info.userId,
+      sid: info.sid,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    })
     return { ok: false, reuse: true }
   }
 
   return { ok: false }
 }
 
-/** End one session. Idempotent; a missing sid is a no-op. Caller writes the audit row. */
+/** End one session. Idempotent; a missing sid is a no-op. */
 export async function revokeSession(sid: string): Promise<void> {
   const [refreshHash, userId] = await redis.hmget(sessionKey(sid), 'refreshHash', 'userId')
   const m = redis.multi().del(sessionKey(sid)).del(raceKey(sid))
@@ -258,23 +268,4 @@ export async function findSessionByRefresh(
   }
 
   return null
-}
-
-/**
- * Best-effort `REFRESH_REUSE` audit row. Dynamically imports Payload so the
- * static module graph stays free of it (this file is imported by `proxy`). A
- * failure here must not swallow the security response, so it only logs.
- */
-async function writeReuseAudit(userId: number, ctx: SessionCtx): Promise<void> {
-  try {
-    const { getPayload } = await import('payload')
-    const configPromise = (await import('@payload-config')).default
-    const payload = await getPayload({ config: await configPromise })
-    await payload.create({
-      collection: 'audit-logs',
-      data: { action: 'REFRESH_REUSE', user: userId, ip: ctx.ip, userAgent: ctx.userAgent },
-    })
-  } catch (err) {
-    console.error('failed to write REFRESH_REUSE audit row', err)
-  }
 }

@@ -37,8 +37,6 @@ beforeAll(async () => {
     data: {
       email: `classes-int-${Date.now()}@example.com`,
       password: 'Secret123',
-      role: 'STUDENT',
-      status: 'ACTIVE',
     },
   })
   userId = user.id as number

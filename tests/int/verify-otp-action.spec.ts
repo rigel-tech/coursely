@@ -60,8 +60,8 @@ const run = (fd: FormData) => verifyOtpAction(initialVerifyOtpState, fd)
 const seed = async (status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED', tag?: string) => {
   const email = uniqueEmail(tag)
   const user = await payload.create({
-    collection: 'users',
-    data: { email, password: 'abcd1234', role: 'STUDENT', status },
+    collection: 'students',
+    data: { email, password: 'abcd1234', status },
   })
   scope.user(user.id as number)
   ctx.cookieJar.set(PENDING_EMAIL_COOKIE, email)
@@ -83,14 +83,14 @@ afterEach(async () => {
   for (const email of usedEmails) {
     await redis.del(`otp:verify:${email}`, `otp:cooldown:${email}`, `otp:quota:${email}`)
     const { docs } = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 10,
       depth: 0,
     })
     for (const u of docs) {
       await payload.delete({ collection: 'notifications', where: { user: { equals: u.id } } })
-      await payload.delete({ collection: 'users', id: u.id })
+      await payload.delete({ collection: 'students', id: u.id })
     }
   }
   usedEmails.clear()
@@ -103,7 +103,7 @@ describe('verifyOtpAction — happy path', () => {
 
     expect(await run(form(otp))).toEqual({ status: 'success', redirectTo: '/' })
 
-    const after = await payload.findByID({ collection: 'users', id: user.id, depth: 0 })
+    const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('ACTIVE')
     expect(after.verifiedAt).toBeTruthy()
     expect(ctx.cookieJar.has(PENDING_EMAIL_COOKIE)).toBe(false)
@@ -142,7 +142,7 @@ describe('verifyOtpAction — rejected input', () => {
     expect(result.status).toBe('error')
     expect(result.message).toMatch(/6 chữ số/i)
 
-    const after = await payload.findByID({ collection: 'users', id: user.id, depth: 0 })
+    const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('PENDING_VERIFICATION')
     expect(await redis.hget(`otp:verify:${email}`, 'attempts')).toBe('0')
   })
@@ -158,7 +158,7 @@ describe('verifyOtpAction — wrong code', () => {
     expect(result.status).toBe('error')
     expect(result.message).toMatch(/còn 4 lần/i)
 
-    const after = await payload.findByID({ collection: 'users', id: user.id, depth: 0 })
+    const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('PENDING_VERIFICATION')
     expect(await redis.hget(`otp:verify:${email}`, 'attempts')).toBe('1')
   })
@@ -186,7 +186,7 @@ describe('verifyOtpAction — disabled account', () => {
     expect(result.status).toBe('error')
     expect(result.message).toMatch(/khoá/i)
 
-    const after = await payload.findByID({ collection: 'users', id: user.id, depth: 0 })
+    const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('DISABLED')
     expect(await redis.exists(`otp:verify:${email}`)).toBe(1)
   })

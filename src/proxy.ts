@@ -33,9 +33,9 @@ const jwtSecret = createHash('sha256')
   .digest('hex')
   .slice(0, 32)
 
-const USER_HEADERS = ['x-user-id', 'x-user-role', 'x-user-status']
+const USER_HEADERS = ['x-user-id', 'x-user-status']
 
-type GuardUser = { id: number; role?: string; status?: string }
+type GuardUser = { id: number; status?: string }
 type Identity = { user: GuardUser | null; renewed?: IssuedSession; clearStudent?: boolean }
 
 const isAdminPath = (pathname: string) => pathname === '/admin' || pathname.startsWith('/admin/')
@@ -71,7 +71,6 @@ function withUserHeaders(request: NextRequest, user: GuardUser | null): NextResp
   for (const h of USER_HEADERS) headers.delete(h)
   if (user) {
     headers.set('x-user-id', String(user.id))
-    if (user.role) headers.set('x-user-role', user.role)
     if (user.status) headers.set('x-user-status', user.status)
   }
   return NextResponse.next({ request: { headers } })

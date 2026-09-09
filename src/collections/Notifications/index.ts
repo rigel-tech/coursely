@@ -3,10 +3,13 @@ import type { CollectionConfig } from 'payload'
 import { authenticated } from '../../access/authenticated'
 
 /**
- * In-app notifications shown to a user. The registration flow writes an
- * `ACCOUNT_CREATED` row inside the same transaction as the new user — a user
- * must never exist without its welcome notification — so `user` is required.
- * More `type` values are added as other features raise notifications.
+ * In-app notifications shown to a student. The registration flow writes an
+ * `ACCOUNT_CREATED` row inside the same transaction as the new account — a
+ * student must never exist without its welcome notification — so `user` is
+ * required. More `type` values are added as other features raise notifications.
+ *
+ * `user` points at `students`, not `users`: notifications are addressed to the
+ * public site. Staff never receive them.
  */
 export const Notifications: CollectionConfig = {
   slug: 'notifications',
@@ -24,7 +27,7 @@ export const Notifications: CollectionConfig = {
     {
       name: 'user',
       type: 'relationship',
-      relationTo: 'users',
+      relationTo: 'students',
       required: true,
       index: true,
     },
