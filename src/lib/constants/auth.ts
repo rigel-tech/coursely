@@ -17,37 +17,23 @@ export const REMEMBER_ME_MAX_AGE_SEC = 30 * 24 * 60 * 60
 export const AUTH_TOKEN_COOKIE = 'payload-token'
 
 /**
- * Custom student-session tokens (§ access+refresh sessions). `ACCESS` is a
- * stateless ~15-minute HS256 JWT verified in `proxy` with no datastore hit;
- * `REFRESH` is an opaque value whose SHA-256 hash keys a Redis session record.
- * Distinct from `AUTH_TOKEN_COOKIE` so a signed-in admin and a signed-in student
- * can coexist in one browser.
+ * The student-session cookies. Both carry a self-contained HS256 JWT — `ACCESS` a
+ * ~15-minute one, `REFRESH` one that lasts the session — so `proxy` can verify
+ * and renew with no datastore hit. Distinct from `AUTH_TOKEN_COOKIE` so a
+ * signed-in admin and a signed-in student can coexist in one browser.
  */
 export const ACCESS_TOKEN_COOKIE = 'coursely-access'
 export const REFRESH_TOKEN_COOKIE = 'coursely-refresh'
 
-/** Access-token lifetime. Bounds how long a revoked session's access token stays usable. */
+/** How long an access token stays usable — and so how stale its `status` claim can be. */
 export const ACCESS_TTL_SEC = 15 * 60
 
 /**
- * Refresh-token lifetimes. With `rememberMe` the session is a rolling
- * `REFRESH_IDLE_TTL_SEC` window from the last renewal, capped by
- * `REFRESH_ABSOLUTE_TTL_SEC` from the session-line's creation. Without it the
- * refresh cookie is a browser-session cookie and the server record self-expires
- * after `REFRESH_NO_REMEMBER_TTL_SEC` of inactivity.
+ * Refresh-token lifetime without "remember me". The cookie dies with the browser
+ * anyway; this bounds the token itself, which is what makes the session end.
+ * With "remember me" the lifetime is `REMEMBER_ME_MAX_AGE_SEC` above.
  */
-export const REFRESH_IDLE_TTL_SEC = 30 * 24 * 60 * 60
-export const REFRESH_ABSOLUTE_TTL_SEC = 90 * 24 * 60 * 60
 export const REFRESH_NO_REMEMBER_TTL_SEC = 12 * 60 * 60
-
-/**
- * Renewal concurrency. `REFRESH_LOCK_MS` is the single-flight lock hold on
- * `lock:sess:{sid}`; `RENEWAL_GRACE_SEC` is how long the winner's freshly-minted
- * tokens are cached at `race:{sid}` for a concurrent double-submit to pick up
- * instead of being mistaken for token reuse.
- */
-export const REFRESH_LOCK_MS = 5000
-export const RENEWAL_GRACE_SEC = 10
 
 /** Route prefixes `proxy` gates behind a signed-in `ACTIVE` account. */
 export const PROTECTED_PREFIXES = ['/tai-khoan', '/khoa-hoc-cua-toi'] as const

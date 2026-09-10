@@ -22,7 +22,7 @@ import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth'
-import { verifyAccessToken } from '@/lib/auth/access-token'
+import { verifyAccessToken } from '@/lib/auth/session-token'
 import type { Student } from '@/payload-types'
 
 /** The signed-in student, or `null` if there is no usable session. */

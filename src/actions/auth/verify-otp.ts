@@ -1,11 +1,10 @@
 'use server'
 
-import { cookies, headers } from 'next/headers'
+import { cookies } from 'next/headers'
 
 import { PENDING_EMAIL_COOKIE } from '@/lib/constants/auth'
 import type { VerifyOtpState } from '@/lib/constants/verify-otp-state'
 import { verifyRegistration } from '@/services/verify-registration'
-import { createSession } from '@/services/session-store'
 import { setSessionCookies } from '@/lib/auth/session-cookies'
 
 const SESSION_EXPIRED = 'Phiên xác minh đã hết hạn. Vui lòng đăng ký lại.'
@@ -55,14 +54,9 @@ export async function verifyOtpAction(
     }
   }
 
-  const h = await headers()
-  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || 'unknown'
-  const userAgent = h.get('user-agent') || 'unknown'
-
-  const issued = await createSession(result.user, { ip, userAgent }, { rememberMe: true })
   const jar = await cookies()
   jar.delete(PENDING_EMAIL_COOKIE)
-  setSessionCookies(jar, issued)
+  setSessionCookies(jar, result.user, { rememberMe: true })
 
   return { status: 'success', redirectTo: '/' }
 }

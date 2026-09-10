@@ -5,7 +5,6 @@ import configPromise from '@payload-config'
 import { issueOtp } from '@/services/otp-store'
 import { clearOtp, readOtp } from './helpers/otp-record'
 import { PENDING_EMAIL_COOKIE, REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
-import { SessionScope } from './helpers/session-keys'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so the
@@ -35,7 +34,6 @@ vi.mock('next/headers', () => ({
 
 const ACCESS_COOKIE = 'coursely-access'
 const REFRESH_COOKIE = 'coursely-refresh'
-const scope = new SessionScope()
 
 const { verifyOtpAction } = await import('@/actions/auth/verify-otp')
 const { initialVerifyOtpState } = await import('@/lib/constants/verify-otp-state')
@@ -63,7 +61,6 @@ const seed = async (status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED', tag?
     collection: 'students',
     data: { email, password: 'abcd1234', status },
   })
-  scope.user(user.id as number)
   ctx.cookieJar.set(PENDING_EMAIL_COOKIE, email)
   return { email, user }
 }
@@ -79,7 +76,6 @@ beforeEach(() => {
 
 afterEach(async () => {
   vi.restoreAllMocks()
-  await scope.cleanup()
   for (const email of usedEmails) {
     await clearOtp(payload, email)
     const { docs } = await payload.find({

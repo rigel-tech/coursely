@@ -3,7 +3,6 @@
 // only thing that ever removes a stale record is a read that trips over it. That is
 // what most of this spec is about — the counting rules were already true on Redis.
 
-import { readFileSync } from 'node:fs'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
@@ -16,7 +15,6 @@ import {
   OTP_TTL_SEC,
 } from '@/services/otp-store'
 import { verifyOtpHash } from '@/services/otp'
-import { redis } from '@/lib/redis'
 
 /** The record `otp-store` keeps. Written here directly to age a challenge without waiting. */
 type OtpRecord = { hash: string; attempts: number; expiresAt: number; nextResendAt: number }
@@ -66,16 +64,6 @@ describe('issueOtp', () => {
     expect(record!.expiresAt).toBeGreaterThan(nowSec() + OTP_TTL_SEC - 20)
     expect(record!.expiresAt).toBeLessThanOrEqual(nowSec() + OTP_TTL_SEC)
     expect(record!.nextResendAt).toBeGreaterThan(nowSec())
-  })
-
-  it('leaves nothing behind in Redis', async () => {
-    const email = freshEmail()
-
-    await issueOtp(payload, email)
-
-    expect(
-      await redis.exists(`otp:verify:${email}`, `otp:cooldown:${email}`, `otp:quota:${email}`),
-    ).toBe(0)
   })
 
   it('overwrites the previous code so the old one no longer verifies', async () => {
@@ -202,11 +190,5 @@ describe('verifyOtp', () => {
     // Still locked, and the right code no longer helps either.
     expect(await verifyOtp(payload, email, otp)).toEqual({ ok: false, reason: 'locked' })
     expect((await read(email))!.attempts).toBe(OTP_MAX_VERIFY_ATTEMPTS)
-  })
-})
-
-describe('the module itself', () => {
-  it('no longer reaches for Redis', () => {
-    expect(readFileSync('src/services/otp-store.ts', 'utf8')).not.toContain('@/lib/redis')
   })
 })

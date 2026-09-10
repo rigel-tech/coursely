@@ -20,10 +20,10 @@ import { authenticated } from '../../access/authenticated'
  * `payload.login`, `forgotPassword`, `resetPassword` and `unlock` all throw the
  * moment `disableLocalStrategy` is set.
  *
- * `useSessions: false` because the Redis session store is the student session
- * mechanism — Payload's own JWT is discarded on every sign-in, so the rows it
- * would write have no reader. With the flag off, no `sessions` field is added
- * and no `students_sessions` table is created at all.
+ * `useSessions: false` because the `coursely-access` / `coursely-refresh` cookie
+ * pair is the student session mechanism — Payload's own JWT is discarded on every
+ * sign-in, so the rows it would write have no reader. With the flag off, no
+ * `sessions` field is added and no `students_sessions` table is created at all.
  */
 export const Students: CollectionConfig = {
   slug: 'students',

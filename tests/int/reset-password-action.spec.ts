@@ -4,9 +4,6 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { createSession, renewSession } from '@/services/session-store'
-import { SessionScope } from './helpers/session-keys'
-
 const { resetPasswordAction } = await import('@/actions/auth/reset-password')
 
 const idle = { status: 'idle' as const }
@@ -14,7 +11,6 @@ const OLD = 'OldPass123'
 const NEW = 'BrandNew456'
 
 let payload: Payload
-const scope = new SessionScope()
 const madeIds = new Set<number>()
 
 const uniqueEmail = () => `reset-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`
@@ -25,7 +21,6 @@ const seedStudent = async () => {
     data: { email: uniqueEmail(), password: OLD, status: 'ACTIVE' },
   })
   madeIds.add(student.id as number)
-  scope.user(student.id as number)
   return student
 }
 
@@ -51,7 +46,6 @@ beforeAll(async () => {
 })
 
 afterEach(async () => {
-  await scope.cleanup()
   for (const id of madeIds) {
     await payload.delete({ collection: 'students', id }).catch(() => {})
   }
@@ -71,24 +65,6 @@ describe('resetPasswordAction — a valid token', () => {
 
     await expect(signIn(student.email, NEW)).resolves.toBeTruthy()
     await expect(signIn(student.email, OLD)).rejects.toThrow()
-  })
-
-  it('revokes every session the account had — a password reset ends other devices', async () => {
-    const student = await seedStudent()
-    const ctx = { ip: '10.9.9.9', userAgent: 'vitest-reset' }
-    const a = await createSession({ id: student.id as number, status: 'ACTIVE' }, ctx, {
-      rememberMe: true,
-    })
-    const b = await createSession({ id: student.id as number, status: 'ACTIVE' }, ctx, {
-      rememberMe: true,
-    })
-    scope.token(a.refreshRaw, b.refreshRaw)
-
-    const token = await tokenFor(student.email)
-    await resetPasswordAction(idle, form({ token, password: NEW, confirmPassword: NEW }))
-
-    expect(await renewSession(a.refreshRaw, ctx)).toEqual({ ok: false })
-    expect(await renewSession(b.refreshRaw, ctx)).toEqual({ ok: false })
   })
 })
 

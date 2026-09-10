@@ -4,7 +4,6 @@ import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 
 import { parseResetPasswordInput } from '@/lib/validation/reset-password-schema'
-import { revokeAllForUser } from '@/services/session-store'
 
 export type ResetPasswordFormState = {
   status: 'idle' | 'success' | 'error'
@@ -51,15 +50,8 @@ export async function resetPasswordAction(
       }
     }
 
-    // Revoke all existing active sessions on other devices for this user
-    try {
-      if (typeof result.user.id === 'number') {
-        await revokeAllForUser(result.user.id)
-      }
-    } catch (err) {
-      console.error('Failed to revoke sessions after password reset:', err)
-    }
-
+    // Sessions elsewhere are not ended here: a refresh token is self-contained and
+    // there is no record to revoke, so each one lives until it expires.
     return {
       status: 'success',
       message: 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới ngay bây giờ.',

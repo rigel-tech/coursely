@@ -4,7 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { signAccessToken } from '@/services/session-token'
+import { signAccessToken } from '@/lib/auth/session-token'
 
 const ctx = vi.hoisted(() => ({
   cookieJar: new Map<string, string>(),
@@ -38,7 +38,7 @@ const seedStudent = async (status: 'ACTIVE' | 'PENDING_VERIFICATION' = 'ACTIVE')
     data: { email: uniqueEmail(), password: 'Secret123', fullName: 'Tên Cũ', status },
   })
   madeIds.add(student.id as number)
-  ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken({ sub: student.id as number, status }))
+  ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken({ id: student.id as number, status }))
   return student
 }
 

@@ -5,10 +5,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { redis } from '@/lib/redis'
 import { clearOtp, readOtp } from './helpers/otp-record'
 import { REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
-import { SessionScope } from './helpers/session-keys'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so the
@@ -44,7 +42,6 @@ const REFRESH_COOKIE = 'coursely-refresh'
 
 let payload: Payload
 let currentIp: string
-const scope = new SessionScope()
 
 const rnd = () => Math.floor(Math.random() * 255)
 const usedEmails = new Set<string>()
@@ -64,7 +61,6 @@ const makeUser = async (over: { tag?: string; status?: string; password?: string
     collection: 'students',
     data: { email, password, status: (over.status ?? 'ACTIVE') as 'ACTIVE' },
   })
-  scope.user(user.id as number)
   return { email, password, user }
 }
 
@@ -103,7 +99,6 @@ beforeEach(() => {
 
 afterEach(async () => {
   vi.restoreAllMocks()
-  await scope.cleanup()
   usedIps.clear()
   for (const email of usedEmails) {
     await clearOtp(payload, email)
@@ -202,7 +197,7 @@ describe('loginAction — a staff account is not a principal here', () => {
 })
 
 describe('loginAction — bad credentials', () => {
-  it('wrong password: AUTH_021, no cookie, and no counter is written', async () => {
+  it('wrong password: AUTH_021, no cookie', async () => {
     const { email } = await makeUser()
     const res = await run(form({ email, password: 'WrongPass1' }))
     expect(res).toMatchObject({
@@ -211,9 +206,6 @@ describe('loginAction — bad credentials', () => {
       message: 'Email hoặc mật khẩu không đúng.',
     })
     expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
-    // A failed sign-in used to bump two Redis counters. Both axes are gone, so a
-    // failure must leave no trace at all behind.
-    expect(await redis.exists(`rate:login:ip:${currentIp}`, `rate:login:email:${email}`)).toBe(0)
   })
 
   it('unknown email is indistinguishable from a wrong password', async () => {

@@ -2,30 +2,21 @@
 
 import { cookies } from 'next/headers'
 
-import { REFRESH_TOKEN_COOKIE } from '@/lib/constants/auth'
 import { clearSessionCookies } from '@/lib/auth/session-cookies'
-import { findSessionByRefresh, revokeSession } from '@/services/session-store'
 
 /**
- * Sign out of the current device (§ access+refresh sessions). Resolves the
- * session from the `coursely-refresh` cookie itself — never from `x-user-*`,
- * which a caller could carry from a different tab — revokes it, clears both
- * cookies, and returns `redirectTo` for the client to navigate (it must not
- * `redirect()` in the same pass — see INVARIANTS).
+ * Sign out of this device. Both tokens live entirely in the cookies, so dropping
+ * them is the whole of it — there is no record to revoke and nothing to read.
  *
- * Revoking kills the refresh token immediately; the access token is stateless
- * and stays signature-valid until it expires. That is harmless here because the
- * cookie is cleared from this browser in the same call.
+ * It returns `redirectTo` instead of calling `redirect()`: clearing a cookie and
+ * redirecting in the same pass loses the `Set-Cookie` (see INVARIANTS), so the
+ * client owns the navigation.
+ *
+ * A copy of either token taken off this browser keeps working until it expires.
+ * That is the trade the stateless design makes, and it is why the refresh token's
+ * lifetime is the only bound on a session.
  */
 export async function logoutAction(): Promise<{ redirectTo: string }> {
-  const jar = await cookies()
-  const refresh = jar.get(REFRESH_TOKEN_COOKIE)?.value
-
-  if (refresh) {
-    const found = await findSessionByRefresh(refresh)
-    if (found) await revokeSession(found.sid)
-  }
-
-  clearSessionCookies(jar)
+  clearSessionCookies(await cookies())
   return { redirectTo: '/' }
 }

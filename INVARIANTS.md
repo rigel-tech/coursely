@@ -275,49 +275,50 @@ access/refresh branch). The student cookies are written by `src/lib/auth/session
 
 ## Sessions
 
-### One active session record per session line — rotation is in place
+### The `coursely-*` cookies carry `students` ids and nothing else
 
-**Rule** — `renewSession` in `src/services/session-store.ts` rotates a session by `HSET`-ing
-the new refresh-token hash onto the **existing** `session:{sid}` record — same `sid`, same
-`lineId`. It must never `create` a fresh record on renewal. The old token's hash moves to a
-`spent:{hash}` marker; `refresh:{newHash}` points back at the same `sid`.
-
-**Why it breaks silently** — a renewal that writes a _new_ record instead still returns a
-working token pair, so every happy-path test and manual check passes. But the account's
-`session:index:{userId}` set now carries two sids for one browser: `revokeAllForUser`
-(sign-out-everywhere) walks the set and can miss the orphan if it was added after the walk
-started, and the "session line" that reuse-detection revokes as a unit (`spent:` → one
-`sid`) no longer covers every record descended from that sign-in. Nothing throws; a user
-who "signed out everywhere" stays signed in on one device, and a stolen refresh token whose
-line was "revoked" still renews against the orphan.
-
-**Where** — `src/services/session-store.ts` (`rotate`, the single `HSET` on
-`session:{sid}`; `renewSession`'s single-flight lock that keeps two concurrent renewals from
-both creating state). `session:index:{userId}` is the set `revokeAllForUser` walks;
-`spent:{hash}` carries the `sid` that is the line identifier.
-
-### The Redis session store holds `students` ids and nothing else
-
-**Rule** — Every `createSession` call passes a document from the `students` collection. No
-sign-in path may mint a `coursely-access` / `coursely-refresh` pair for a `users` row, and
-nothing may write a `users` id into `session:index:{userId}`. Staff sessions are Payload's
-own `payload-token` and never enter this keyspace.
+**Rule** — Every `setSessionCookies` call passes claims taken from a `students` document.
+No sign-in path may mint a `coursely-access` / `coursely-refresh` pair for a `users` row.
+Staff sessions are Payload's own `payload-token` and never enter this scheme.
 
 **Why it breaks silently** — `users` and `students` are separate Postgres tables with
 independent `serial` primary keys, so their ids collide: `users.id = 7` and
-`students.id = 7` both exist and are different people. The session store keys purely by that
-number. A staff id landing in `session:index:{7}` therefore merges two accounts onto one
-session line — `revokeAllForUser` signs the wrong person out, `revokeAllForUser` after a
-password reset kills a stranger's sessions, and a `LOGOUT_ALL` audit row is written against
-the wrong account. Nothing throws, nothing logs, and every test that exercises one account
-at a time stays green. This is not hypothetical: before the split, `loginAction` issued the
-student cookie pair to anyone who authenticated at `/dang-nhap`, admins included.
+`students.id = 7` both exist and are different people. The claims carry that number and
+nothing else that would tell the tables apart, and `getStudentSession` looks the id up in
+`students` without question. A staff id in that cookie therefore signs a visitor in as
+whichever student happens to hold the same number — a real account, a real profile page, a
+real name in the header. Nothing throws, nothing logs, and every test that exercises one
+account at a time stays green. This is not hypothetical: before the split, `loginAction`
+issued the student cookie pair to anyone who authenticated at `/dang-nhap`, admins included.
 
 **Where** — the only two call sites are `src/actions/auth/login.ts` (`loginAction`) and
 `src/actions/auth/verify-otp.ts` (`verifyOtpAction`); both take their user from
 `src/services/login.ts` / `src/services/verify-registration.ts`, which query `students`.
-`src/services/session-store.ts` (`indexKey`, `createSession`, `revokeAllForUser`) is the
-keyspace this protects.
+`src/lib/auth/session-cookies.ts` and `src/lib/auth/session-token.ts` (`StudentClaims`) are
+what this protects. Pinned by `tests/int/login-action.spec.ts` § "a staff account is not a
+principal here".
+
+### A session cannot be revoked — it can only expire
+
+**Rule** — There is no session record anywhere: the refresh token _is_ the session, and
+`proxy` renews by checking a signature, reading nothing. So no feature may promise to end a
+session from the server — not "sign out everywhere", not "end other devices after a
+password change", not disabling an account mid-session. Anything of that sort needs a
+server-side check added back first (a `sessionVersion` on `students`, read on renewal);
+adding the button alone ships a lie.
+
+**Why it breaks silently** — every such feature has an obvious-looking implementation that
+returns success. Clearing the cookies signs _this_ browser out and looks exactly like it
+worked; setting `status: 'DISABLED'` writes a row and returns 200. Meanwhile the other
+device holds a token that verifies on its own for up to `REMEMBER_ME_MAX_AGE_SEC` — 30 days
+— and `status` inside a live access token is whatever it was at signing time, so even the
+account gate reads stale for up to `ACCESS_TTL_SEC`. Nothing errors. The person who clicked
+"sign out everywhere" believes the stolen session is dead.
+
+**Where** — `src/lib/auth/session-token.ts` (the module banner states the trade),
+`src/proxy.ts` (`resolveIdentity`, which touches no datastore),
+`src/actions/auth/logout.ts` (this device only) and `src/actions/auth/reset-password.ts`
+(the comment where the revocation used to be).
 
 ### `x-user-*` request headers are client input — `proxy` sets none
 

@@ -4,7 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { signAccessToken } from '@/services/session-token'
+import { signAccessToken } from '@/lib/auth/session-token'
 
 const ctx = vi.hoisted(() => ({ cookieJar: new Map<string, string>() }))
 
@@ -35,7 +35,7 @@ const seedStudent = async (status: 'ACTIVE' | 'DISABLED' = 'ACTIVE') => {
 
 /** Put a well-formed access token for `id` in the jar. */
 const signIn = (id: number, status = 'ACTIVE') => {
-  ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken({ sub: id, status }))
+  ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken({ id: id, status }))
 }
 
 beforeAll(async () => {
@@ -84,7 +84,7 @@ describe('getStudentSession — no session', () => {
 
   it('returns null for a tampered signature', async () => {
     const student = await seedStudent()
-    const token = signAccessToken({ sub: student.id as number, status: 'ACTIVE' })
+    const token = signAccessToken({ id: student.id as number, status: 'ACTIVE' })
     ctx.cookieJar.set(ACCESS_COOKIE, token.slice(0, -1) + (token.at(-1) === 'A' ? 'B' : 'A'))
 
     expect(await getStudentSession()).toBeNull()
@@ -93,7 +93,7 @@ describe('getStudentSession — no session', () => {
   it('returns null for an expired token', async () => {
     const student = await seedStudent()
     vi.setSystemTime(new Date(Date.now() - 60 * 60 * 1000))
-    const stale = signAccessToken({ sub: student.id as number, status: 'ACTIVE' })
+    const stale = signAccessToken({ id: student.id as number, status: 'ACTIVE' })
     vi.useRealTimers()
     ctx.cookieJar.set(ACCESS_COOKIE, stale)
 
