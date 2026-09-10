@@ -1,6 +1,5 @@
 import type { GlobalConfig } from 'payload'
 import { revalidateSiteSettings } from './hooks/revalidateSiteSettings'
-import { DEFAULT_SITE_NAME, DEFAULT_TAGLINE } from '@/lib/constants/site'
 import { authenticated } from '@/access/authenticated'
 export const SiteSettings: GlobalConfig = {
   slug: 'site-settings',
@@ -14,14 +13,12 @@ export const SiteSettings: GlobalConfig = {
       name: 'siteName',
       type: 'text',
       label: 'Tên website / Thương hiệu',
-      defaultValue: DEFAULT_SITE_NAME,
       required: true,
     },
     {
       name: 'tagline',
       type: 'text',
       label: 'Khẩu hiệu (Tagline)',
-      defaultValue: DEFAULT_TAGLINE,
       required: true,
     },
     {

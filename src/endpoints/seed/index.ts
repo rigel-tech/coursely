@@ -1,4 +1,4 @@
-import type { CollectionSlug, Payload, PayloadRequest, File } from 'payload'
+import type { CollectionSlug, GlobalSlug, Payload, PayloadRequest, File } from 'payload'
 
 import { contactForm as contactFormData } from './contact-form'
 import { contact as contactPageData } from './contact-page'
@@ -20,7 +20,8 @@ const collections: CollectionSlug[] = [
   'search',
 ]
 
-const globals: ('header' | 'footer')[] = ['header', 'footer']
+// site-settings is excluded because the seed clearing loop below resets navItems: [], which only applies to header & footer
+const globals: Exclude<GlobalSlug, 'site-settings'>[] = ['header', 'footer']
 
 const categories = ['Technology', 'News', 'Finance', 'Design', 'Software', 'Engineering']
 

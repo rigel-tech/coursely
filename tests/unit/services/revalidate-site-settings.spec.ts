@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { revalidateSiteSettings } from '@/SiteSettings/hooks/revalidateSiteSettings'
+import { revalidateSiteSettings } from '@/globals/SiteSettings/hooks/revalidateSiteSettings'
 import type { SiteSetting } from '@/payload-types'
 import type { Payload } from 'payload'
 

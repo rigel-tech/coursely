@@ -11,7 +11,7 @@ import { Logo } from '@/components/public/Logo/Logo'
 export async function Footer() {
   const [footerData, siteSettings] = await Promise.all([
     getCachedGlobal('footer', 1)(),
-    getCachedGlobal('site-settings', 1)().catch(() => null),
+    getCachedGlobal('site-settings', 1)(),
   ])
 
   const navItems = footerData?.navItems || []
@@ -21,9 +21,9 @@ export async function Footer() {
       <div className="container py-8 gap-8 flex flex-col md:flex-row md:justify-between">
         <Link className="flex items-center" href="/">
           <Logo
-            logo={siteSettings?.logo as Media}
-            siteName={siteSettings?.siteName}
-            tagline={siteSettings?.tagline}
+            logo={siteSettings.logo as Media}
+            siteName={siteSettings.siteName}
+            tagline={siteSettings.tagline}
           />
         </Link>
 
