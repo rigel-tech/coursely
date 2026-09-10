@@ -2,6 +2,7 @@ import * as migration_20260830_161642_initial from './20260830_161642_initial'
 import * as migration_20260903_083223_add_courses_collection from './20260903_083223_add_courses_collection'
 import * as migration_20260903_084929_add_course_objectives_and_phases from './20260903_084929_add_course_objectives_and_phases'
 import * as migration_20260904_084119_add_course_categories_and_tags from './20260904_084119_add_course_categories_and_tags'
+import * as migration_20260910_062709_add_site_settings_global from './20260910_062709_add_site_settings_global'
 
 export const migrations = [
   {
@@ -23,5 +24,10 @@ export const migrations = [
     up: migration_20260904_084119_add_course_categories_and_tags.up,
     down: migration_20260904_084119_add_course_categories_and_tags.down,
     name: '20260904_084119_add_course_categories_and_tags',
+  },
+  {
+    up: migration_20260910_062709_add_site_settings_global.up,
+    down: migration_20260910_062709_add_site_settings_global.down,
+    name: '20260910_062709_add_site_settings_global',
   },
 ]
