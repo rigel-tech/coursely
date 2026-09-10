@@ -4,8 +4,8 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
    CREATE TABLE "site_settings" (
   	"id" serial PRIMARY KEY NOT NULL,
-  	"site_name" varchar DEFAULT 'SPEAKEDGE' NOT NULL,
-  	"tagline" varchar DEFAULT 'Anh ngữ công sở' NOT NULL,
+  	"site_name" varchar,
+  	"tagline" varchar,
   	"logo_id" integer,
   	"favicon_id" integer,
   	"updated_at" timestamp(3) with time zone,

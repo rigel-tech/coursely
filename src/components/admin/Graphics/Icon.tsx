@@ -3,19 +3,14 @@ import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import type { Media, SiteSetting } from '@/payload-types'
 import { getCachedGlobal } from '@/utilities/getGlobals'
-import { DEFAULT_LOGO_SHORT } from '@/lib/constants/site'
 
 export const Icon: React.FC = async () => {
   let siteSettings: SiteSetting | null = null
   try {
     siteSettings = await getCachedGlobal('site-settings', 1)()
   } catch (err) {
-    try {
-      const payload = await getPayload({ config: configPromise })
-      payload.logger.error({ err }, 'Failed to fetch site-settings for Admin Icon')
-    } catch {
-      console.error('Failed to fetch site-settings for Admin Icon', err)
-    }
+    const payload = await getPayload({ config: configPromise })
+    payload.logger.error({ err }, 'Failed to fetch site-settings for Admin Icon')
   }
 
   const favicon = siteSettings?.favicon as Media | undefined
@@ -33,24 +28,7 @@ export const Icon: React.FC = async () => {
     )
   }
 
-  return (
-    <div
-      style={{
-        width: '36px',
-        height: '36px',
-        borderRadius: '8px',
-        background: 'var(--brand-accent)',
-        color: 'var(--primary-foreground)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontWeight: 900,
-        fontSize: '14px',
-      }}
-    >
-      {DEFAULT_LOGO_SHORT}
-    </div>
-  )
+  return null
 }
 
 export default Icon

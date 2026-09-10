@@ -4,8 +4,8 @@ import { cn } from '@/utilities/ui'
 import { Be_Vietnam_Pro, JetBrains_Mono } from 'next/font/google'
 import React from 'react'
 
-import { Footer } from '@/Footer/Component'
-import { Header } from '@/Header/Component'
+import { Footer } from '@/globals/Footer/Component'
+import { Header } from '@/globals/Header/Component'
 import { Providers } from '@/providers'
 import { InitTheme } from '@/providers/Theme/InitTheme'
 import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
@@ -35,8 +35,8 @@ const jetBrainsMono = JetBrains_Mono({
 })
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const siteSettings = await getCachedGlobal('site-settings', 1)().catch(() => null)
-  const favicon = siteSettings?.favicon as Media | undefined
+  const siteSettings = await getCachedGlobal('site-settings', 1)()
+  const favicon = siteSettings.favicon as Media | undefined
   const faviconUrl = favicon?.url || null
 
   return (

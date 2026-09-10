@@ -9,7 +9,7 @@ vi.mock('@/components/public/HeaderAuthControls', () => ({
   HeaderAuthControls: () => React.createElement('div', { 'data-testid': 'header-auth-controls' }),
 }))
 
-const { HeaderClient } = await import('@/Header/Component.client')
+const { HeaderClient } = await import('@/globals/Header/Component.client')
 
 afterEach(cleanup)
 
