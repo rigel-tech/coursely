@@ -5,11 +5,12 @@ import { authenticated } from '../../access/authenticated'
 /**
  * In-app notifications shown to a student. The registration flow writes an
  * `ACCOUNT_CREATED` row inside the same transaction as the new account — a
- * student must never exist without its welcome notification — so `user` is
+ * student must never exist without its welcome notification — so `student` is
  * required. More `type` values are added as other features raise notifications.
  *
- * `user` points at `students`, not `users`: notifications are addressed to the
- * public site. Staff never receive them.
+ * The field is `student`, not `user`: this repo has both a `users` collection
+ * (staff) and a `students` one, and notifications are addressed to the public
+ * site. Staff never receive them.
  */
 export const Notifications: CollectionConfig = {
   slug: 'notifications',
@@ -20,12 +21,12 @@ export const Notifications: CollectionConfig = {
     update: authenticated,
   },
   admin: {
-    defaultColumns: ['title', 'user', 'type', 'isRead', 'createdAt'],
+    defaultColumns: ['title', 'student', 'type', 'isRead', 'createdAt'],
     useAsTitle: 'title',
   },
   fields: [
     {
-      name: 'user',
+      name: 'student',
       type: 'relationship',
       relationTo: 'students',
       required: true,

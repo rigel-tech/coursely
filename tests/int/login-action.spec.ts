@@ -109,7 +109,7 @@ afterEach(async () => {
       depth: 0,
     })
     for (const u of docs) {
-      await payload.delete({ collection: 'notifications', where: { user: { equals: u.id } } })
+      await payload.delete({ collection: 'notifications', where: { student: { equals: u.id } } })
       await payload.delete({ collection: 'students', id: u.id })
     }
   }
@@ -148,7 +148,7 @@ describe('loginAction — success', () => {
 
     const notes = await payload.find({
       collection: 'notifications',
-      where: { user: { equals: user.id } },
+      where: { student: { equals: user.id } },
       limit: 0,
     })
     expect(notes.totalDocs).toBe(0)

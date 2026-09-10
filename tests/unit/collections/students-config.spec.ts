@@ -36,7 +36,7 @@ describe('Students auth configuration', () => {
     expect(typeof Students.auth).toBe('object')
   })
 
-  it('turns off Payload sessions — the Redis store is the student session mechanism', () => {
+  it('turns off Payload sessions — the coursely cookie pair is the session mechanism', () => {
     expect(Students.auth).toMatchObject({ useSessions: false })
   })
 

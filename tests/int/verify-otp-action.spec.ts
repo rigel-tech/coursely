@@ -85,7 +85,7 @@ afterEach(async () => {
       depth: 0,
     })
     for (const u of docs) {
-      await payload.delete({ collection: 'notifications', where: { user: { equals: u.id } } })
+      await payload.delete({ collection: 'notifications', where: { student: { equals: u.id } } })
       await payload.delete({ collection: 'students', id: u.id })
     }
   }

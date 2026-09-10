@@ -117,7 +117,7 @@ async function createStudentWithWelcomeNotification(
     await payload.create({
       collection: 'notifications',
       data: {
-        user: student.id,
+        student: student.id,
         type: 'ACCOUNT_CREATED',
         title: 'Chào mừng bạn đến với Coursely',
         content: 'Tài khoản của bạn đã được tạo. Hãy xác minh email để bắt đầu.',

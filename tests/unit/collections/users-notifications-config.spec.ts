@@ -53,18 +53,22 @@ describe('Notifications collection config', () => {
 
   it('carries the fields from spec step 6b', () => {
     expect(names).toEqual(
-      expect.arrayContaining(['user', 'type', 'title', 'content', 'metadata', 'isRead']),
+      expect.arrayContaining(['student', 'type', 'title', 'content', 'metadata', 'isRead']),
     )
   })
 
   it('belongs to a student — notifications are addressed to the public site, not to staff', () => {
-    const user = field(Notifications.fields, 'user') as Extract<Field, { type: 'relationship' }>
+    const student = field(Notifications.fields, 'student') as Extract<
+      Field,
+      { type: 'relationship' }
+    >
 
-    expect(user.relationTo).toBe('students')
+    expect(student.relationTo).toBe('students')
+    expect(names).not.toContain('user')
   })
 
-  it('requires user, title and content', () => {
-    for (const name of ['user', 'title', 'content']) {
+  it('requires student, title and content', () => {
+    for (const name of ['student', 'title', 'content']) {
       const f = field(Notifications.fields, name) as Extract<Field, { required?: boolean }>
       expect(f.required).toBe(true)
     }

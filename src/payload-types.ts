@@ -968,7 +968,7 @@ export interface Class {
  */
 export interface Notification {
   id: number;
-  user: number | Student;
+  student: number | Student;
   type: 'ACCOUNT_CREATED';
   title: string;
   content: string;
@@ -1701,7 +1701,7 @@ export interface ClassesSelect<T extends boolean = true> {
  * via the `definition` "notifications_select".
  */
 export interface NotificationsSelect<T extends boolean = true> {
-  user?: T;
+  student?: T;
   type?: T;
   title?: T;
   content?: T;

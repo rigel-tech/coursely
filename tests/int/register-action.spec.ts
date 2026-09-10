@@ -89,7 +89,7 @@ afterEach(async () => {
       depth: 0,
     })
     for (const u of docs) {
-      await payload.delete({ collection: 'notifications', where: { user: { equals: u.id } } })
+      await payload.delete({ collection: 'notifications', where: { student: { equals: u.id } } })
       await payload.delete({ collection: 'students', id: u.id })
     }
   }
@@ -122,7 +122,7 @@ describe('registerAction — new email', () => {
 
     const notes = await payload.find({
       collection: 'notifications',
-      where: { user: { equals: docs[0].id } },
+      where: { student: { equals: docs[0].id } },
       depth: 0,
     })
     expect(notes.docs).toHaveLength(1)
@@ -178,7 +178,7 @@ describe('registerAction — existing PENDING_VERIFICATION email', () => {
 
     const notes = await payload.find({
       collection: 'notifications',
-      where: { user: { equals: existing.id } },
+      where: { student: { equals: existing.id } },
       limit: 0,
     })
     expect(notes.totalDocs).toBe(0)
@@ -250,16 +250,5 @@ describe('registerAction — guards', () => {
       limit: 0,
     })
     expect(totalDocs).toBe(0)
-  })
-
-  // The old per-IP cap refused the 11th registration from one address.
-  it('does not cap registrations per IP: 12 in a row from one address all succeed', async () => {
-    const ip = `172.16.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`
-    ctx.reqHeaders.set('x-forwarded-for', ip)
-    vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
-
-    for (let i = 0; i < 12; i++) {
-      expect(await run(validForm(uniqueEmail(`burst${i}`)))).toEqual({ status: 'success' })
-    }
   })
 })

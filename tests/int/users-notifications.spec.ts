@@ -33,7 +33,7 @@ describe('notifications collection', () => {
     payload = await getPayload({ config: await config })
   })
 
-  it('rejects a notification with no user/title/content', async () => {
+  it('rejects a notification with no student/title/content', async () => {
     await expect(
       payload.create({ collection: 'notifications', data: {} as never }),
     ).rejects.toThrow()
@@ -48,7 +48,7 @@ describe('notifications collection', () => {
     const notification = await payload.create({
       collection: 'notifications',
       data: {
-        user: owner.id,
+        student: owner.id,
         type: 'ACCOUNT_CREATED',
         title: 'Chào mừng bạn đến với Coursely',
         content: 'Tài khoản của bạn đã được tạo. Hãy xác minh email để bắt đầu.',
