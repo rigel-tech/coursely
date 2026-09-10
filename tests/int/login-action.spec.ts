@@ -103,15 +103,9 @@ beforeEach(() => {
 afterEach(async () => {
   vi.restoreAllMocks()
   await scope.cleanup()
-  for (const ip of usedIps) await redis.del(`rate:login:ip:${ip}`)
   usedIps.clear()
   for (const email of usedEmails) {
-    await redis.del(
-      `rate:login:email:${email}`,
-      `otp:verify:${email}`,
-      `otp:cooldown:${email}`,
-      `otp:quota:${email}`,
-    )
+    await redis.del(`otp:verify:${email}`, `otp:cooldown:${email}`, `otp:quota:${email}`)
     const { docs } = await payload.find({
       collection: 'students',
       where: { email: { equals: email } },
@@ -184,13 +178,6 @@ describe('loginAction — success', () => {
       await run(form({ email: b.email, password: b.password, callbackUrl: '//evil.com' })),
     ).toMatchObject({ redirectTo: '/' })
   })
-
-  it('clears the per-email rate counter on success', async () => {
-    const { email, password } = await makeUser()
-    await redis.set(`rate:login:email:${email}`, '3')
-    await run(form({ email, password }))
-    expect(await redis.exists(`rate:login:email:${email}`)).toBe(0)
-  })
 })
 
 describe('loginAction — a staff account is not a principal here', () => {
@@ -214,7 +201,7 @@ describe('loginAction — a staff account is not a principal here', () => {
 })
 
 describe('loginAction — bad credentials', () => {
-  it('wrong password: AUTH_021, bumps both counters, no cookie', async () => {
+  it('wrong password: AUTH_021, no cookie, and no counter is written', async () => {
     const { email } = await makeUser()
     const res = await run(form({ email, password: 'WrongPass1' }))
     expect(res).toMatchObject({
@@ -223,42 +210,35 @@ describe('loginAction — bad credentials', () => {
       message: 'Email hoặc mật khẩu không đúng.',
     })
     expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
-    expect(await redis.get(`rate:login:ip:${currentIp}`)).toBe('1')
-    expect(await redis.get(`rate:login:email:${email}`)).toBe('1')
+    // A failed sign-in used to bump two Redis counters. Both axes are gone, so a
+    // failure must leave no trace at all behind.
+    expect(await redis.exists(`rate:login:ip:${currentIp}`, `rate:login:email:${email}`)).toBe(0)
   })
 
   it('unknown email is indistinguishable from a wrong password', async () => {
-    const missing = uniqueEmail('ghost')
-    const res = await run(form({ email: missing, password: 'Whatever1' }))
+    const res = await run(form({ email: uniqueEmail('ghost'), password: 'Whatever1' }))
     expect(res).toMatchObject({
       status: 'error',
       code: 'AUTH_021',
       message: 'Email hoặc mật khẩu không đúng.',
     })
-    expect(await redis.get(`rate:login:email:${missing}`)).toBe('1')
   })
 })
 
-describe('loginAction — rate limited', () => {
-  it('per-email over the limit: AUTH_020, payload.login never runs', async () => {
-    const { email, password } = await makeUser()
-    await redis.set(`rate:login:email:${email}`, '6')
-    const spy = vi.spyOn(payload, 'login')
-
-    const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_020' })
-    expect(res.message).toMatch(/15 phút/)
-    expect(spy).not.toHaveBeenCalled()
-  })
-
-  it('per-IP over the limit: AUTH_020, payload.login never runs', async () => {
-    const { email, password } = await makeUser()
-    await redis.set(`rate:login:ip:${currentIp}`, '21')
-    const spy = vi.spyOn(payload, 'login')
-
-    const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_020' })
-    expect(spy).not.toHaveBeenCalled()
+describe('loginAction — no per-IP throttle', () => {
+  // The old per-IP axis cut in on the 22nd attempt from one address. Every attempt
+  // here uses a different unknown email, so Payload's own per-account lockout —
+  // which stays — cannot be what answers.
+  // None of these addresses exists, so nothing is created and `usedEmails` — which
+  // costs a query per entry to clean — is deliberately left out of it.
+  it('22 failed attempts from one IP all come back AUTH_021', async () => {
+    const stamp = Date.now()
+    for (let i = 0; i < 22; i++) {
+      const res = await run(
+        form({ email: `burst-${stamp}-${i}@example.com`, password: 'x1234567' }),
+      )
+      expect(res).toMatchObject({ status: 'error', code: 'AUTH_021' })
+    }
   })
 })
 

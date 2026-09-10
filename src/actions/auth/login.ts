@@ -42,7 +42,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 
   let result
   try {
-    result = await authenticateUser(parsed.data, { ip, userAgent })
+    result = await authenticateUser(parsed.data)
   } catch (err) {
     console.error('loginAction failed', err)
     return { status: 'error', message: 'Có lỗi hệ thống. Vui lòng thử lại sau.' }

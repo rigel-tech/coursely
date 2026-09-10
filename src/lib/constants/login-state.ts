@@ -2,9 +2,8 @@ import type { LoginFieldErrors } from '@/lib/validation/login-schema'
 
 /**
  * Outcome surfaced to `<LoginForm>` via `useActionState`.
- * `AUTH_020` rate limited · `AUTH_021` bad credentials · `AUTH_022` unverified
- * (account exists but email not confirmed) · `AUTH_023` Payload lockout ·
- * `AUTH_024` account disabled.
+ * `AUTH_021` bad credentials · `AUTH_022` unverified (account exists but email
+ * not confirmed) · `AUTH_023` Payload lockout · `AUTH_024` account disabled.
  *
  * The action never calls `redirect()` — setting an auth cookie and redirecting in
  * the same server action drops the cookie. On `'success'` (where it sets
@@ -15,7 +14,7 @@ import type { LoginFieldErrors } from '@/lib/validation/login-schema'
  */
 export type LoginState = {
   status: 'idle' | 'error' | 'success'
-  code?: 'AUTH_020' | 'AUTH_021' | 'AUTH_022' | 'AUTH_023' | 'AUTH_024'
+  code?: 'AUTH_021' | 'AUTH_022' | 'AUTH_023' | 'AUTH_024'
   message?: string
   fieldErrors?: LoginFieldErrors
   redirectTo?: string

@@ -1,42 +1,34 @@
 /**
  * Registration domain logic (§5.1 steps 3–7). No HTTP concerns here — the caller
  * owns request headers, the `pending_email` cookie and the redirect. This module
- * owns: the per-IP rate check, email normalisation, the branch on any existing
- * account, the student + welcome-notification transaction, and issuing / emailing
- * the OTP after that transaction commits.
+ * owns: email normalisation, the branch on any existing account, the student +
+ * welcome-notification transaction, and issuing / emailing the OTP after that
+ * transaction commits.
+ *
+ * Nothing caps how often one address may register. What stands between this and a
+ * flood of accounts is the OTP: an unverified student is `PENDING_VERIFICATION`
+ * and cannot sign in, and the resend cooldown bounds the mail that leaves.
  */
 import { getPayload, type Payload, type PayloadRequest } from 'payload'
 import configPromise from '@payload-config'
 
-import { REGISTER_RATE_LIMIT, REGISTER_RATE_WINDOW_SEC } from '@/lib/constants/auth'
-import { checkRate } from '@/lib/rate-limit'
 import type { RegisterInput } from '@/lib/validation/register-schema'
 import { sendDuplicateAttemptEmail, sendVerifyOtpEmail } from '@/email/send'
 import { issueOtp } from '@/services/otp-store'
 
 export type RegisterContext = { ip: string; userAgent: string }
 
-export type RegisterServiceResult =
-  { ok: true; email: string } | { ok: false; reason: 'rate_limited' }
+export type RegisterServiceResult = { email: string }
 
 /**
- * Runs a self-registration attempt. Returns the normalised email on success (for
- * the caller's cookie); `{ ok: false, reason: 'rate_limited' }` when the IP is
- * over quota. Throws on an unexpected failure — the student/notification write is
+ * Runs a self-registration attempt. Returns the normalised email for the caller's
+ * cookie. Throws on an unexpected failure — the student/notification write is
  * rolled back before it propagates.
  */
 export async function registerStudent(
   input: RegisterInput,
   { ip, userAgent }: RegisterContext,
 ): Promise<RegisterServiceResult> {
-  // §5.1 step 1 — rate limit per IP
-  const rate = await checkRate(
-    `rate:action:register:${ip}`,
-    REGISTER_RATE_LIMIT,
-    REGISTER_RATE_WINDOW_SEC,
-  )
-  if (!rate.ok) return { ok: false, reason: 'rate_limited' }
-
   // §5.1 step 3 — normalise
   const email = input.email.trim().toLowerCase()
   const { password, fullName, phone } = input
@@ -92,7 +84,7 @@ export async function registerStudent(
     )
   }
 
-  return { ok: true, email }
+  return { email }
 }
 
 /** §5.1 step 5 — student + welcome notification, atomically. */

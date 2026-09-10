@@ -15,9 +15,10 @@ import { renewSession, type IssuedSession } from '@/services/session-store'
 
 /**
  * Auth guard (Next 16 Proxy, formerly Middleware — Node runtime). Gates `/admin`,
- * the student area and `/xac-thuc-otp`, and forwards the identity to Server
- * Components through `x-user-*` request headers, which are always rewritten so a
- * client cannot forge them.
+ * the student area and `/xac-thuc-otp`. It decides routing and cookies only: the
+ * request headers pass through untouched, so nothing this file learns about the
+ * visitor reaches a Server Component. Server code asks `getStudentSession`;
+ * public UI asks `/next/auth-status` from the browser (see INVARIANTS).
  *
  * Two identity sources, split by area:
  *   `/admin*`  — Payload's `payload-token`, verified with no DB hit (unchanged).
@@ -32,8 +33,6 @@ const jwtSecret = createHash('sha256')
   .update(process.env.PAYLOAD_SECRET ?? '')
   .digest('hex')
   .slice(0, 32)
-
-const USER_HEADERS = ['x-user-id', 'x-user-status']
 
 type GuardUser = { id: number; status?: string }
 type Identity = { user: GuardUser | null; renewed?: IssuedSession; clearStudent?: boolean }
@@ -66,16 +65,6 @@ async function resolveIdentity(request: NextRequest): Promise<Identity> {
   }
 }
 
-function withUserHeaders(request: NextRequest, user: GuardUser | null): NextResponse {
-  const headers = new Headers(request.headers)
-  for (const h of USER_HEADERS) headers.delete(h)
-  if (user) {
-    headers.set('x-user-id', String(user.id))
-    if (user.status) headers.set('x-user-status', user.status)
-  }
-  return NextResponse.next({ request: { headers } })
-}
-
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { user, renewed, clearStudent } = await resolveIdentity(request)
 
@@ -88,7 +77,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const response =
     decision.type === 'redirect'
       ? NextResponse.redirect(new URL(decision.to, request.url))
-      : withUserHeaders(request, user)
+      : NextResponse.next()
 
   // A renewal that happened must reach the browser even if the request then
   // redirects for an unrelated reason.

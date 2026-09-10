@@ -1,10 +1,13 @@
 /**
  * Login domain logic (§7). No HTTP concerns — the caller owns request headers and
- * writes the cookies. This module owns: the two rate-limit axes (per IP, per
- * email), the `payload.login` call and its error mapping, the app-level `status`
- * branch Payload does not know about, and — on success — clearing the email
- * counter and stamping `lastLoginAt`. No notification: a login is routine and one
+ * writes the cookies. This module owns: the `payload.login` call and its error
+ * mapping, the app-level `status` branch Payload does not know about, and — on
+ * success — stamping `lastLoginAt`. No notification: a login is routine and one
  * per sign-in would flood the bell.
+ *
+ * Brute force is Payload's job alone: `maxLoginAttempts` locks the account after
+ * five failures and surfaces here as `AUTH_023`. There is no per-IP axis, so one
+ * address may keep guessing across many different accounts.
  *
  * This is the **students** door. A `users` row — staff — is not a principal here:
  * `payload.login` on `students` cannot find it, so it is refused with the same
@@ -15,13 +18,9 @@
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { LOGIN_EMAIL_LIMIT, LOGIN_IP_LIMIT, LOGIN_RATE_WINDOW_SEC } from '@/lib/constants/auth'
-import { bumpRate, clearRate, peekRate } from '@/lib/rate-limit'
 import type { LoginInput } from '@/lib/validation/login-schema'
 import { sendVerifyOtpEmail } from '@/email/send'
 import { resendOtp } from '@/services/otp-store'
-
-export type LoginContext = { ip: string; userAgent: string }
 
 export type LoginServiceResult =
   | {
@@ -30,31 +29,14 @@ export type LoginServiceResult =
       rememberMe: boolean
       redirectTo: string
     }
-  | { ok: false; code: 'AUTH_020' | 'AUTH_021' | 'AUTH_023' | 'AUTH_024'; message: string }
+  | { ok: false; code: 'AUTH_021' | 'AUTH_023' | 'AUTH_024'; message: string }
   | { ok: false; code: 'AUTH_022'; message: string; email: string; redirectTo: string }
 
-const IP_RATE_LIMITED = 'Quá nhiều lần thử từ thiết bị này, vui lòng thử lại sau.'
-const EMAIL_RATE_LIMITED = 'Tài khoản tạm khóa do đăng nhập sai nhiều lần, thử lại sau 15 phút.'
 const BAD_CREDENTIALS = 'Email hoặc mật khẩu không đúng.'
 const DISABLED = 'Tài khoản đã bị khóa, vui lòng liên hệ trung tâm.'
 
-const ipKey = (ip: string) => `rate:login:ip:${ip}`
-const emailKey = (email: string) => `rate:login:email:${email}`
-
-export async function authenticateUser(
-  input: LoginInput,
-  // `userAgent` stays on `LoginContext` — the caller still needs it for `createSession`.
-  { ip }: LoginContext,
-): Promise<LoginServiceResult> {
+export async function authenticateUser(input: LoginInput): Promise<LoginServiceResult> {
   const email = input.email.trim().toLowerCase()
-
-  // §7 — gates read the counters; only a real credential failure bumps them.
-  if (!(await peekRate(ipKey(ip), LOGIN_IP_LIMIT)).ok) {
-    return { ok: false, code: 'AUTH_020', message: IP_RATE_LIMITED }
-  }
-  if (!(await peekRate(emailKey(email), LOGIN_EMAIL_LIMIT)).ok) {
-    return { ok: false, code: 'AUTH_020', message: EMAIL_RATE_LIMITED }
-  }
 
   const payload = await getPayload({ config: await configPromise })
 
@@ -79,8 +61,6 @@ export async function authenticateUser(
     }
     if (name === 'AuthenticationError') {
       // §7 — wrong email and wrong password are reported identically.
-      await bumpRate(ipKey(ip), LOGIN_RATE_WINDOW_SEC)
-      await bumpRate(emailKey(email), LOGIN_RATE_WINDOW_SEC)
       return { ok: false, code: 'AUTH_021', message: BAD_CREDENTIALS }
     }
     throw err
@@ -111,9 +91,8 @@ export async function authenticateUser(
     }
   }
 
-  // §7 success — reset the email counter, stamp the login, leave a trail. The
-  // caller mints the session tokens (`payload.login`'s own JWT is discarded).
-  await clearRate(emailKey(email))
+  // §7 success — stamp the login, leave a trail. The caller mints the session
+  // tokens (`payload.login`'s own JWT is discarded).
   await payload.update({
     collection: 'students',
     id: user.id,

@@ -252,19 +252,14 @@ describe('registerAction — guards', () => {
     expect(totalDocs).toBe(0)
   })
 
-  it('returns AUTH_002 once the per-IP limit is exceeded', async () => {
+  // The old per-IP cap refused the 11th registration from one address.
+  it('does not cap registrations per IP: 12 in a row from one address all succeed', async () => {
     const ip = `172.16.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`
     ctx.reqHeaders.set('x-forwarded-for', ip)
     vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
 
-    let lastCode: string | undefined
     for (let i = 0; i < 12; i++) {
-      const email = uniqueEmail(`rate${i}`)
-      const res = await run(validForm(email))
-      lastCode = res.code
+      expect(await run(validForm(uniqueEmail(`burst${i}`)))).toEqual({ status: 'success' })
     }
-    expect(lastCode).toBe('AUTH_002')
-
-    await redis.del(`rate:action:register:${ip}`)
   })
 })

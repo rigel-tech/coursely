@@ -95,3 +95,27 @@ describe('proxy — student session', () => {
     expect(res.cookies.get(REFRESH_COOKIE)?.value).toBe('')
   })
 })
+
+// `NextResponse.next({ request: { headers } })` is observable on the response as
+// `x-middleware-override-headers` plus one `x-middleware-request-<name>` per header
+// (see `next/dist/server/web/spec-extension/response.js`). A plain `NextResponse.next()`
+// writes neither — which is exactly what "proxy does not touch request headers" means.
+describe('proxy — identity is never forwarded as a request header', () => {
+  it('a signed-in student: no x-user-* is written onto the forwarded request', async () => {
+    const user = await makeUser()
+    const access = signAccessToken({ sub: user.id as number, status: 'ACTIVE' })
+
+    const res = await proxy(req(`${ACCESS_COOKIE}=${access}`))
+
+    expect(res.headers.get('x-middleware-request-x-user-id')).toBeNull()
+    expect(res.headers.get('x-middleware-request-x-user-status')).toBeNull()
+  })
+
+  it('an x-user-id sent by the client passes through untouched — proxy rewrites nothing', async () => {
+    const res = await proxy(
+      new NextRequest('http://localhost/', { headers: { 'x-user-id': '999' } }),
+    )
+
+    expect(res.headers.get('x-middleware-override-headers')).toBeNull()
+  })
+})

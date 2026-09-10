@@ -42,15 +42,7 @@ export async function registerAction(
 
   let email: string
   try {
-    const result = await registerStudent(parsed.data, { ip, userAgent })
-    if (!result.ok) {
-      return {
-        status: 'error',
-        code: 'AUTH_002',
-        message: 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau ít phút.',
-      }
-    }
-    email = result.email
+    email = (await registerStudent(parsed.data, { ip, userAgent })).email
   } catch (err) {
     console.error('registerAction failed', err)
     return { status: 'error', code: 'AUTH_003', message: 'Có lỗi hệ thống. Vui lòng thử lại sau.' }

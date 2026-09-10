@@ -319,6 +319,27 @@ student cookie pair to anyone who authenticated at `/dang-nhap`, admins included
 `src/services/session-store.ts` (`indexKey`, `createSession`, `revokeAllForUser`) is the
 keyspace this protects.
 
+### `x-user-*` request headers are client input — `proxy` sets none
+
+**Rule** — `proxy` returns a bare `NextResponse.next()`; it does not rewrite the request
+headers. An `x-user-id`, `x-user-status` or `x-user-role` arriving on a request is
+therefore whatever the caller typed, and no file in `src/` may read one. Server code that
+needs the signed-in student calls `getStudentSession()`; public UI asks
+`GET /next/auth-status` from the browser.
+
+**Why it breaks silently** — `proxy` used to forward the verified identity in these
+headers, deleting the inbound copies first so a client could not forge them. Nothing ever
+read them and the forwarding was removed as dead code — but the old shape survives in
+`specs/001-access-refresh-sessions/contracts/proxy-guard.md` §2, so the next person to
+follow that document writes a Server Component that reads `x-user-id`. It compiles, it
+renders, and it trusts an account id the visitor chose, on every route the matcher covers.
+Nothing in the type system or the build says a word.
+
+**Where** — `src/proxy.ts` (`proxy`, the `NextResponse.next()` branch). Guarded by
+`tests/unit/repo/user-header-readers.spec.ts`, which fails the moment any file under
+`src/` mentions one of these names; the proxy behaviour is pinned in
+`tests/int/proxy-session.spec.ts` § "identity is never forwarded as a request header".
+
 ## Client-side state
 
 ### `themeLocalStorageKey` and `defaultTheme` exist in two modules — change both or neither
@@ -345,8 +366,9 @@ imported by the **readers** `src/providers/Theme/InitTheme/index.tsx:4` (`InitTh
 **Rule** — Whether the public site treats the visitor as signed in must be decided in the
 browser — `HeaderAuthControls` fetches `GET /next/auth-status`, which reads the
 `coursely-access` cookie and returns `{ authenticated }`. A Server Component on a public
-page must not branch its render on the proxy-forwarded `x-user-*` request headers (or on
-`cookies()`), and must not gate UI on them.
+page must not branch its render on `cookies()`, and must not gate UI on it. Nor on an
+`x-user-*` request header — `proxy` sets none, so that header is client input; see
+"`x-user-*` request headers are client input" under Sessions.
 
 **Why it breaks silently** — `src/app/(frontend)/page.tsx`, `courses/page.tsx`, and
 `posts/page.tsx` set `export const dynamic = 'force-static'`. Under `force-static` Next 16
