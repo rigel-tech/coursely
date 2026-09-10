@@ -37,7 +37,6 @@ const jetBrainsMono = JetBrains_Mono({
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const siteSettings = await getCachedGlobal('site-settings', 1)()
   const favicon = siteSettings.favicon as Media | undefined
-  const faviconUrl = favicon?.url || null
 
   return (
     <html
