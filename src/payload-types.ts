@@ -2014,14 +2014,14 @@ export interface Footer {
  */
 export interface SiteSetting {
   id: number;
-  siteName?: string | null;
-  tagline?: string | null;
+  siteName: string;
+  tagline: string;
   /**
-   * Logo hiển thị tại Header, Footer và màn hình Admin. Hỗ trợ SVG, PNG, WEBP (Tối đa 2MB).
+   * Logo hiển thị tại Header, Footer và màn hình Admin.
    */
   logo?: (number | null) | Media;
   /**
-   * Biểu tượng tab trình duyệt. Hỗ trợ ICO, SVG, PNG, WEBP (Tối đa 1MB).
+   * Biểu tượng tab trình duyệt (Khuyên dùng PNG, ICO, WEBP).
    */
   favicon?: (number | null) | Media;
   updatedAt?: string | null;

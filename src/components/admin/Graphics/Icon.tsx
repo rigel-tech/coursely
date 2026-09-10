@@ -2,13 +2,21 @@ import React from 'react'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import type { Media, SiteSetting } from '@/payload-types'
+import { getCachedGlobal } from '@/utilities/getGlobals'
+import { DEFAULT_LOGO_SHORT } from '@/lib/constants/site'
 
 export const Icon: React.FC = async () => {
   let siteSettings: SiteSetting | null = null
   try {
-    const payload = await getPayload({ config: configPromise })
-    siteSettings = await payload.findGlobal({ slug: 'site-settings', depth: 1 })
-  } catch {}
+    siteSettings = await getCachedGlobal('site-settings', 1)()
+  } catch (err) {
+    try {
+      const payload = await getPayload({ config: configPromise })
+      payload.logger.error({ err }, 'Failed to fetch site-settings for Admin Icon')
+    } catch {
+      console.error('Failed to fetch site-settings for Admin Icon', err)
+    }
+  }
 
   const favicon = siteSettings?.favicon as Media | undefined
   const logo = siteSettings?.logo as Media | undefined
@@ -16,6 +24,7 @@ export const Icon: React.FC = async () => {
 
   if (iconUrl) {
     return (
+      /* 3. Dùng <img> thay vì next/image vì: icon kích thước nhỏ (24px), hỗ trợ SVG không overhead, tránh request /_next/image trên mọi trang admin */
       <img
         src={iconUrl}
         alt="Icon"
@@ -27,19 +36,19 @@ export const Icon: React.FC = async () => {
   return (
     <div
       style={{
-        width: '24px',
-        height: '24px',
-        borderRadius: '6px',
-        background: 'var(--theme-elevation-500, #ff5c00)',
-        color: '#fff',
+        width: '36px',
+        height: '36px',
+        borderRadius: '8px',
+        background: 'var(--brand-accent)',
+        color: 'var(--primary-foreground)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         fontWeight: 900,
-        fontSize: '11px',
+        fontSize: '14px',
       }}
     >
-      SE
+      {DEFAULT_LOGO_SHORT}
     </div>
   )
 }

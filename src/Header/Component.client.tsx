@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React, { useEffect } from 'react'
 
-import type { Header, SiteSetting } from '@/payload-types'
+import type { Header, Media, SiteSetting } from '@/payload-types'
 import { Logo } from '@/components/public/Logo/Logo'
 import { HeaderAuthControls } from '@/components/public/HeaderAuthControls'
 import { useHeaderTheme } from '@/providers/HeaderTheme'
@@ -36,7 +36,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, siteSettings }
         {/* Left: SpeakEdge Logo */}
         <Link href="/" className="shrink-0 flex items-center">
           <Logo
-            logo={siteSettings?.logo}
+            logo={siteSettings?.logo as Media}
             siteName={siteSettings?.siteName}
             tagline={siteSettings?.tagline}
           />
