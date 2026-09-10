@@ -1,63 +1,79 @@
 /**
- * Redis-side of the OTP flow (§3.2). Holds only `HMAC-SHA256(otp, OTP_SECRET)`,
- * never the code itself.
+ * The OTP challenge, held in Payload's key–value store (§3.2). What is written
+ * down is `HMAC-SHA256(otp, OTP_SECRET)`, never the code itself.
  *
- * Keys per email:
- *   otp:verify:{email}    hash { hash, attempts }, TTL 300s  — the live challenge
- *   otp:cooldown:{email}  TTL 60s                            — resend cooldown
- *   otp:quota:{email}     counter, TTL 3600s                 — max 5 sends / hour
+ * One record per address, at `otp:{email}`:
+ *
+ *   hash          the code, in the only form that is ever persisted
+ *   attempts      wrong guesses so far; at five the challenge is dead
+ *   expiresAt     epoch seconds — the code stops working once this passes
+ *   nextResendAt  epoch seconds — "Gửi lại mã" refuses before this
+ *
+ * The store has **no TTL**, which is the one thing to keep in mind here: expiry
+ * is a field, checked on every read, and a read that trips over an elapsed record
+ * deletes it. That read is the whole of the cleanup. A challenge nobody comes back
+ * for therefore sits in `payload-kv` until the next code for the same address
+ * overwrites it — dead on arrival to every caller, but still a row.
  */
-import { redis } from '@/lib/redis'
+import type { Payload } from 'payload'
+
 import { generateOtp, hashOtp, verifyOtpHash } from '@/services/otp'
 
 export const OTP_TTL_SEC = 300
 export const OTP_COOLDOWN_SEC = 60
-export const OTP_QUOTA_WINDOW_SEC = 3600
-export const OTP_MAX_SENDS_PER_WINDOW = 5
 export const OTP_MAX_VERIFY_ATTEMPTS = 5
 
-const verifyKey = (email: string) => `otp:verify:${email}`
-const cooldownKey = (email: string) => `otp:cooldown:${email}`
-const quotaKey = (email: string) => `otp:quota:${email}`
+type OtpRecord = { hash: string; attempts: number; expiresAt: number; nextResendAt: number }
+
+const key = (email: string) => `otp:${email}`
+const nowSec = () => Math.floor(Date.now() / 1000)
+
+/** The challenge for `email` if one is still live; an expired record is dropped here. */
+async function readLive(payload: Payload, email: string): Promise<OtpRecord | null> {
+  const record = await payload.kv.get<OtpRecord>(key(email))
+  if (!record) return null
+
+  if (record.expiresAt <= nowSec()) {
+    await payload.kv.delete(key(email))
+    return null
+  }
+  return record
+}
 
 export type IssuedOtp = { otp: string }
 
 export type ResendResult = { ok: true; otp: string } | { ok: false; reason: 'cooldown' }
 
 /**
- * Mint a fresh code for `email`: replace any prior code (the old one stops
- * working immediately), (re)start the 5-minute expiry, arm the 60-second resend
- * cooldown, and bump the hourly send quota. Returns the plaintext for the caller
- * to put in the email — it is never stored.
+ * Mint a fresh code for `email`, replacing any prior one — the old code stops
+ * working immediately and both windows restart. Returns the plaintext for the
+ * caller to put in the email; it is never stored.
  */
-export async function issueOtp(email: string): Promise<IssuedOtp> {
+export async function issueOtp(payload: Payload, email: string): Promise<IssuedOtp> {
   const otp = generateOtp()
-  const key = verifyKey(email)
+  const now = nowSec()
 
-  await redis
-    .multi()
-    .del(key)
-    .hset(key, { hash: hashOtp(otp), attempts: 0 })
-    .expire(key, OTP_TTL_SEC)
-    .set(cooldownKey(email), '1', 'EX', OTP_COOLDOWN_SEC)
-    .incr(quotaKey(email))
-    // NX: only the first send in the window sets the TTL, so the quota window is
-    // fixed from that first send rather than sliding on every resend.
-    .expire(quotaKey(email), OTP_QUOTA_WINDOW_SEC, 'NX')
-    .exec()
+  await payload.kv.set(key(email), {
+    hash: hashOtp(otp),
+    attempts: 0,
+    expiresAt: now + OTP_TTL_SEC,
+    nextResendAt: now + OTP_COOLDOWN_SEC,
+  })
 
   return { otp }
 }
 
 /**
  * `issueOtp`, but refuses instead of sending twice inside the resend cooldown.
- * Shared by every path that can re-send a code outside of a fresh registration
- * (a login bounce, the verification screen's "resend" control) so none of them can
- * drift from the cooldown key's own semantics.
+ * Shared by every path that can re-send a code outside a fresh registration (a
+ * login bounce, the verification screen's "resend" control) so none of them can
+ * drift from the cooldown's semantics.
  */
-export async function resendOtp(email: string): Promise<ResendResult> {
-  if (await redis.exists(cooldownKey(email))) return { ok: false, reason: 'cooldown' }
-  const { otp } = await issueOtp(email)
+export async function resendOtp(payload: Payload, email: string): Promise<ResendResult> {
+  const live = await readLive(payload, email)
+  if (live && nowSec() < live.nextResendAt) return { ok: false, reason: 'cooldown' }
+
+  const { otp } = await issueOtp(payload, email)
   return { ok: true, otp }
 }
 
@@ -70,30 +86,32 @@ export type OtpVerification =
 /**
  * Check `otp` against the live challenge for `email`.
  *
- * `expired` — no challenge (never issued, or the 5-minute TTL lapsed).
- * `locked` — `OTP_MAX_VERIFY_ATTEMPTS` wrong tries already spent; the code is
- * dead even if the next guess is right, the caller must re-issue.
+ * `expired` — no challenge: never issued, already spent, or past `expiresAt`.
+ * `locked` — `OTP_MAX_VERIFY_ATTEMPTS` wrong tries are spent; the code is dead
+ * even if the next guess is right, and the caller must re-issue.
  * `mismatch` — wrong guess, now counted; `remaining` tries left.
- * `ok` — correct, and the challenge is deleted so it cannot be replayed.
+ * `ok` — correct, and the record is deleted so it cannot be replayed.
  *
- * `HINCRBY` leaves the key's TTL untouched, so a wrong guess never extends the
- * window. Read-then-increment is not atomic, but the flow is single-user and the
- * worst case is one extra try — not worth a Lua script.
+ * A wrong guess rewrites `attempts` and nothing else, so it never pushes
+ * `expiresAt` further out.
  */
-export async function verifyOtp(email: string, otp: string): Promise<OtpVerification> {
-  const key = verifyKey(email)
-  const stored = await redis.hgetall(key)
+export async function verifyOtp(
+  payload: Payload,
+  email: string,
+  otp: string,
+): Promise<OtpVerification> {
+  const live = await readLive(payload, email)
+  if (!live) return { ok: false, reason: 'expired' }
+  if (live.attempts >= OTP_MAX_VERIFY_ATTEMPTS) return { ok: false, reason: 'locked' }
 
-  if (!stored.hash) return { ok: false, reason: 'expired' }
-  if (Number(stored.attempts ?? 0) >= OTP_MAX_VERIFY_ATTEMPTS)
-    return { ok: false, reason: 'locked' }
-
-  if (verifyOtpHash(otp, stored.hash)) {
-    await redis.del(key)
+  if (verifyOtpHash(otp, live.hash)) {
+    await payload.kv.delete(key(email))
     return { ok: true }
   }
 
-  const attempts = await redis.hincrby(key, 'attempts', 1)
+  const attempts = live.attempts + 1
+  await payload.kv.set(key(email), { ...live, attempts })
+
   const remaining = OTP_MAX_VERIFY_ATTEMPTS - attempts
   return remaining > 0
     ? { ok: false, reason: 'mismatch', remaining }

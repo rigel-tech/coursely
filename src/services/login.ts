@@ -76,7 +76,7 @@ export async function authenticateUser(input: LoginInput): Promise<LoginServiceR
     // §7 — a returning unverified user needs a working code waiting for them; the
     // one from registration may already be stale. Fire-and-forget, cooldown-gated,
     // same shape as `registerStudent`'s own send.
-    const resend = await resendOtp(email)
+    const resend = await resendOtp(payload, email)
     if (resend.ok) {
       void sendVerifyOtpEmail(payload, email, resend.otp).catch((err) =>
         payload.logger.error({ err }, 'EMAIL_VERIFY_OTP send failed'),

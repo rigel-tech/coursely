@@ -2,7 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { redis } from '@/lib/redis'
+import { clearOtp, readOtp } from './helpers/otp-record'
 import { PENDING_EMAIL_COOKIE } from '@/lib/constants/auth'
 
 /**
@@ -47,7 +47,7 @@ beforeEach(() => {
 afterEach(async () => {
   vi.restoreAllMocks()
   for (const email of usedEmails) {
-    await redis.del(`otp:verify:${email}`, `otp:cooldown:${email}`, `otp:quota:${email}`)
+    await clearOtp(payload, email)
   }
   usedEmails.clear()
 })
@@ -61,7 +61,7 @@ describe('resendOtpAction', () => {
     const result = await run()
 
     expect(result.status).toBe('sent')
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(1)
+    expect(await readOtp(payload, email)).toBeTruthy()
     expect(sendEmail).toHaveBeenCalledTimes(1)
   })
 

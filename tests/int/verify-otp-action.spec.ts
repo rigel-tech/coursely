@@ -3,7 +3,7 @@ import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
 import { issueOtp } from '@/services/otp-store'
-import { redis } from '@/lib/redis'
+import { clearOtp, readOtp } from './helpers/otp-record'
 import { PENDING_EMAIL_COOKIE, REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
 import { SessionScope } from './helpers/session-keys'
 
@@ -81,7 +81,7 @@ afterEach(async () => {
   vi.restoreAllMocks()
   await scope.cleanup()
   for (const email of usedEmails) {
-    await redis.del(`otp:verify:${email}`, `otp:cooldown:${email}`, `otp:quota:${email}`)
+    await clearOtp(payload, email)
     const { docs } = await payload.find({
       collection: 'students',
       where: { email: { equals: email } },
@@ -99,7 +99,7 @@ afterEach(async () => {
 describe('verifyOtpAction — happy path', () => {
   it('flips the account to ACTIVE, signs the user in, clears the cookie, consumes the code', async () => {
     const { email, user } = await seed('PENDING_VERIFICATION')
-    const { otp } = await issueOtp(email)
+    const { otp } = await issueOtp(payload, email)
 
     expect(await run(form(otp))).toEqual({ status: 'success', redirectTo: '/' })
 
@@ -107,7 +107,7 @@ describe('verifyOtpAction — happy path', () => {
     expect(after.status).toBe('ACTIVE')
     expect(after.verifiedAt).toBeTruthy()
     expect(ctx.cookieJar.has(PENDING_EMAIL_COOKIE)).toBe(false)
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(0)
+    expect(await readOtp(payload, email)).toBeNull()
 
     // a fresh session, treated as "remember me" (D10)
     expect(ctx.cookieJar.get(ACCESS_COOKIE)).toBeTruthy()
@@ -136,7 +136,7 @@ describe('verifyOtpAction — rejected input', () => {
 
   it('errors on a code that is not six digits, without touching the account or the code', async () => {
     const { email, user } = await seed('PENDING_VERIFICATION')
-    await issueOtp(email)
+    await issueOtp(payload, email)
 
     const result = await run(form('12ab5'))
     expect(result.status).toBe('error')
@@ -144,14 +144,14 @@ describe('verifyOtpAction — rejected input', () => {
 
     const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('PENDING_VERIFICATION')
-    expect(await redis.hget(`otp:verify:${email}`, 'attempts')).toBe('0')
+    expect((await readOtp(payload, email))?.attempts).toBe(0)
   })
 })
 
 describe('verifyOtpAction — wrong code', () => {
   it('reports the remaining tries and leaves the account pending', async () => {
     const { email, user } = await seed('PENDING_VERIFICATION')
-    const { otp } = await issueOtp(email)
+    const { otp } = await issueOtp(payload, email)
     const wrong = String((Number(otp) + 1) % 1_000_000).padStart(6, '0')
 
     const result = await run(form(wrong))
@@ -160,13 +160,13 @@ describe('verifyOtpAction — wrong code', () => {
 
     const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('PENDING_VERIFICATION')
-    expect(await redis.hget(`otp:verify:${email}`, 'attempts')).toBe('1')
+    expect((await readOtp(payload, email))?.attempts).toBe(1)
   })
 
   it('rejects a superseded code after a resend, then accepts the fresh one', async () => {
     const { email } = await seed('PENDING_VERIFICATION')
-    const first = (await issueOtp(email)).otp
-    const second = (await issueOtp(email)).otp
+    const first = (await issueOtp(payload, email)).otp
+    const second = (await issueOtp(payload, email)).otp
 
     if (first !== second) {
       const stale = await run(form(first))
@@ -180,7 +180,7 @@ describe('verifyOtpAction — wrong code', () => {
 describe('verifyOtpAction — disabled account', () => {
   it('refuses without consuming the code', async () => {
     const { email, user } = await seed('DISABLED')
-    const { otp } = await issueOtp(email)
+    const { otp } = await issueOtp(payload, email)
 
     const result = await run(form(otp))
     expect(result.status).toBe('error')
@@ -188,6 +188,6 @@ describe('verifyOtpAction — disabled account', () => {
 
     const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('DISABLED')
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(1)
+    expect(await readOtp(payload, email)).toBeTruthy()
   })
 })

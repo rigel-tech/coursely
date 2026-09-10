@@ -2,7 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { redis } from '@/lib/redis'
+import { clearOtp, readOtp } from './helpers/otp-record'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so it
@@ -81,7 +81,7 @@ beforeEach(() => {
 afterEach(async () => {
   vi.restoreAllMocks()
   for (const email of usedEmails) {
-    await redis.del(`otp:verify:${email}`, `otp:cooldown:${email}`, `otp:quota:${email}`)
+    await clearOtp(payload, email)
     const { docs } = await payload.find({
       collection: 'students',
       where: { email: { equals: email } },
@@ -128,7 +128,7 @@ describe('registerAction — new email', () => {
     expect(notes.docs).toHaveLength(1)
     expect(notes.docs[0].type).toBe('ACCOUNT_CREATED')
 
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(1)
+    expect(await readOtp(payload, email)).toBeTruthy()
     expect(ctx.cookieJar.get('pending_email')).toBe(email)
     expect(ctx.cookieOptions.get('pending_email')).toMatchObject({ httpOnly: true })
     expect(sendEmail).toHaveBeenCalledTimes(1)
@@ -152,7 +152,7 @@ describe('registerAction — existing ACTIVE email', () => {
       limit: 0,
     })
     expect(totalDocs).toBe(1)
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(0)
+    expect(await readOtp(payload, email)).toBeNull()
     expect(ctx.cookieJar.get('pending_email')).toBe(email)
     expect(sendEmail).toHaveBeenCalledTimes(1)
   })
@@ -182,7 +182,7 @@ describe('registerAction — existing PENDING_VERIFICATION email', () => {
       limit: 0,
     })
     expect(notes.totalDocs).toBe(0)
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(1)
+    expect(await readOtp(payload, email)).toBeTruthy()
 
     // Credentials were refreshed: the stored hash changed.
     const after = await payload.find({
@@ -207,7 +207,7 @@ describe('registerAction — DISABLED email', () => {
 
     expect(await run(validForm(email))).toEqual({ status: 'success' })
 
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(0)
+    expect(await readOtp(payload, email)).toBeNull()
     expect(sendEmail).not.toHaveBeenCalled()
     expect(ctx.cookieJar.get('pending_email')).toBe(email)
   })

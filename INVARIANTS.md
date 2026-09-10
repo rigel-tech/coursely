@@ -340,6 +340,34 @@ Nothing in the type system or the build says a word.
 `src/` mentions one of these names; the proxy behaviour is pinned in
 `tests/int/proxy-session.spec.ts` § "identity is never forwarded as a request header".
 
+## Key–value storage
+
+### Anything written to `payload.kv` carries its own expiry and deletes itself on read
+
+**Rule** — `payload.kv` has `get` / `set` / `delete` / `has` / `keys` / `clear` and **no TTL
+argument anywhere**. A value that is supposed to stop being valid must therefore carry the
+moment it does — an `expiresAt` field — and every read goes through one helper that checks
+it and deletes the record before answering `null`. Never assume a KV entry disappears on
+its own, and never add a "temporary" KV write without that field.
+
+**Why it breaks silently** — the shape of the API invites the mistake: it is the same
+`get`/`set`/`delete` surface as Redis minus the one argument that mattered, so a Redis
+keyspace ported over key by key looks complete and compiles. Nothing throws; the value is
+simply immortal. For the OTP challenge that means a six-digit code that stays valid forever
+and a five-try lockout that never lifts, and the tests pass either way because a test issues
+a code and verifies it seconds later — exactly the window in which an expiry that never
+fires is indistinguishable from one that works. The rows are also invisible: the generated
+`payload-kv` collection is `admin.hidden` with all four access rules `() => false`, so
+nobody browsing the admin panel will ever notice them piling up.
+
+**Where** — `src/services/otp-store.ts` (`readLive` is the only reader; `expiresAt` is set
+in `issueOtp`), pinned by `tests/int/otp-store.spec.ts` § "reports expired past `expiresAt`
+and drops the record on the way out". The adapter is
+`node_modules/payload/dist/kv/adapters/DatabaseKVAdapter.js`, wired in by
+`node_modules/payload/dist/config/defaults.js` (`config.kv = config.kv ?? databaseKVAdapter()`)
+— this project declares no `kv` in `payload.config.ts`, so the records are Postgres rows in
+`payload_kv`.
+
 ## Client-side state
 
 ### `themeLocalStorageKey` and `defaultTheme` exist in two modules — change both or neither

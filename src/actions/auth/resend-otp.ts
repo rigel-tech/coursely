@@ -26,10 +26,10 @@ export async function resendOtpAction(
   if (!email) return { status: 'error', message: SESSION_EXPIRED }
 
   try {
-    const result = await resendOtp(email)
+    const payload = await getPayload({ config: await configPromise })
+    const result = await resendOtp(payload, email)
     if (!result.ok) return { status: 'cooldown', message: COOLDOWN }
 
-    const payload = await getPayload({ config: await configPromise })
     void sendVerifyOtpEmail(payload, email, result.otp).catch((err) =>
       payload.logger.error({ err }, 'EMAIL_VERIFY_OTP send failed'),
     )

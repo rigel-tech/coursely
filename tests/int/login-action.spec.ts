@@ -6,6 +6,7 @@ import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
 import { redis } from '@/lib/redis'
+import { clearOtp, readOtp } from './helpers/otp-record'
 import { REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
 import { SessionScope } from './helpers/session-keys'
 
@@ -105,7 +106,7 @@ afterEach(async () => {
   await scope.cleanup()
   usedIps.clear()
   for (const email of usedEmails) {
-    await redis.del(`otp:verify:${email}`, `otp:cooldown:${email}`, `otp:quota:${email}`)
+    await clearOtp(payload, email)
     const { docs } = await payload.find({
       collection: 'students',
       where: { email: { equals: email } },
@@ -268,7 +269,7 @@ describe('loginAction — status gate', () => {
 
     await run(form({ email, password }))
 
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(1)
+    expect(await readOtp(payload, email)).toBeTruthy()
     expect(sendEmail).toHaveBeenCalledTimes(1)
   })
 

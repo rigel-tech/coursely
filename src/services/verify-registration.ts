@@ -1,10 +1,10 @@
 /**
  * Registration-verification domain logic (§5.2). No HTTP concerns — the caller
  * owns the `pending_email` cookie. Given an `(email, otp)` pair this checks the
- * Redis challenge with its 5-try lockout and, on a correct code, flips the
+ * stored challenge with its 5-try lockout and, on a correct code, flips the
  * account `PENDING_VERIFICATION -> ACTIVE` and stamps `verifiedAt`. The account
  * lookup runs before `verifyOtp` so a disabled account never burns the code, and
- * an already-`ACTIVE` account resolves `ok` without touching Redis.
+ * an already-`ACTIVE` account resolves `ok` without reading the challenge at all.
  */
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
@@ -37,7 +37,7 @@ export async function verifyRegistration(
   const asUser = { id: user.id, status: 'ACTIVE' as const }
   if (user.status === 'ACTIVE') return { ok: true, user: asUser }
 
-  const result = await verifyOtp(email, otp)
+  const result = await verifyOtp(payload, email, otp)
   if (!result.ok) return result
 
   await payload.update({
