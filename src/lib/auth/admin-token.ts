@@ -15,11 +15,11 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 
 const STAFF_COLLECTION = 'users'
 
-export type AuthUser = { id: number; status?: string; email?: string }
+export type AdminUser = { id: number; status?: string; email?: string }
 
 const str = (v: unknown) => (typeof v === 'string' ? v : undefined)
 
-export function verifyAuthToken(token: string | undefined, secret: string): AuthUser | null {
+export function verifyAdminToken(token: string | undefined, secret: string): AdminUser | null {
   if (!token) return null
 
   const parts = token.split('.')

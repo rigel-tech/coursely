@@ -13,7 +13,7 @@ vi.mock('@/actions/auth/resend-otp', () => ({
   resendOtpAction: (...args: unknown[]) => resendOtpAction(...args),
 }))
 
-const { OtpForm } = await import('@/app/(frontend)/user/verify-otp/OtpForm')
+const { OtpForm } = await import('@/app/(frontend)/student/verify-otp/OtpForm')
 
 beforeEach(() => {
   verifyOtpAction.mockReset()

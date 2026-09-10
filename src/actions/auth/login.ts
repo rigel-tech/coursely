@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 
 import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_TTL_SEC } from '@/lib/constants/auth'
 import { parseLoginInput } from '@/lib/validation/login-schema'
-import { authenticateUser } from '@/services/login'
+import { authenticateStudent } from '@/services/student-login'
 import { setSessionCookies } from '@/lib/auth/session-cookies'
 import type { LoginState } from '@/lib/constants/login-state'
 
@@ -12,7 +12,7 @@ const BAD_CREDENTIALS = 'Email hoặc mật khẩu không đúng.'
 
 /**
  * Server action for login (§7). Orchestration only: validate, delegate to
- * `authenticateUser`, then translate the result into the `coursely-access` /
+ * `authenticateStudent`, then translate the result into the `coursely-access` /
  * `coursely-refresh` cookies + `redirectTo` for `<LoginForm>` to act on. It never
  * calls `redirect()` itself — setting an auth cookie and redirecting in the same
  * action drops the cookie, so the client owns the navigation.
@@ -36,7 +36,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 
   let result
   try {
-    result = await authenticateUser(parsed.data)
+    result = await authenticateStudent(parsed.data)
   } catch (err) {
     console.error('loginAction failed', err)
     return { status: 'error', message: 'Có lỗi hệ thống. Vui lòng thử lại sau.' }
@@ -62,7 +62,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     return { status: 'error', code: result.code, message: result.message }
   }
 
-  setSessionCookies(await cookies(), result.user, { rememberMe: result.rememberMe })
+  setSessionCookies(await cookies(), result.student, { rememberMe: result.rememberMe })
 
   return { status: 'success', redirectTo: result.redirectTo }
 }

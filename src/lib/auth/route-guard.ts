@@ -3,7 +3,9 @@
  * can be unit-tested without constructing a `NextRequest`.
  */
 import { PROTECTED_PREFIXES } from '@/lib/constants/auth'
-import type { AuthUser } from '@/lib/auth/verify-token'
+
+/** All routing needs to know about whoever is signed in — staff or student. */
+export type RoutePrincipal = { id: number; status?: string }
 
 export type RouteDecision = { type: 'next' } | { type: 'redirect'; to: string }
 
@@ -11,10 +13,10 @@ const NEXT: RouteDecision = { type: 'next' }
 
 export function decideRoute(
   pathname: string,
-  user: AuthUser | null,
+  user: RoutePrincipal | null,
   hasPendingEmail: boolean,
 ): RouteDecision {
-  // No `/admin` branch. `verifyAuthToken` rejects any token whose `collection` claim
+  // No `/admin` branch. `verifyAdminToken` rejects any token whose `collection` claim
   // is not `users`, so a student reaches this function as `null` and Payload's own
   // `canAccessAdmin` — backed by `Students.access.admin` — is what refuses the panel.
   // Routing was never authorisation; it only looked like it.

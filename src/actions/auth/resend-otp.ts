@@ -6,7 +6,7 @@ import configPromise from '@payload-config'
 
 import { PENDING_EMAIL_COOKIE } from '@/lib/constants/auth'
 import type { ResendOtpState } from '@/lib/constants/resend-otp-state'
-import { resendOtp } from '@/services/otp-store'
+import { resendOtp } from '@/services/otp-challenge'
 import { sendVerifyOtpEmail } from '@/email/send'
 
 const SESSION_EXPIRED = 'Phiên xác minh đã hết hạn. Vui lòng đăng ký lại.'

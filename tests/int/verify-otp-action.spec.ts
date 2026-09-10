@@ -2,7 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { issueOtp } from '@/services/otp-store'
+import { issueOtp } from '@/services/otp-challenge'
 import { clearOtp, readOtp } from './helpers/otp-record'
 import { PENDING_EMAIL_COOKIE, REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
 

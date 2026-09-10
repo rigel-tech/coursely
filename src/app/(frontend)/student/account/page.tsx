@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import React from 'react'
 
-import { getStudentSession } from '@/lib/auth/student-session'
+import { getCurrentStudent } from '@/lib/auth/current-student'
 import { ProfileForm } from './ProfileForm'
 
 export const dynamic = 'force-dynamic'
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 }
 
 export default async function ProfilePage() {
-  const student = await getStudentSession()
+  const student = await getCurrentStudent()
 
   // `status` is read from the document, not from the token: an account disabled
   // mid-session loses the page on its next navigation rather than at token expiry.

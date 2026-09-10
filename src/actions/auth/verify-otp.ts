@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 
 import { PENDING_EMAIL_COOKIE } from '@/lib/constants/auth'
 import type { VerifyOtpState } from '@/lib/constants/verify-otp-state'
-import { verifyRegistration } from '@/services/verify-registration'
+import { verifyRegistration } from '@/services/student-verification'
 import { setSessionCookies } from '@/lib/auth/session-cookies'
 
 const SESSION_EXPIRED = 'Phiên xác minh đã hết hạn. Vui lòng đăng ký lại.'
@@ -56,7 +56,7 @@ export async function verifyOtpAction(
 
   const jar = await cookies()
   jar.delete(PENDING_EMAIL_COOKIE)
-  setSessionCookies(jar, result.user, { rememberMe: true })
+  setSessionCookies(jar, result.student, { rememberMe: true })
 
   return { status: 'success', redirectTo: '/' }
 }

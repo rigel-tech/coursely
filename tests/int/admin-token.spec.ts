@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto'
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { verifyAuthToken } from '@/lib/auth/verify-token'
+import { verifyAdminToken } from '@/lib/auth/admin-token'
 
 const derivedSecret = createHash('sha256')
   .update(process.env.PAYLOAD_SECRET as string)
@@ -45,15 +45,15 @@ afterEach(async () => {
   }
 })
 
-describe('verifyAuthToken against a real Payload token', () => {
+describe('verifyAdminToken against a real Payload token', () => {
   it('accepts a staff token and decodes the id Payload signed in', async () => {
-    const user = verifyAuthToken(await tokenFor('users'), derivedSecret)
+    const user = verifyAdminToken(await tokenFor('users'), derivedSecret)
 
     expect(typeof user?.id).toBe('number')
   })
 
   it('rejects that token under the wrong secret', async () => {
-    expect(verifyAuthToken(await tokenFor('users'), 'x'.repeat(32))).toBeNull()
+    expect(verifyAdminToken(await tokenFor('users'), 'x'.repeat(32))).toBeNull()
   })
 
   // The one that matters: a student can authenticate perfectly well — `payload.login` on
@@ -63,6 +63,6 @@ describe('verifyAuthToken against a real Payload token', () => {
     const token = await tokenFor('students')
 
     expect(token).toBeTruthy()
-    expect(verifyAuthToken(token, derivedSecret)).toBeNull()
+    expect(verifyAdminToken(token, derivedSecret)).toBeNull()
   })
 })

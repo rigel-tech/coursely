@@ -20,12 +20,12 @@ import configPromise from '@payload-config'
 
 import type { LoginInput } from '@/lib/validation/login-schema'
 import { sendVerifyOtpEmail } from '@/email/send'
-import { resendOtp } from '@/services/otp-store'
+import { resendOtp } from '@/services/otp-challenge'
 
 export type LoginServiceResult =
   | {
       ok: true
-      user: { id: number; status?: string }
+      student: { id: number; status?: string }
       rememberMe: boolean
       redirectTo: string
     }
@@ -35,7 +35,7 @@ export type LoginServiceResult =
 const BAD_CREDENTIALS = 'Email hoặc mật khẩu không đúng.'
 const DISABLED = 'Tài khoản đã bị khóa, vui lòng liên hệ trung tâm.'
 
-export async function authenticateUser(input: LoginInput): Promise<LoginServiceResult> {
+export async function authenticateStudent(input: LoginInput): Promise<LoginServiceResult> {
   const email = input.email.trim().toLowerCase()
 
   const payload = await getPayload({ config: await configPromise })
@@ -66,13 +66,13 @@ export async function authenticateUser(input: LoginInput): Promise<LoginServiceR
     throw err
   }
 
-  const user = result.user as { id: number; status?: string }
+  const student = result.user as { id: number; status?: string }
 
   // §7 — status lives in our schema, Payload never checked it.
-  if (user.status === 'DISABLED') {
+  if (student.status === 'DISABLED') {
     return { ok: false, code: 'AUTH_024', message: DISABLED }
   }
-  if (user.status === 'PENDING_VERIFICATION') {
+  if (student.status === 'PENDING_VERIFICATION') {
     // §7 — a returning unverified user needs a working code waiting for them; the
     // one from registration may already be stale. Fire-and-forget, cooldown-gated,
     // same shape as `registerStudent`'s own send.
@@ -95,13 +95,13 @@ export async function authenticateUser(input: LoginInput): Promise<LoginServiceR
   // tokens (`payload.login`'s own JWT is discarded).
   await payload.update({
     collection: 'students',
-    id: user.id,
+    id: student.id,
     data: { lastLoginAt: new Date().toISOString() },
   })
 
   return {
     ok: true,
-    user: { id: user.id, status: user.status },
+    student: { id: student.id, status: student.status },
     rememberMe: input.rememberMe,
     redirectTo: input.callbackUrl ?? '/',
   }

@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
 
 import { decideRoute } from '@/lib/auth/route-guard'
-import type { AuthUser } from '@/lib/auth/verify-token'
+import type { RoutePrincipal } from '@/lib/auth/route-guard'
 
-const staff: AuthUser = { id: 1, status: 'ACTIVE' }
-const student: AuthUser = { id: 2, status: 'ACTIVE' }
-const pending: AuthUser = { id: 3, status: 'PENDING_VERIFICATION' }
+const staff: RoutePrincipal = { id: 1, status: 'ACTIVE' }
+const student: RoutePrincipal = { id: 2, status: 'ACTIVE' }
+const pending: RoutePrincipal = { id: 3, status: 'PENDING_VERIFICATION' }
 
-// The admin branch is gone. `verifyAuthToken` now rejects any token whose `collection`
+// The admin branch is gone. `verifyAdminToken` now rejects any token whose `collection`
 // claim is not `users`, so by the time a user object reaches here it is already staff —
 // and Payload's own `canAccessAdmin` is what actually guards the panel. Routing never
 // was authorisation; this asserts it has stopped pretending to be.

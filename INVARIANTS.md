@@ -284,7 +284,7 @@ Staff sessions are Payload's own `payload-token` and never enter this scheme.
 **Why it breaks silently** — `users` and `students` are separate Postgres tables with
 independent `serial` primary keys, so their ids collide: `users.id = 7` and
 `students.id = 7` both exist and are different people. The claims carry that number and
-nothing else that would tell the tables apart, and `getStudentSession` looks the id up in
+nothing else that would tell the tables apart, and `getCurrentStudent` looks the id up in
 `students` without question. A staff id in that cookie therefore signs a visitor in as
 whichever student happens to hold the same number — a real account, a real profile page, a
 real name in the header. Nothing throws, nothing logs, and every test that exercises one
@@ -293,7 +293,7 @@ issued the student cookie pair to anyone who authenticated at `/dang-nhap`, admi
 
 **Where** — the only two call sites are `src/actions/auth/login.ts` (`loginAction`) and
 `src/actions/auth/verify-otp.ts` (`verifyOtpAction`); both take their user from
-`src/services/login.ts` / `src/services/verify-registration.ts`, which query `students`.
+`src/services/student-login.ts` / `src/services/student-verification.ts`, which query `students`.
 `src/lib/auth/session-cookies.ts` and `src/lib/auth/session-token.ts` (`StudentClaims`) are
 what this protects. Pinned by `tests/int/login-action.spec.ts` § "a staff account is not a
 principal here".
@@ -325,7 +325,7 @@ account gate reads stale for up to `ACCESS_TTL_SEC`. Nothing errors. The person 
 **Rule** — `proxy` returns a bare `NextResponse.next()`; it does not rewrite the request
 headers. An `x-user-id`, `x-user-status` or `x-user-role` arriving on a request is
 therefore whatever the caller typed, and no file in `src/` may read one. Server code that
-needs the signed-in student calls `getStudentSession()`; public UI asks
+needs the signed-in student calls `getCurrentStudent()`; public UI asks
 `GET /next/auth-status` from the browser.
 
 **Why it breaks silently** — `proxy` used to forward the verified identity in these
@@ -337,7 +337,7 @@ renders, and it trusts an account id the visitor chose, on every route the match
 Nothing in the type system or the build says a word.
 
 **Where** — `src/proxy.ts` (`proxy`, the `NextResponse.next()` branch). Guarded by
-`tests/unit/repo/user-header-readers.spec.ts`, which fails the moment any file under
+`tests/unit/repo/student-header-readers.spec.ts`, which fails the moment any file under
 `src/` mentions one of these names; the proxy behaviour is pinned in
 `tests/int/proxy-session.spec.ts` § "identity is never forwarded as a request header".
 
@@ -361,8 +361,8 @@ fires is indistinguishable from one that works. The rows are also invisible: the
 `payload-kv` collection is `admin.hidden` with all four access rules `() => false`, so
 nobody browsing the admin panel will ever notice them piling up.
 
-**Where** — `src/services/otp-store.ts` (`readLive` is the only reader; `expiresAt` is set
-in `issueOtp`), pinned by `tests/int/otp-store.spec.ts` § "reports expired past `expiresAt`
+**Where** — `src/services/otp-challenge.ts` (`readLive` is the only reader; `expiresAt` is set
+in `issueOtp`), pinned by `tests/int/otp-challenge.spec.ts` § "reports expired past `expiresAt`
 and drops the record on the way out". The adapter is
 `node_modules/payload/dist/kv/adapters/DatabaseKVAdapter.js`, wired in by
 `node_modules/payload/dist/config/defaults.js` (`config.kv = config.kv ?? databaseKVAdapter()`)
@@ -408,7 +408,7 @@ signed-in visitor, on exactly the pages that host the header. No warning, no bui
 
 **Where** — `src/components/public/HeaderAuthControls/index.tsx` (client check) →
 `src/app/(frontend)/next/auth-status/route.ts` (`GET`, signature-only, no I/O) →
-`verifyAccessToken` in `src/lib/auth/access-token.ts`. Rendered by
+`verifyAccessToken` in `src/lib/auth/session-token.ts`. Rendered by
 `src/Header/Component.client.tsx`. The `force-static` declarations are in the three
 `src/app/(frontend)/**/page.tsx` files above. Design rationale:
 `specs/002-header-logout-ui/research.md` D1/D4.

@@ -7,8 +7,8 @@ import {
   PENDING_EMAIL_COOKIE,
   REFRESH_TOKEN_COOKIE,
 } from '@/lib/constants/auth'
-import { decideRoute } from '@/lib/auth/route-guard'
-import { verifyAuthToken, type AuthUser } from '@/lib/auth/verify-token'
+import { decideRoute, type RoutePrincipal } from '@/lib/auth/route-guard'
+import { verifyAdminToken } from '@/lib/auth/admin-token'
 import { verifyAccessToken, verifyRefreshToken, type StudentClaims } from '@/lib/auth/session-token'
 import { clearSessionCookies, refreshAccessCookie } from '@/lib/auth/session-cookies'
 
@@ -16,7 +16,7 @@ import { clearSessionCookies, refreshAccessCookie } from '@/lib/auth/session-coo
  * Auth guard (Next 16 Proxy, formerly Middleware — Node runtime). Gates `/admin`,
  * the student area and `/xac-thuc-otp`. It decides routing and cookies only: the
  * request headers pass through untouched, so nothing this file learns about the
- * visitor reaches a Server Component. Server code asks `getStudentSession`;
+ * visitor reaches a Server Component. Server code asks `getCurrentStudent`;
  * public UI asks `/next/auth-status` from the browser (see INVARIANTS).
  *
  * Two identity sources, split by area:
@@ -34,7 +34,7 @@ const jwtSecret = createHash('sha256')
 
 /** The visitor, plus what the response owes the session cookies. */
 type Identity = {
-  user: AuthUser | StudentClaims | null
+  user: RoutePrincipal | null
   /** The access cookie must be re-minted from these claims. */
   renew?: StudentClaims
   /** A refresh cookie was presented and did not verify — drop both. */
@@ -45,7 +45,7 @@ const isAdminPath = (pathname: string) => pathname === '/admin' || pathname.star
 
 function resolveIdentity(request: NextRequest): Identity {
   if (isAdminPath(request.nextUrl.pathname)) {
-    return { user: verifyAuthToken(request.cookies.get(AUTH_TOKEN_COOKIE)?.value, jwtSecret) }
+    return { user: verifyAdminToken(request.cookies.get(AUTH_TOKEN_COOKIE)?.value, jwtSecret) }
   }
 
   const student = verifyAccessToken(request.cookies.get(ACCESS_TOKEN_COOKIE)?.value)

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { getStudentSession } from '@/lib/auth/student-session'
+import { getCurrentStudent } from '@/lib/auth/current-student'
 import { parseProfileInput } from '@/lib/validation/profile-schema'
 
 export type ProfileFormState = {
@@ -25,7 +25,7 @@ export async function updateProfileAction(
   _prevState: ProfileFormState,
   formData: FormData,
 ): Promise<ProfileFormState> {
-  const student = await getStudentSession()
+  const student = await getCurrentStudent()
 
   if (!student || student.status !== 'ACTIVE') {
     return {

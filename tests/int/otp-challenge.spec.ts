@@ -13,10 +13,10 @@ import {
   verifyOtp,
   OTP_MAX_VERIFY_ATTEMPTS,
   OTP_TTL_SEC,
-} from '@/services/otp-store'
+} from '@/services/otp-challenge'
 import { verifyOtpHash } from '@/services/otp'
 
-/** The record `otp-store` keeps. Written here directly to age a challenge without waiting. */
+/** The record `otp-challenge` keeps. Written here directly to age a challenge without waiting. */
 type OtpRecord = { hash: string; attempts: number; expiresAt: number; nextResendAt: number }
 
 const kvKey = (email: string) => `otp:${email}`

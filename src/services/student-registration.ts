@@ -14,7 +14,7 @@ import configPromise from '@payload-config'
 
 import type { RegisterInput } from '@/lib/validation/register-schema'
 import { sendDuplicateAttemptEmail, sendVerifyOtpEmail } from '@/email/send'
-import { issueOtp } from '@/services/otp-store'
+import { issueOtp } from '@/services/otp-challenge'
 
 export type RegisterContext = { ip: string; userAgent: string }
 

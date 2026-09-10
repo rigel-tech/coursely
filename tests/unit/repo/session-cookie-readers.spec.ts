@@ -16,7 +16,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const SRC = 'src'
-const HELPER = 'src/lib/auth/student-session.ts'
+const HELPER = 'src/lib/auth/current-student.ts'
 
 const walk = (dir: string, acc: string[] = []): string[] => {
   for (const name of readdirSync(dir)) {
@@ -36,7 +36,7 @@ const readsAccessCookieFromHeaders = (file: string): boolean => {
 describe('who may read the student access cookie', () => {
   const readers = walk(SRC).filter(readsAccessCookieFromHeaders)
 
-  it('is exactly one file, and it is getStudentSession', () => {
+  it('is exactly one file, and it is getCurrentStudent', () => {
     expect(readers).toEqual([HELPER])
   })
 

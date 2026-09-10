@@ -26,7 +26,7 @@ import { verifyAccessToken } from '@/lib/auth/session-token'
 import type { Student } from '@/payload-types'
 
 /** The signed-in student, or `null` if there is no usable session. */
-export async function getStudentSession(): Promise<Student | null> {
+export async function getCurrentStudent(): Promise<Student | null> {
   const claims = verifyAccessToken((await cookies()).get(ACCESS_TOKEN_COOKIE)?.value)
   if (!claims) return null
 
