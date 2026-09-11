@@ -301,6 +301,31 @@ issued the student cookie pair to anyone who authenticated at `/dang-nhap`, admi
 what this protects. Pinned by `tests/int/login-action.spec.ts` § "a staff account is not a
 principal here".
 
+### Signing and verifying a session token is `async` — every caller must `await`
+
+**Rule** — `signAccessToken`, `signRefreshToken`, `verifyAccessToken` and
+`verifyRefreshToken` all return Promises, and so does everything built on them
+(`setSessionCookies`, `refreshAccessCookie`, `resolveIdentity`, `proxy`). Await them.
+Never interpolate one into a string, and never call one for its side effect alone.
+
+**Why it breaks silently** — a Promise is truthy and stringifies to `"[object Promise]"`,
+so the two failure shapes both read as success. Writing one into a cookie signs every
+visitor out; checking one as an identity lets every visitor in as a student with an
+`undefined` id. TypeScript closes most of this door but not all of it: `Promise<string>`
+interpolated into a template literal is a perfectly valid string expression, and a call
+whose result is discarded is a floating promise no signature can object to. Both were
+real — `tests/int/proxy-session.spec.ts` built its cookie header as
+`` `${ACCESS_COOKIE}=${signAccessToken(claims)}` `` and `tests/int/current-student.spec.ts`
+called an un-awaited `signIn()`, while `tsc --noEmit` reported zero errors on both.
+
+**Where** — `src/lib/auth/session-token.ts` (the module banner states it),
+`src/lib/auth/session-cookies.ts`, `src/lib/auth/session-student.ts`, `src/proxy.ts`,
+and the two cookie-minting actions in `src/actions/auth/`. Pinned by
+`tests/unit/lib/session-cookies.spec.ts`, which reads each cookie back and verifies it
+rather than asserting it is merely truthy — the one assertion that tells a token from a
+pending promise. Note jose rejects a Node `Buffer` under jsdom's realm, so any spec that
+touches this module needs `// @vitest-environment node`.
+
 ### A session cannot be revoked — it can only expire
 
 **Rule** — There is no session record anywhere: the refresh token _is_ the session, and

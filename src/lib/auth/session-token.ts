@@ -2,16 +2,20 @@
  * The two student session tokens. Pure crypto — no datastore, no Payload, no
  * HTTP — so `proxy` imports it directly and a renewal costs no I/O at all.
  *
- * Both are compact HS256 JWTs over the same claims, each signed with its own key
- * derived from `PAYLOAD_SECRET`:
+ * Both are compact HS256 JWTs over the same claims, signed and checked through jose,
+ * each under its own key derived from `PAYLOAD_SECRET`:
  *
  *   access   sha256("coursely/access-token\0"  + PAYLOAD_SECRET)   — minutes
  *   refresh  sha256("coursely/refresh-token\0" + PAYLOAD_SECRET)   — days
  *
  * Three separations follow, and each matters: an access token cannot be replayed
  * as a refresh token or the other way round, neither can be replayed as Payload's
- * own `payload-token` (Payload signs with the raw secret), and rotating
- * `PAYLOAD_SECRET` signs everybody out at once.
+ * own `payload-token` (Payload derives its own key from the secret, the first 32
+ * characters of `sha256(secret)` in hex), and rotating `PAYLOAD_SECRET` signs
+ * everybody out at once.
+ *
+ * All four entry points are async, and a Promise is truthy — a missing `await`
+ * signs everyone out rather than failing. See INVARIANTS before adding a caller.
  *
  * There is no session record anywhere: the refresh token *is* the session. A
  * session therefore cannot be revoked before it expires — see INVARIANTS.

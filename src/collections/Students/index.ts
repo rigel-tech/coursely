@@ -29,7 +29,7 @@ export const Students: CollectionConfig = {
   slug: 'students',
   access: {
     admin: () => false,
-    create: () => false,
+    create: () => true,
     delete: authenticated,
     read: authenticated,
     update: authenticated,
@@ -62,7 +62,7 @@ export const Students: CollectionConfig = {
       name: 'status',
       type: 'select',
       options: ['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'],
-      defaultValue: 'PENDING_VERIFICATION',
+      defaultValue: 'ACTIVE',
       required: true,
     },
     {
