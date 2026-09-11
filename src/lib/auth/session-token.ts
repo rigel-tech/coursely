@@ -31,9 +31,7 @@ export type StudentClaims = { id: number; status?: string }
 type TokenKind = 'access' | 'refresh'
 
 const keyFor = (kind: TokenKind): Buffer =>
-  createHash('sha256')
-    .update(`coursely/${kind}-token\0${process.env.PAYLOAD_SECRET ?? ''}`)
-    .digest()
+  createHash('sha256').update(`coursely/${kind}-token\0${process.env.PAYLOAD_SECRET}`).digest()
 
 // `iat` and `exp` are written into the claims object by hand rather than through jose's
 // `.setIssuedAt()` / `.setExpirationTime()`, which append: those would emit
