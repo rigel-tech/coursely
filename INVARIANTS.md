@@ -258,6 +258,29 @@ Both are safe for the same reason — the browser applies the action response's 
 before the promise resolves or the new state arrives, so either way the navigation happens
 after the cookie exists. What is **not** safe is navigating from inside the action.
 
+### `proxy` must never redirect a Server Action request — it sends `NEXT` and lets the action answer
+
+**Rule** — A Server Action invocation is a POST carrying Next's own `next-action` header, to
+the same URL as the page it was called from. `proxy` must treat that header as an
+unconditional pass: whatever `decideRoute` would have returned for the pathname, a Server
+Action request always gets `NextResponse.next()`, never a redirect.
+
+**Why it breaks silently** — `proxy`'s matcher covers ordinary pages and Server Action POSTs
+alike, since both hit the same URL. Before this rule, a stale session hitting a protected
+page's action (`/tai-khoan`'s `updateProfileAction`, say) got an HTTP redirect back in place
+of the action's own response. The browser followed it exactly as it would for any redirect —
+a full navigation to `/dang-nhap`, with no action response ever reaching the calling
+component. Nothing throws, no console warning: the person who clicked "Lưu thay đổi" is just
+signed out, with no error banner ever rendered, because the component that would have shown
+one never got a response to render from. The action's own `getSessionStudent()` check — which
+already turns "no session" into a proper in-app message — never even ran.
+
+**Where** — `src/proxy.ts` (`isServerAction`, checked before `decideRoute` runs), pinned by
+`tests/int/proxy-session.spec.ts` § "a Server Action reaches its own handler even with no
+session". Any action reachable from a page under `PROTECTED_PREFIXES`
+(`src/lib/constants/auth.ts`) depends on this — today that's
+`src/actions/student/profile.ts`'s `updateProfileAction`, called from `/tai-khoan`.
+
 ## Routing
 
 ### A rewritten page has two live paths — link the public one, gate both
