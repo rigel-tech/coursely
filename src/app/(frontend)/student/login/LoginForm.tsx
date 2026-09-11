@@ -28,6 +28,11 @@ import { loginSchema, type LoginFormValues } from '@/lib/validation/login-schema
  * `coursely-access` / `pending_email` cookie is read server-side at the destination
  * and `/admin` (a separate route tree) re-renders.
  */
+const SYSTEM_FAILURE: LoginState = {
+  status: 'error',
+  message: 'Có lỗi hệ thống. Vui lòng thử lại sau.',
+}
+
 export const LoginForm: React.FC = () => {
   const [state, setState] = useState<LoginState>(initialLoginState)
   const {
@@ -43,10 +48,13 @@ export const LoginForm: React.FC = () => {
     // `route-guard` bounces a blocked visitor to `/dang-nhap?callbackUrl=<path>`. Fold
     // it into the submission so a successful login returns there; the server
     // re-validates it with `safeCallbackUrl`, so a tampered value is harmless.
+    //
+    // The action rethrows anything it has no copy for, so this is the last place a
+    // system failure can still reach the person instead of crashing the page.
     const result = await loginAction({
       ...values,
       callbackUrl: new URLSearchParams(window.location.search).get('callbackUrl'),
-    })
+    }).catch(() => SYSTEM_FAILURE)
 
     setState(result)
     if (result.redirectTo) window.location.assign(result.redirectTo)

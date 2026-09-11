@@ -92,6 +92,19 @@ describe('LoginForm', () => {
     expect(loginAction).not.toHaveBeenCalled()
   })
 
+  // The action rethrows anything it cannot translate, so the form is the last place a
+  // system failure can still be shown to a person rather than crashing the page.
+  it('shows a banner when the action rejects, instead of crashing', async () => {
+    loginAction.mockRejectedValue(new Error('database is on fire'))
+    render(React.createElement(LoginForm))
+
+    fill()
+    submit()
+
+    expect(await screen.findByText(/lỗi hệ thống/i)).toBeTruthy()
+    expect(assign).not.toHaveBeenCalled()
+  })
+
   it('disables the submit while the action is pending', async () => {
     loginAction.mockImplementation(() => new Promise(() => {}))
     render(React.createElement(LoginForm))

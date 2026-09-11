@@ -64,9 +64,10 @@ export function proxy(request: NextRequest): NextResponse {
       : NextResponse.next()
 
   // A renewal must reach the browser even if the request then redirects for an
-  // unrelated reason.
+  // unrelated reason. `resolveIdentity` never sets both — one is the renewed branch and
+  // the other the failed one — so these are two independent guards, not a chain.
   if (renew) refreshAccessCookie(response.cookies, renew)
-  else if (clear) clearSessionCookies(response.cookies)
+  if (clear) clearSessionCookies(response.cookies)
 
   return response
 }
