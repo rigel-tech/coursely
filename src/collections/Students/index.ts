@@ -35,6 +35,7 @@ export const Students: CollectionConfig = {
     update: authenticated,
   },
   admin: {
+    group: 'Academic',
     defaultColumns: ['email', 'fullName', 'status'],
     useAsTitle: 'email',
   },

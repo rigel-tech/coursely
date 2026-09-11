@@ -4,6 +4,7 @@ import * as migration_20260903_084929_add_course_objectives_and_phases from './2
 import * as migration_20260904_084119_add_course_categories_and_tags from './20260904_084119_add_course_categories_and_tags'
 import * as migration_20260909_140000_split_students_from_users from './20260909_140000_split_students_from_users'
 import * as migration_20260910_131500_rename_notifications_user_to_student from './20260910_131500_rename_notifications_user_to_student'
+import * as migration_20260910_062709_add_site_settings_global from './20260910_062709_add_site_settings_global'
 
 export const migrations = [
   {
@@ -35,5 +36,10 @@ export const migrations = [
     up: migration_20260910_131500_rename_notifications_user_to_student.up,
     down: migration_20260910_131500_rename_notifications_user_to_student.down,
     name: '20260910_131500_rename_notifications_user_to_student',
+  },
+  {
+    up: migration_20260910_062709_add_site_settings_global.up,
+    down: migration_20260910_062709_add_site_settings_global.down,
+    name: '20260910_062709_add_site_settings_global',
   },
 ]

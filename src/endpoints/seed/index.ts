@@ -20,7 +20,8 @@ const collections: CollectionSlug[] = [
   'search',
 ]
 
-const globals: GlobalSlug[] = ['header', 'footer']
+// site-settings is excluded because the seed clearing loop below resets navItems: [], which only applies to header & footer
+const globals: Exclude<GlobalSlug, 'site-settings'>[] = ['header', 'footer']
 
 const categories = ['Technology', 'News', 'Finance', 'Design', 'Software', 'Engineering']
 

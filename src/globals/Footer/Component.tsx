@@ -2,12 +2,17 @@ import { getCachedGlobal } from '@/utilities/getGlobals'
 import Link from 'next/link'
 import React from 'react'
 
+import type { Media } from '@/payload-types'
+
 import { ThemeSelector } from '@/providers/Theme/ThemeSelector'
 import { CMSLink } from '@/components/public/Link'
 import { Logo } from '@/components/public/Logo/Logo'
 
 export async function Footer() {
-  const footerData = await getCachedGlobal('footer', 1)()
+  const [footerData, siteSettings] = await Promise.all([
+    getCachedGlobal('footer', 1)(),
+    getCachedGlobal('site-settings', 1)(),
+  ])
 
   const navItems = footerData?.navItems || []
 
@@ -15,7 +20,11 @@ export async function Footer() {
     <footer className="mt-auto border-t border-border bg-card text-card-foreground">
       <div className="container py-8 gap-8 flex flex-col md:flex-row md:justify-between">
         <Link className="flex items-center" href="/">
-          <Logo />
+          <Logo
+            logo={siteSettings.logo as Media}
+            siteName={siteSettings.siteName}
+            tagline={siteSettings.tagline}
+          />
         </Link>
 
         <div className="flex flex-col-reverse items-start md:flex-row gap-4 md:items-center">

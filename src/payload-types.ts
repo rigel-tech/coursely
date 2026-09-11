@@ -63,21 +63,21 @@ export type SupportedTimezones =
 
 export interface Config {
   auth: {
-    users: UserAuthOperations;
     students: StudentAuthOperations;
+    users: UserAuthOperations;
   };
   blocks: {};
   collections: {
+    students: Student;
+    courses: Course;
+    classes: Class;
+    'course-phases': CoursePhase;
+    'course-objectives': CourseObjective;
+    categories: Category;
     pages: Page;
     posts: Post;
     media: Media;
-    categories: Category;
     users: User;
-    students: Student;
-    courses: Course;
-    'course-objectives': CourseObjective;
-    'course-phases': CoursePhase;
-    classes: Class;
     notifications: Notification;
     redirects: Redirect;
     forms: Form;
@@ -100,16 +100,16 @@ export interface Config {
     };
   };
   collectionsSelect: {
+    students: StudentsSelect<false> | StudentsSelect<true>;
+    courses: CoursesSelect<false> | CoursesSelect<true>;
+    classes: ClassesSelect<false> | ClassesSelect<true>;
+    'course-phases': CoursePhasesSelect<false> | CoursePhasesSelect<true>;
+    'course-objectives': CourseObjectivesSelect<false> | CourseObjectivesSelect<true>;
+    categories: CategoriesSelect<false> | CategoriesSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
-    categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
-    students: StudentsSelect<false> | StudentsSelect<true>;
-    courses: CoursesSelect<false> | CoursesSelect<true>;
-    'course-objectives': CourseObjectivesSelect<false> | CourseObjectivesSelect<true>;
-    'course-phases': CoursePhasesSelect<false> | CoursePhasesSelect<true>;
-    classes: ClassesSelect<false> | ClassesSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
@@ -129,16 +129,18 @@ export interface Config {
   globals: {
     header: Header;
     footer: Footer;
+    'site-settings': SiteSetting;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
   };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
   };
-  user: User | Student;
+  user: Student | User;
   jobs: {
     tasks: {
       schedulePublish: TaskSchedulePublish;
@@ -148,24 +150,6 @@ export interface Config {
       };
     };
     workflows: unknown;
-  };
-}
-export interface UserAuthOperations {
-  forgotPassword: {
-    email: string;
-    password: string;
-  };
-  login: {
-    email: string;
-    password: string;
-  };
-  registerFirstUser: {
-    email: string;
-    password: string;
-  };
-  unlock: {
-    email: string;
-    password: string;
   };
 }
 export interface StudentAuthOperations {
@@ -186,124 +170,55 @@ export interface StudentAuthOperations {
     password: string;
   };
 }
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "pages".
- */
-export interface Page {
-  id: number;
-  title: string;
-  hero: {
-    type: 'none' | 'highImpact' | 'mediumImpact' | 'lowImpact';
-    richText?: {
-      root: {
-        type: string;
-        children: {
-          type: any;
-          version: number;
-          [k: string]: unknown;
-        }[];
-        direction: ('ltr' | 'rtl') | null;
-        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-        indent: number;
-        version: number;
-      };
-      [k: string]: unknown;
-    } | null;
-    links?:
-      | {
-          link: {
-            type?: ('reference' | 'custom') | null;
-            newTab?: boolean | null;
-            reference?:
-              | ({
-                  relationTo: 'pages';
-                  value: number | Page;
-                } | null)
-              | ({
-                  relationTo: 'posts';
-                  value: number | Post;
-                } | null);
-            url?: string | null;
-            label: string;
-            /**
-             * Choose how the link should be rendered.
-             */
-            appearance?: ('default' | 'outline') | null;
-          };
-          id?: string | null;
-        }[]
-      | null;
-    media?: (number | null) | Media;
+export interface UserAuthOperations {
+  forgotPassword: {
+    email: string;
+    password: string;
   };
-  layout: (CallToActionBlock | ContentBlock | MediaBlock | ArchiveBlock | FormBlock)[];
-  meta?: {
-    title?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (number | null) | Media;
-    description?: string | null;
+  login: {
+    email: string;
+    password: string;
   };
-  publishedAt?: string | null;
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
-  updatedAt: string;
-  createdAt: string;
-  _status?: ('draft' | 'published') | null;
+  registerFirstUser: {
+    email: string;
+    password: string;
+  };
+  unlock: {
+    email: string;
+    password: string;
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "posts".
+ * via the `definition` "students".
  */
-export interface Post {
+export interface Student {
   id: number;
-  title: string;
-  heroImage?: (number | null) | Media;
-  content: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  };
-  relatedPosts?: (number | Post)[] | null;
-  categories?: (number | Category)[] | null;
-  meta?: {
-    title?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (number | null) | Media;
-    description?: string | null;
-  };
-  publishedAt?: string | null;
-  authors?: (number | User)[] | null;
-  populatedAuthors?:
-    | {
-        id?: string | null;
-        name?: string | null;
-      }[]
-    | null;
+  fullName?: string | null;
+  phone?: string | null;
+  avatar?: (number | null) | Media;
+  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
   /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   * Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.
    */
-  generateSlug?: boolean | null;
-  slug: string;
+  isWalkIn?: boolean | null;
+  verifiedAt?: string | null;
+  lastLoginAt?: string | null;
+  /**
+   * Nhân sự đã tạo tài khoản này. Trống với tài khoản tự đăng ký.
+   */
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
-  _status?: ('draft' | 'published') | null;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  password?: string | null;
+  collection: 'students';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -426,6 +341,138 @@ export interface FolderInterface {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  fullName?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "courses".
+ */
+export interface Course {
+  id: number;
+  title: string;
+  image?: (number | null) | Media;
+  shortDescription?: string | null;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  duration?: string | null;
+  /**
+   * Chỉ hiển thị khi loại khóa học là MOODLE
+   */
+  moodleUrl?: string | null;
+  registrationStartAt?: string | null;
+  registrationEndAt?: string | null;
+  objectives?: {
+    docs?: (number | CourseObjective)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  phases?: {
+    docs?: (number | CoursePhase)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  category?: (number | null) | Category;
+  tags?:
+    | {
+        tag: string;
+        id?: string | null;
+      }[]
+    | null;
+  courseType: 'MOODLE' | 'OFFLINE';
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "course-objectives".
+ */
+export interface CourseObjective {
+  id: number;
+  title: string;
+  description?: string | null;
+  course: number | Course;
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "course-phases".
+ */
+export interface CoursePhase {
+  id: number;
+  title: string;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  course: number | Course;
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "categories".
  */
 export interface Category {
@@ -450,29 +497,139 @@ export interface Category {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
+ * via the `definition` "classes".
  */
-export interface User {
+export interface Class {
   id: number;
-  fullName?: string | null;
+  code: string;
+  course: number | Course;
+  status: 'DRAFT' | 'OPEN' | 'CLOSED' | 'COMPLETED' | 'CANCELLED';
+  startDate: string;
+  endDate?: string | null;
+  scheduleTime?: string | null;
+  location?: string | null;
+  maxStudents: number;
   updatedAt: string;
   createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: number;
+  title: string;
+  hero: {
+    type: 'none' | 'highImpact' | 'mediumImpact' | 'lowImpact';
+    richText?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    links?:
+      | {
+          link: {
+            type?: ('reference' | 'custom') | null;
+            newTab?: boolean | null;
+            reference?:
+              | ({
+                  relationTo: 'pages';
+                  value: number | Page;
+                } | null)
+              | ({
+                  relationTo: 'posts';
+                  value: number | Post;
+                } | null);
+            url?: string | null;
+            label: string;
+            /**
+             * Choose how the link should be rendered.
+             */
+            appearance?: ('default' | 'outline') | null;
+          };
+          id?: string | null;
+        }[]
+      | null;
+    media?: (number | null) | Media;
+  };
+  layout: (CallToActionBlock | ContentBlock | MediaBlock | ArchiveBlock | FormBlock)[];
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  publishedAt?: string | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts".
+ */
+export interface Post {
+  id: number;
+  title: string;
+  heroImage?: (number | null) | Media;
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  relatedPosts?: (number | Post)[] | null;
+  categories?: (number | Category)[] | null;
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  publishedAt?: string | null;
+  authors?: (number | User)[] | null;
+  populatedAuthors?:
     | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
+        id?: string | null;
+        name?: string | null;
       }[]
     | null;
-  password?: string | null;
-  collection: 'users';
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -809,161 +966,6 @@ export interface Form {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "students".
- */
-export interface Student {
-  id: number;
-  fullName?: string | null;
-  phone?: string | null;
-  avatar?: (number | null) | Media;
-  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
-  /**
-   * Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.
-   */
-  isWalkIn?: boolean | null;
-  verifiedAt?: string | null;
-  lastLoginAt?: string | null;
-  /**
-   * Nhân sự đã tạo tài khoản này. Trống với tài khoản tự đăng ký.
-   */
-  createdBy?: (number | null) | User;
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  password?: string | null;
-  collection: 'students';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "courses".
- */
-export interface Course {
-  id: number;
-  title: string;
-  image?: (number | null) | Media;
-  shortDescription?: string | null;
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  duration?: string | null;
-  /**
-   * Chỉ hiển thị khi loại khóa học là MOODLE
-   */
-  moodleUrl?: string | null;
-  registrationStartAt?: string | null;
-  registrationEndAt?: string | null;
-  objectives?: {
-    docs?: (number | CourseObjective)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
-  phases?: {
-    docs?: (number | CoursePhase)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
-  meta?: {
-    title?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (number | null) | Media;
-    description?: string | null;
-  };
-  category?: (number | null) | Category;
-  tags?:
-    | {
-        tag: string;
-        id?: string | null;
-      }[]
-    | null;
-  courseType: 'MOODLE' | 'OFFLINE';
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
-  updatedAt: string;
-  createdAt: string;
-  _status?: ('draft' | 'published') | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "course-objectives".
- */
-export interface CourseObjective {
-  id: number;
-  title: string;
-  description?: string | null;
-  course: number | Course;
-  sortOrder?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "course-phases".
- */
-export interface CoursePhase {
-  id: number;
-  title: string;
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  course: number | Course;
-  sortOrder?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "classes".
- */
-export interface Class {
-  id: number;
-  code: string;
-  course: number | Course;
-  status: 'DRAFT' | 'OPEN' | 'CLOSED' | 'COMPLETED' | 'CANCELLED';
-  startDate: string;
-  endDate?: string | null;
-  scheduleTime?: string | null;
-  location?: string | null;
-  maxStudents: number;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "notifications".
  */
 export interface Notification {
@@ -1179,6 +1181,30 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
+        relationTo: 'students';
+        value: number | Student;
+      } | null)
+    | ({
+        relationTo: 'courses';
+        value: number | Course;
+      } | null)
+    | ({
+        relationTo: 'classes';
+        value: number | Class;
+      } | null)
+    | ({
+        relationTo: 'course-phases';
+        value: number | CoursePhase;
+      } | null)
+    | ({
+        relationTo: 'course-objectives';
+        value: number | CourseObjective;
+      } | null)
+    | ({
+        relationTo: 'categories';
+        value: number | Category;
+      } | null)
+    | ({
         relationTo: 'pages';
         value: number | Page;
       } | null)
@@ -1191,32 +1217,8 @@ export interface PayloadLockedDocument {
         value: number | Media;
       } | null)
     | ({
-        relationTo: 'categories';
-        value: number | Category;
-      } | null)
-    | ({
         relationTo: 'users';
         value: number | User;
-      } | null)
-    | ({
-        relationTo: 'students';
-        value: number | Student;
-      } | null)
-    | ({
-        relationTo: 'courses';
-        value: number | Course;
-      } | null)
-    | ({
-        relationTo: 'course-objectives';
-        value: number | CourseObjective;
-      } | null)
-    | ({
-        relationTo: 'course-phases';
-        value: number | CoursePhase;
-      } | null)
-    | ({
-        relationTo: 'classes';
-        value: number | Class;
       } | null)
     | ({
         relationTo: 'notifications';
@@ -1245,12 +1247,12 @@ export interface PayloadLockedDocument {
   globalSlug?: string | null;
   user:
     | {
-        relationTo: 'users';
-        value: number | User;
-      }
-    | {
         relationTo: 'students';
         value: number | Student;
+      }
+    | {
+        relationTo: 'users';
+        value: number | User;
       };
   updatedAt: string;
   createdAt: string;
@@ -1263,12 +1265,12 @@ export interface PayloadPreference {
   id: number;
   user:
     | {
-        relationTo: 'users';
-        value: number | User;
-      }
-    | {
         relationTo: 'students';
         value: number | Student;
+      }
+    | {
+        relationTo: 'users';
+        value: number | User;
       };
   key?: string | null;
   value?:
@@ -1293,6 +1295,125 @@ export interface PayloadMigration {
   batch?: number | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "students_select".
+ */
+export interface StudentsSelect<T extends boolean = true> {
+  fullName?: T;
+  phone?: T;
+  avatar?: T;
+  status?: T;
+  isWalkIn?: T;
+  verifiedAt?: T;
+  lastLoginAt?: T;
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "courses_select".
+ */
+export interface CoursesSelect<T extends boolean = true> {
+  title?: T;
+  image?: T;
+  shortDescription?: T;
+  description?: T;
+  duration?: T;
+  moodleUrl?: T;
+  registrationStartAt?: T;
+  registrationEndAt?: T;
+  objectives?: T;
+  phases?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        image?: T;
+        description?: T;
+      };
+  category?: T;
+  tags?:
+    | T
+    | {
+        tag?: T;
+        id?: T;
+      };
+  courseType?: T;
+  generateSlug?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "classes_select".
+ */
+export interface ClassesSelect<T extends boolean = true> {
+  code?: T;
+  course?: T;
+  status?: T;
+  startDate?: T;
+  endDate?: T;
+  scheduleTime?: T;
+  location?: T;
+  maxStudents?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "course-phases_select".
+ */
+export interface CoursePhasesSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  course?: T;
+  sortOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "course-objectives_select".
+ */
+export interface CourseObjectivesSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  course?: T;
+  sortOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories_select".
+ */
+export interface CategoriesSelect<T extends boolean = true> {
+  title?: T;
+  generateSlug?: T;
+  slug?: T;
+  parent?: T;
+  breadcrumbs?:
+    | T
+    | {
+        doc?: T;
+        url?: T;
+        label?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1556,26 +1677,6 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categories_select".
- */
-export interface CategoriesSelect<T extends boolean = true> {
-  title?: T;
-  generateSlug?: T;
-  slug?: T;
-  parent?: T;
-  breadcrumbs?:
-    | T
-    | {
-        doc?: T;
-        url?: T;
-        label?: T;
-        id?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
@@ -1596,105 +1697,6 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "students_select".
- */
-export interface StudentsSelect<T extends boolean = true> {
-  fullName?: T;
-  phone?: T;
-  avatar?: T;
-  status?: T;
-  isWalkIn?: T;
-  verifiedAt?: T;
-  lastLoginAt?: T;
-  createdBy?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  email?: T;
-  resetPasswordToken?: T;
-  resetPasswordExpiration?: T;
-  salt?: T;
-  hash?: T;
-  loginAttempts?: T;
-  lockUntil?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "courses_select".
- */
-export interface CoursesSelect<T extends boolean = true> {
-  title?: T;
-  image?: T;
-  shortDescription?: T;
-  description?: T;
-  duration?: T;
-  moodleUrl?: T;
-  registrationStartAt?: T;
-  registrationEndAt?: T;
-  objectives?: T;
-  phases?: T;
-  meta?:
-    | T
-    | {
-        title?: T;
-        image?: T;
-        description?: T;
-      };
-  category?: T;
-  tags?:
-    | T
-    | {
-        tag?: T;
-        id?: T;
-      };
-  courseType?: T;
-  generateSlug?: T;
-  slug?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "course-objectives_select".
- */
-export interface CourseObjectivesSelect<T extends boolean = true> {
-  title?: T;
-  description?: T;
-  course?: T;
-  sortOrder?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "course-phases_select".
- */
-export interface CoursePhasesSelect<T extends boolean = true> {
-  title?: T;
-  description?: T;
-  course?: T;
-  sortOrder?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "classes_select".
- */
-export interface ClassesSelect<T extends boolean = true> {
-  code?: T;
-  course?: T;
-  status?: T;
-  startDate?: T;
-  endDate?: T;
-  scheduleTime?: T;
-  location?: T;
-  maxStudents?: T;
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2045,6 +2047,25 @@ export interface Footer {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: number;
+  siteName: string;
+  tagline: string;
+  /**
+   * Logo hiển thị tại Header, Footer và màn hình Admin.
+   */
+  logo?: (number | null) | Media;
+  /**
+   * Biểu tượng tab trình duyệt (Khuyên dùng PNG, ICO, WEBP).
+   */
+  favicon?: (number | null) | Media;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "header_select".
  */
 export interface HeaderSelect<T extends boolean = true> {
@@ -2091,6 +2112,19 @@ export interface FooterSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  siteName?: T;
+  tagline?: T;
+  logo?: T;
+  favicon?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
 export interface CollectionsWidget {
@@ -2109,16 +2143,16 @@ export interface TaskSchedulePublish {
     locale?: string | null;
     doc?:
       | ({
+          relationTo: 'courses';
+          value: number | Course;
+        } | null)
+      | ({
           relationTo: 'pages';
           value: number | Page;
         } | null)
       | ({
           relationTo: 'posts';
           value: number | Post;
-        } | null)
-      | ({
-          relationTo: 'courses';
-          value: number | Course;
         } | null);
     global?: string | null;
     user?: (number | null) | User;

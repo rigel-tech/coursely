@@ -4,14 +4,16 @@ import { cn } from '@/utilities/ui'
 import { Be_Vietnam_Pro, JetBrains_Mono } from 'next/font/google'
 import React from 'react'
 
-import { Footer } from '@/Footer/Component'
-import { Header } from '@/Header/Component'
+import { Footer } from '@/globals/Footer/Component'
+import { Header } from '@/globals/Header/Component'
 import { Providers } from '@/providers'
 import { InitTheme } from '@/providers/Theme/InitTheme'
 import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 
 import './globals.css'
 import { getServerSideURL } from '@/utilities/getURL'
+import { getCachedGlobal } from '@/utilities/getGlobals'
+import type { Media } from '@/payload-types'
 
 // The `vietnamese` subset is not optional here: without it every accented character falls
 // out to a fallback face mid-word, which reads as a rendering glitch rather than a bug.
@@ -33,6 +35,9 @@ const jetBrainsMono = JetBrains_Mono({
 })
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const siteSettings = await getCachedGlobal('site-settings', 1)()
+  const favicon = siteSettings.favicon as Media | undefined
+
   return (
     <html
       className={cn(beVietnamPro.variable, jetBrainsMono.variable)}
@@ -41,8 +46,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <head>
         <InitTheme />
-        <link href="/favicon.ico" rel="icon" sizes="32x32" />
-        <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
+        {favicon?.url ? (
+          <link href={favicon.url} rel="icon" type={favicon.mimeType || undefined} />
+        ) : (
+          <>
+            <link href="/favicon.ico" rel="icon" sizes="32x32" />
+            <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
+          </>
+        )}
       </head>
       <body>
         <Providers>

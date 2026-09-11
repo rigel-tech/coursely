@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const FILES = [
-  'src/Header/Nav/index.tsx',
+  'src/globals/Header/Nav/index.tsx',
   'src/app/(frontend)/page.tsx',
   'src/app/(frontend)/courses/page.tsx',
   'src/app/(frontend)/courses/[slug]/page.tsx',
