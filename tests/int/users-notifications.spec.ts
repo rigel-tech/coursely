@@ -13,15 +13,17 @@ describe('students collection defaults', () => {
     payload = await getPayload({ config: await config })
   })
 
-  it('applies PENDING_VERIFICATION / isWalkIn=false when unspecified', async () => {
+  it('applies ACTIVE / isWalkIn=false when unspecified', async () => {
     // Omitting status on purpose — this asserts the collection defaults fill it.
+    // The default serves the account staff create at the counter: usable at once. Self
+    // registration never reaches it — `registerStudent` passes PENDING_VERIFICATION itself.
     // @ts-expect-error status is `required` in the input type but carries a defaultValue.
     const student = await payload.create({
       collection: 'students',
       data: { email: uniqueEmail(), password: 'Passw0rd123' },
     })
 
-    expect(student.status).toBe('PENDING_VERIFICATION')
+    expect(student.status).toBe('ACTIVE')
     expect(student.isWalkIn).toBe(false)
 
     await payload.delete({ collection: 'students', id: student.id })

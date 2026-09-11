@@ -16,7 +16,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const SRC = 'src'
-const HELPER = 'src/lib/auth/current-student.ts'
+const HELPER = 'src/lib/auth/session-student.ts'
 
 const walk = (dir: string, acc: string[] = []): string[] => {
   for (const name of readdirSync(dir)) {

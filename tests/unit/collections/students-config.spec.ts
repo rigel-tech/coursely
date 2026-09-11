@@ -67,12 +67,13 @@ describe('Students fields', () => {
     expect(names).not.toContain('role')
   })
 
-  it('keeps status on the JWT with the same enum and default as before', () => {
+  // Nothing asserts `saveToJWT` any more: the session is the coursely cookie pair, and
+  // `payload.login`'s own JWT is discarded unread, so putting status on it reaches no one.
+  it('keeps the status enum, and defaults to ACTIVE for the counter-created account', () => {
     const status = field(Students.fields, 'status') as Extract<Field, { type: 'select' }>
 
-    expect(status.saveToJWT).toBe(true)
     expect(status.options).toEqual(['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'])
-    expect(status.defaultValue).toBe('PENDING_VERIFICATION')
+    expect(status.defaultValue).toBe('ACTIVE')
   })
 
   it('points createdBy at users — the one place the two lanes meet', () => {
