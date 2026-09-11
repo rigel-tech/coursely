@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import React from 'react'
 
-import { ForgotPasswordForm } from './ForgotPasswordForm'
+import { ForgotPasswordForm } from '../../../../components/public/forms/ForgotPasswordForm'
 
 export const metadata: Metadata = {
   title: 'Quên mật khẩu | Coursely',

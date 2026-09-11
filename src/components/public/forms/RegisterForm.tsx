@@ -1,72 +1,59 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 
 import { FormField } from '@/components/public/forms/field'
 import { Button } from '@/components/public/ui/button'
 import { Input } from '@/components/public/ui/input'
+import { registerAction } from '@/actions/student/register'
+import { initialRegisterState, type RegisterState } from '@/lib/constants/register-state'
 import { registerSchema, type RegisterValues } from '@/lib/validation/register-schema'
-import { cn } from '@/utilities/ui'
 
-export type RegisterFormProps = {
-  /** Resolve to create the account, reject to surface the message on the form. */
-  onSubmit: (values: RegisterValues) => Promise<void> | void
-  /** Server-side failure — an address already registered, for instance. */
-  error?: string
-  className?: string
+const SYSTEM_FAILURE: RegisterState = {
+  status: 'error',
+  message: 'Có lỗi hệ thống. Vui lòng thử lại sau.',
 }
 
 /**
- * Account creation: name, email, and a password with confirmation.
+ * Self-registration form for the `/dang-ky` page. `react-hook-form` owns the fields and
+ * every field-level message, validating against the same `registerSchema` the action
+ * re-checks server-side, so a value this form accepts is never one the server then rejects.
  *
- * Validated by `registerSchema` through `zodResolver` — the same schema
- * `registerAction` re-checks server-side (see `lib/validation/register-schema.ts`), so a
- * value this form accepts is never one the server then rejects.
+ * On success it navigates to `/xac-thuc-otp` with `router.push` — a client-side
+ * navigation, not a full reload: unlike `LoginForm`, nothing server-rendered at the
+ * destination needs to read a fresh cookie synchronously, `verifyOtpAction` reads it only
+ * when the OTP is submitted, by which point the browser already holds it.
  *
- * `onSubmit` receives one object holding every field — `registerAction` takes exactly that
- * shape, so nothing between the two reshapes it. A phone number is deliberately absent:
- * registration asks for the least that can create an account, and `/tai-khoan` collects the
- * rest once there is one.
- *
- * @example
- * ```tsx
- * <RegisterForm
- *   onSubmit={async (values) => {
- *     const res = await createAccount(values)
- *     if (!res.ok) throw new Error('Email này đã được đăng ký')
- *   }}
- * />
- * ```
+ * The action rethrows anything it has no copy for, so the `.catch` here is the last place
+ * a system failure can reach the person instead of crashing the page.
  */
-export function RegisterForm({ className, error, onSubmit }: RegisterFormProps) {
+export function RegisterForm() {
+  const router = useRouter()
+  const [state, setState] = useState<RegisterState>(initialRegisterState)
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
-    setError,
   } = useForm<RegisterValues>({ resolver: zodResolver(registerSchema) })
 
-  const submit = handleSubmit(async (values) => {
-    try {
-      await onSubmit(values)
-    } catch (cause) {
-      setError('root', {
-        message: cause instanceof Error ? cause.message : 'Đăng ký không thành công',
-      })
-    }
-  })
+  const onSubmit = async (values: RegisterValues) => {
+    const result = await registerAction(values).catch(() => SYSTEM_FAILURE)
 
-  const rootError = error ?? errors.root?.message
+    setState(result)
+    if (result.status === 'success') router.push('/xac-thuc-otp')
+  }
 
   return (
-    <form className={cn('flex flex-col gap-4', className)} noValidate onSubmit={submit}>
-      {rootError ? (
+    <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit(onSubmit)}>
+      {state.status === 'error' && state.message ? (
         <p
           className="border-error-foreground bg-error text-error-foreground rounded-md border px-3 py-2 text-sm"
           role="alert"
         >
-          {rootError}
+          {state.message}
         </p>
       ) : null}
 

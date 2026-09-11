@@ -4,11 +4,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 
 /** The action runs for real in tests/int; here we only drive its result. */
 const loginAction = vi.fn()
-vi.mock('@/actions/auth/login', () => ({
+vi.mock('@/actions/student/login', () => ({
   loginAction: (...args: unknown[]) => loginAction(...args),
 }))
 
-const { LoginForm } = await import('@/app/(frontend)/student/login/LoginForm')
+const { LoginForm } = await import('@/components/public/forms/LoginForm')
 
 const assign = vi.fn()
 

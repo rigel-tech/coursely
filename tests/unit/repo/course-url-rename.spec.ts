@@ -12,7 +12,7 @@ const FILES = [
   'src/app/(frontend)/courses/page.tsx',
   'src/app/(frontend)/courses/[slug]/page.tsx',
   'src/components/public/CourseFilters/index.tsx',
-  'src/app/(frontend)/student/account/ProfileForm.tsx',
+  'src/components/public/forms/ProfileForm.tsx',
 ]
 
 /** The one documented exception: a CMS redirects-collection lookup key, not a rendered link. */

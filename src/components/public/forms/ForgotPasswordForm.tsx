@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, Mail } from 'lucide-react'
-import * as React from 'react'
-import { useActionState } from 'react'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 
 import { Alert, AlertDescription } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
@@ -17,14 +18,44 @@ import {
 } from '@/components/public/ui/card'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
-import { forgotPasswordAction, type ForgotPasswordFormState } from '@/actions/auth/forgot-password'
+import { forgotPasswordAction } from '@/actions/student/forgot-password'
+import {
+  initialForgotPasswordState,
+  type ForgotPasswordState,
+} from '@/lib/constants/forgot-password-state'
+import {
+  forgotPasswordSchema,
+  type ForgotPasswordValues,
+} from '@/lib/validation/forgot-password-schema'
 
-const initialState: ForgotPasswordFormState = {
-  status: 'idle',
+const SYSTEM_FAILURE: ForgotPasswordState = {
+  status: 'error',
+  message: 'Có lỗi hệ thống. Vui lòng thử lại sau.',
 }
 
+/**
+ * Request a password-reset email. `react-hook-form` validates against the same
+ * `forgotPasswordSchema` the action re-checks server-side, then calls the action directly
+ * with a plain object — no `<form action>`, no `FormData`.
+ *
+ * The action rethrows anything it has no copy for, so the `.catch` here is the last place a
+ * system failure can reach the person instead of crashing the page.
+ */
 export function ForgotPasswordForm() {
-  const [state, formAction, isPending] = useActionState(forgotPasswordAction, initialState)
+  const [state, setState] = useState<ForgotPasswordState>(initialForgotPasswordState)
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+  } = useForm<ForgotPasswordValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
+  })
+
+  const onSubmit = async (values: ForgotPasswordValues) => {
+    const result = await forgotPasswordAction(values.email).catch(() => SYSTEM_FAILURE)
+    setState(result)
+  }
 
   if (state.status === 'success') {
     return (
@@ -66,9 +97,9 @@ export function ForgotPasswordForm() {
           Nhập email đăng ký của bạn. Chúng tôi sẽ gửi cho bạn một liên kết để đặt lại mật khẩu mới.
         </CardDescription>
       </CardHeader>
-      <form action={formAction} noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <CardContent className="space-y-4">
-          {state.status === 'error' && state.message && !state.fieldErrors?.email && (
+          {state.status === 'error' && state.message && (
             <Alert variant="destructive">
               <AlertDescription>{state.message}</AlertDescription>
             </Alert>
@@ -84,28 +115,27 @@ export function ForgotPasswordForm() {
             </Label>
             <Input
               id="email"
-              name="email"
               type="email"
               placeholder="ten@example.com"
               autoComplete="email"
-              required
-              aria-invalid={!!state.fieldErrors?.email}
-              aria-describedby={state.fieldErrors?.email ? 'email-error' : undefined}
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'email-error' : undefined}
+              {...register('email')}
             />
-            {state.fieldErrors?.email && (
+            {errors.email && (
               <p
                 id="email-error"
                 role="alert"
                 className="text-destructive-foreground text-xs font-medium"
               >
-                {state.fieldErrors.email}
+                {errors.email.message}
               </p>
             )}
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3 pt-4">
-          <Button type="submit" disabled={isPending} className="w-full">
-            {isPending ? 'Đang gửi yêu cầu…' : 'Gửi liên kết đặt lại mật khẩu'}
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting ? 'Đang gửi yêu cầu…' : 'Gửi liên kết đặt lại mật khẩu'}
           </Button>
           <Button asChild variant="ghost" size="sm" className="w-full">
             <Link

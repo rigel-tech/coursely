@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import React from 'react'
 
 import { getSessionStudent } from '@/lib/auth/session-student'
-import { ProfileForm } from './ProfileForm'
+import { ProfileForm } from '../../../../components/public/forms/ProfileForm'
 
 export const dynamic = 'force-dynamic'
 

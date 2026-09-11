@@ -1,25 +1,24 @@
 import type { Metadata } from 'next'
-import React from 'react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/public/ui/card'
-import { LoginForm } from '../../../../components/public/forms/LoginForm'
+import { RegisterForm } from '@/components/public/forms/RegisterForm'
 
 export const metadata: Metadata = {
-  title: 'Đăng nhập | Coursely',
-  description: 'Đăng nhập vào tài khoản học viên tại Coursely.',
+  title: 'Đăng ký | Coursely',
+  description: 'Tạo tài khoản học viên mới tại Coursely.',
 }
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <main className="container flex min-h-[calc(100vh-200px)] items-center justify-center py-12">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-foreground text-center">
-            Đăng nhập
+            Tạo tài khoản mới
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <LoginForm />
+          <RegisterForm />
         </CardContent>
       </Card>
     </main>

@@ -8,9 +8,9 @@ import { Alert, AlertDescription } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
-import { verifyOtpAction } from '@/actions/auth/verify-otp'
+import { verifyOtpAction } from '@/actions/student/verify-otp'
 import { initialVerifyOtpState } from '@/lib/constants/verify-otp-state'
-import { resendOtpAction } from '@/actions/auth/resend-otp'
+import { resendOtpAction } from '@/actions/student/resend-otp'
 import { initialResendOtpState } from '@/lib/constants/resend-otp-state'
 
 function SubmitButton() {

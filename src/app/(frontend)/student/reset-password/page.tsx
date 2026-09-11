@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import React from 'react'
 
-import { ResetPasswordForm } from './ResetPasswordForm'
+import { ResetPasswordForm } from '../../../../components/public/forms/ResetPasswordForm'
 
 export const metadata: Metadata = {
   title: 'Đặt lại mật khẩu | Coursely',

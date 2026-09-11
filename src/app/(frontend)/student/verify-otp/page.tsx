@@ -3,7 +3,7 @@ import React from 'react'
 
 import { PENDING_EMAIL_COOKIE } from '@/lib/constants/auth'
 import { maskEmail } from '@/lib/mask-email'
-import { OtpForm } from './OtpForm'
+import { OtpForm } from '../../../../components/public/forms/OtpForm'
 
 /**
  * Server Component. `proxy` already guaranteed the `pending_email` cookie is

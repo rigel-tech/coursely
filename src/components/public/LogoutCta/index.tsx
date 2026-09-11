@@ -5,7 +5,7 @@ import * as React from 'react'
 import { useState } from 'react'
 
 import { Button } from '@/components/public/ui/button'
-import { logoutAction } from '@/actions/auth/logout'
+import { logoutAction } from '@/actions/student/logout'
 
 export interface LogoutCtaProps {
   className?: string

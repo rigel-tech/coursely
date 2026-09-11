@@ -4,14 +4,14 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 
 /** The action is exercised for real elsewhere (tests/int); here we only drive its result. */
 const registerAction = vi.fn()
-vi.mock('@/actions/auth/register', () => ({
+vi.mock('@/actions/student/register', () => ({
   registerAction: (...args: unknown[]) => registerAction(...args),
 }))
 
 const push = vi.fn()
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
 
-const { RegisterForm } = await import('@/components/public/RegisterCta/RegisterForm')
+const { RegisterForm } = await import('@/components/public/forms/RegisterForm')
 
 beforeEach(() => {
   registerAction.mockReset()
@@ -83,5 +83,41 @@ describe('RegisterForm', () => {
 
     expect(await screen.findByText(/Có lỗi hệ thống/)).toBeTruthy()
     expect(push).not.toHaveBeenCalled()
+  })
+
+  it('no longer asks for terms consent', () => {
+    render(React.createElement(RegisterForm))
+
+    expect(screen.queryByLabelText(/điều khoản/i)).toBeNull()
+  })
+
+  it('blocks a mismatched confirmation before ever calling the action', async () => {
+    render(React.createElement(RegisterForm))
+
+    fill('Họ và tên', 'Nguyễn Văn A')
+    fill('Email', 'a@example.com')
+    fill('Mật khẩu', 'abcd1234')
+    fill('Nhập lại mật khẩu', 'abcd9999')
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo tài khoản' }))
+
+    expect(
+      await screen.findByText('Mật khẩu nhập lại không khớp với mật khẩu đã nhập'),
+    ).toBeTruthy()
+    expect(registerAction).not.toHaveBeenCalled()
+  })
+
+  // Regression: the client rule must match the server's — a password with no digit is
+  // rejected the same way `registerSchema` rejects it server-side.
+  it('rejects a password with no digit, the same rule the server enforces', async () => {
+    render(React.createElement(RegisterForm))
+
+    fill('Họ và tên', 'Nguyễn Văn A')
+    fill('Email', 'a@example.com')
+    fill('Mật khẩu', 'abcdefgh')
+    fill('Nhập lại mật khẩu', 'abcdefgh')
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo tài khoản' }))
+
+    expect(await screen.findByText('Mật khẩu tối thiểu 8 ký tự, gồm cả chữ và số')).toBeTruthy()
+    expect(registerAction).not.toHaveBeenCalled()
   })
 })

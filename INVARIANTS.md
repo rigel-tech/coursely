@@ -241,18 +241,18 @@ the cookie. Nothing errors — the action's DB writes all commit, the return val
 but `/verify-otp` finds no `pending_email` and bounces to `/`, or `/admin` sees no session.
 There is no console warning.
 
-**Where** — `src/actions/auth/register.ts`, `src/actions/auth/login.ts`,
-`src/actions/auth/verify-otp.ts` (sets `coursely-*` + returns `redirectTo`) and
-`src/actions/auth/logout.ts` (clears `coursely-*` + returns `redirectTo`) — all return,
+**Where** — `src/actions/student/register.ts`, `src/actions/student/login.ts`,
+`src/actions/student/verify-otp.ts` (sets `coursely-*` + returns `redirectTo`) and
+`src/actions/student/logout.ts` (clears `coursely-*` + returns `redirectTo`) — all return,
 never `redirect()`.
 
 Client navigation lives in the form, in one of two shapes. A `react-hook-form` form awaits
 the action in its submit handler and navigates on the resolved value:
-`src/components/public/RegisterCta/RegisterForm.tsx` (`router.push`),
-`src/app/(frontend)/student/login/LoginForm.tsx` and
+`src/components/public/forms/RegisterForm.tsx` (`router.push`),
+`src/components/public/forms/LoginForm.tsx` and
 `src/components/public/LogoutCta/index.tsx` (`window.location.assign`). A `useActionState`
 form navigates from a `useEffect` on `state.status` instead:
-`src/app/(frontend)/student/verify-otp/OtpForm.tsx`.
+`src/components/public/forms/OtpForm.tsx`.
 
 Both are safe for the same reason — the browser applies the action response's `Set-Cookie`
 before the promise resolves or the new state arrives, so either way the navigation happens
@@ -303,8 +303,8 @@ real name in the header. Nothing throws, nothing logs, and every test that exerc
 account at a time stays green. This is not hypothetical: before the split, `loginAction`
 issued the student cookie pair to anyone who authenticated at `/dang-nhap`, admins included.
 
-**Where** — the only two call sites are `src/actions/auth/login.ts` (`loginAction`) and
-`src/actions/auth/verify-otp.ts` (`verifyOtpAction`); both take their user from
+**Where** — the only two call sites are `src/actions/student/login.ts` (`loginAction`) and
+`src/actions/student/verify-otp.ts` (`verifyOtpAction`); both take their user from
 `src/services/student-login.ts` / `src/services/student-verification.ts`, which query `students`.
 `src/lib/auth/session-cookies.ts` and `src/lib/auth/session-token.ts` (`StudentClaims`) are
 what this protects. Pinned by `tests/int/login-action.spec.ts` § "a staff account is not a
@@ -329,7 +329,7 @@ called an un-awaited `signIn()`, while `tsc --noEmit` reported zero errors on bo
 
 **Where** — `src/lib/auth/session-token.ts` (the module banner states it),
 `src/lib/auth/session-cookies.ts`, `src/lib/auth/session-student.ts`, `src/proxy.ts`,
-and the two cookie-minting actions in `src/actions/auth/`. Pinned by
+and the two cookie-minting actions in `src/actions/student/`. Pinned by
 `tests/unit/lib/session-cookies.spec.ts`, which reads each cookie back and verifies it
 rather than asserting it is merely truthy — the one assertion that tells a token from a
 pending promise. Note jose rejects a Node `Buffer` under jsdom's realm, so any spec that
@@ -355,7 +355,7 @@ account gate reads stale for up to `ACCESS_TTL_SEC`. Nothing errors. The person 
 
 **Where** — `src/lib/auth/session-token.ts` (the module banner states the trade),
 `src/proxy.ts` (`resolveIdentity`, which touches no datastore),
-`src/actions/auth/logout.ts` (this device only) and `src/actions/auth/reset-password.ts`
+`src/actions/student/logout.ts` (this device only) and `src/actions/student/reset-password.ts`
 (the comment where the revocation used to be).
 
 ### `x-user-*` request headers are client input — `proxy` sets none

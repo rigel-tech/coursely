@@ -7,7 +7,11 @@
 // even though it ships no product behaviour.
 
 import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// `RegisterForm` (public/forms/) calls `useRouter()` — outside a real Next.js app router,
+// as this render is, that throws "invariant expected app router to be mounted".
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 
 import { ComponentGallery } from '@/app/(frontend)/components/page.client'
 
@@ -19,7 +23,11 @@ describe('/components', () => {
 
     // A crash inside any entry takes the whole tree down, so reaching the last section is
     // the assertion. Checking a few landmarks keeps the failure message useful.
-    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy()
+    //
+    // More than one level-1 heading is expected here, not a bug: `ProfileForm` is a full
+    // page in its own right and owns its own `<h1>` (the student's name), which now
+    // renders nested inside the gallery's own `<h1>Thư viện component</h1>`.
+    expect(screen.getAllByRole('heading', { level: 1 }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('heading', { level: 2 }).length).toBeGreaterThan(2)
   })
 

@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
-import { loginAction } from '@/actions/auth/login'
+import { loginAction } from '@/actions/student/login'
 import { initialLoginState, type LoginState } from '@/lib/constants/login-state'
 import { loginSchema, type LoginFormValues } from '@/lib/validation/login-schema'
 

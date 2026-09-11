@@ -35,7 +35,7 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
-const { loginAction } = await import('@/actions/auth/login')
+const { loginAction } = await import('@/actions/student/login')
 
 type LoginInput = Parameters<typeof loginAction>[0]
 

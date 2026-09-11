@@ -3,6 +3,8 @@
 import { AlertCircle, BookOpenIcon } from 'lucide-react'
 import * as React from 'react'
 
+import type { Student } from '@/payload-types'
+
 import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
 
 import { ClassRoster } from '@/components/design/blocks/class-roster'
@@ -12,9 +14,14 @@ import { SpotlightTeacher } from '@/components/design/blocks/spotlight-teacher'
 import { Stats } from '@/components/design/blocks/stats'
 import { ClassAssignForm } from '@/components/design/forms/class-assign-form'
 import { CourseForm } from '@/components/design/forms/course-form'
+import { LoginForm as StagedLoginForm } from '@/components/design/forms/login-form'
 import { FormField } from '@/components/public/forms/field'
-import { LoginForm } from '@/components/design/forms/login-form'
-import { RegisterForm } from '@/components/public/forms/register-form'
+import { ForgotPasswordForm } from '@/components/public/forms/ForgotPasswordForm'
+import { LoginForm } from '@/components/public/forms/LoginForm'
+import { OtpForm } from '@/components/public/forms/OtpForm'
+import { ProfileForm } from '@/components/public/forms/ProfileForm'
+import { RegisterForm } from '@/components/public/forms/RegisterForm'
+import { ResetPasswordForm } from '@/components/public/forms/ResetPasswordForm'
 import { Avatar } from '@/components/public/ui/avatar'
 import { EmptyState } from '@/components/public/ui/empty-state'
 import { Modal } from '@/components/design/ui/modal'
@@ -62,6 +69,19 @@ type Entry = {
 }
 
 const noop = () => {}
+
+/** `ProfileForm` takes a real `Student` — a stand-in for the gallery, not any real account. */
+const SHOWCASE_STUDENT: Student = {
+  id: 1,
+  email: 'mai.tran@example.com',
+  fullName: 'Trần Thị Mai',
+  phone: '0912345678',
+  status: 'ACTIVE',
+  collection: 'students',
+  verifiedAt: '2026-08-01T00:10:00.000Z',
+  createdAt: '2026-08-01T00:00:00.000Z',
+  updatedAt: '2026-08-01T00:00:00.000Z',
+}
 
 const COURSES = [
   {
@@ -488,11 +508,67 @@ const READY_FORMS: Entry[] = [
   },
   {
     name: 'RegisterForm',
-    path: '@/components/public/forms/register-form',
+    path: '@/components/public/forms/RegisterForm',
     origin: 'public',
+    note: 'Trang /dang-ky. Gọi registerAction trực tiếp — không nhận onSubmit như trước.',
     preview: (
       <div className="max-w-sm">
-        <RegisterForm onSubmit={noop} />
+        <RegisterForm />
+      </div>
+    ),
+  },
+  {
+    name: 'LoginForm',
+    path: '@/components/public/forms/LoginForm',
+    origin: 'public',
+    note: 'Trang /dang-nhap. Gọi loginAction trực tiếp — không nhận onSubmit như bản đang chờ.',
+    preview: (
+      <div className="max-w-sm">
+        <LoginForm />
+      </div>
+    ),
+  },
+  {
+    name: 'ForgotPasswordForm',
+    path: '@/components/public/forms/ForgotPasswordForm',
+    origin: 'public',
+    note: 'Trang /quen-mat-khau.',
+    preview: (
+      <div className="max-w-sm">
+        <ForgotPasswordForm />
+      </div>
+    ),
+  },
+  {
+    name: 'ResetPasswordForm',
+    path: '@/components/public/forms/ResetPasswordForm',
+    origin: 'public',
+    note: 'Trang /dat-lai-mat-khau. Không có token thì hiện thẻ "Liên kết không hợp lệ" thay vì form.',
+    preview: (
+      <div className="max-w-sm">
+        <ResetPasswordForm token="showcase-token" />
+      </div>
+    ),
+  },
+  {
+    name: 'OtpForm',
+    path: '@/components/public/forms/OtpForm',
+    origin: 'public',
+    note: 'Trang /xac-thuc-otp.',
+    preview: (
+      <div className="max-w-sm">
+        <OtpForm />
+      </div>
+    ),
+  },
+  {
+    name: 'ProfileForm',
+    path: '@/components/public/forms/ProfileForm',
+    origin: 'public',
+    note: 'Trang /tai-khoan. Học viên minh hoạ, không phải tài khoản thật.',
+    preview: (
+      <div className="max-w-2xl">
+        <ProfileForm user={SHOWCASE_STUDENT} />
       </div>
     ),
   },
@@ -505,7 +581,7 @@ const STAGED_FORMS: Entry[] = [
     origin: 'design',
     preview: (
       <div className="max-w-sm">
-        <LoginForm onSubmit={noop} />
+        <StagedLoginForm onSubmit={noop} />
       </div>
     ),
   },

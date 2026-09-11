@@ -24,7 +24,7 @@ vi.mock('@/services/student-login', () => ({
 }))
 
 const { EmailNotVerified, LoginRefused } = await import('@/lib/errors/auth')
-const { loginAction } = await import('@/actions/auth/login')
+const { loginAction } = await import('@/actions/student/login')
 
 const credentials = { email: 'a@b.com', password: 'secret12' }
 

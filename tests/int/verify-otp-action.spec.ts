@@ -39,7 +39,7 @@ vi.mock('next/headers', () => ({
 const ACCESS_COOKIE = 'coursely-access'
 const REFRESH_COOKIE = 'coursely-refresh'
 
-const { verifyOtpAction } = await import('@/actions/auth/verify-otp')
+const { verifyOtpAction } = await import('@/actions/student/verify-otp')
 const { initialVerifyOtpState } = await import('@/lib/constants/verify-otp-state')
 
 let payload: Payload

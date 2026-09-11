@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound, Lock } from 'lucide-react'
-import * as React from 'react'
-import { useActionState } from 'react'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 
 import { Alert, AlertDescription } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
@@ -17,18 +18,44 @@ import {
 } from '@/components/public/ui/card'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
-import { resetPasswordAction, type ResetPasswordFormState } from '@/actions/auth/reset-password'
+import { resetPasswordAction } from '@/actions/student/reset-password'
+import {
+  initialResetPasswordState,
+  type ResetPasswordState,
+} from '@/lib/constants/reset-password-state'
+import {
+  resetPasswordFormSchema,
+  type ResetPasswordFormValues,
+} from '@/lib/validation/reset-password-schema'
 
 interface ResetPasswordFormProps {
   token?: string
 }
 
-const initialState: ResetPasswordFormState = {
-  status: 'idle',
+const SYSTEM_FAILURE: ResetPasswordState = {
+  status: 'error',
+  message: 'Có lỗi hệ thống. Vui lòng thử lại sau.',
 }
 
+/**
+ * Set a new password from the link in the forgot-password email. `react-hook-form`
+ * validates the two fields it owns against `resetPasswordFormSchema`, then calls
+ * `resetPasswordAction` with those plus the `token` prop — the token is not a field the
+ * person types, so it never goes through the form's own validation.
+ *
+ * The action rethrows anything it has no copy for, so the `.catch` here is the last place
+ * a system failure can reach the person instead of crashing the page.
+ */
 export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
-  const [state, formAction, isPending] = useActionState(resetPasswordAction, initialState)
+  const [state, setState] = useState<ResetPasswordState>(initialResetPasswordState)
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+  } = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordFormSchema),
+    defaultValues: { password: '', confirmPassword: '' },
+  })
 
   if (!token) {
     return (
@@ -61,6 +88,11 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         </CardFooter>
       </Card>
     )
+  }
+
+  const onSubmit = async (values: ResetPasswordFormValues) => {
+    const result = await resetPasswordAction({ token, ...values }).catch(() => SYSTEM_FAILURE)
+    setState(result)
   }
 
   if (state.status === 'success') {
@@ -97,11 +129,9 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           Nhập mật khẩu mới cho tài khoản của bạn (tối thiểu 8 ký tự, gồm cả chữ và số).
         </CardDescription>
       </CardHeader>
-      <form action={formAction} noValidate>
-        <input type="hidden" name="token" value={token} />
-
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <CardContent className="space-y-4">
-          {state.status === 'error' && state.message && !state.fieldErrors && (
+          {state.status === 'error' && state.message && (
             <Alert variant="destructive">
               <AlertDescription>{state.message}</AlertDescription>
             </Alert>
@@ -117,20 +147,19 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
             </Label>
             <Input
               id="password"
-              name="password"
               type="password"
               autoComplete="new-password"
-              required
-              aria-invalid={!!state.fieldErrors?.password}
-              aria-describedby={state.fieldErrors?.password ? 'password-error' : undefined}
+              aria-invalid={Boolean(errors.password)}
+              aria-describedby={errors.password ? 'password-error' : undefined}
+              {...register('password')}
             />
-            {state.fieldErrors?.password && (
+            {errors.password && (
               <p
                 id="password-error"
                 role="alert"
                 className="text-destructive-foreground text-xs font-medium"
               >
-                {state.fieldErrors.password}
+                {errors.password.message}
               </p>
             )}
           </div>
@@ -145,30 +174,27 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
             </Label>
             <Input
               id="confirmPassword"
-              name="confirmPassword"
               type="password"
               autoComplete="new-password"
-              required
-              aria-invalid={!!state.fieldErrors?.confirmPassword}
-              aria-describedby={
-                state.fieldErrors?.confirmPassword ? 'confirmPassword-error' : undefined
-              }
+              aria-invalid={Boolean(errors.confirmPassword)}
+              aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
+              {...register('confirmPassword')}
             />
-            {state.fieldErrors?.confirmPassword && (
+            {errors.confirmPassword && (
               <p
                 id="confirmPassword-error"
                 role="alert"
                 className="text-destructive-foreground text-xs font-medium"
               >
-                {state.fieldErrors.confirmPassword}
+                {errors.confirmPassword.message}
               </p>
             )}
           </div>
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3 pt-4">
-          <Button type="submit" disabled={isPending} className="w-full">
-            {isPending ? 'Đang xử lý…' : 'Cập nhật mật khẩu'}
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting ? 'Đang xử lý…' : 'Cập nhật mật khẩu'}
           </Button>
           <Button asChild variant="ghost" size="sm" className="w-full">
             <Link

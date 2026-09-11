@@ -8,6 +8,7 @@ import type { NextConfig } from 'next'
  */
 export const rewrites: NextConfig['rewrites'] = async () => [
   { source: '/dang-nhap', destination: '/student/login' },
+  { source: '/dang-ky', destination: '/student/register' },
   { source: '/tai-khoan', destination: '/student/account' },
   { source: '/quen-mat-khau', destination: '/student/forgot-password' },
   { source: '/dat-lai-mat-khau', destination: '/student/reset-password' },

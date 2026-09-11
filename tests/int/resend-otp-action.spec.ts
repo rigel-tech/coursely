@@ -22,7 +22,7 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
-const { resendOtpAction } = await import('@/actions/auth/resend-otp')
+const { resendOtpAction } = await import('@/actions/student/resend-otp')
 const { initialResendOtpState } = await import('@/lib/constants/resend-otp-state')
 
 let payload: Payload

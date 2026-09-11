@@ -4,9 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-const { forgotPasswordAction } = await import('@/actions/auth/forgot-password')
-
-const idle = { status: 'idle' as const }
+const { forgotPasswordAction } = await import('@/actions/student/forgot-password')
 
 let payload: Payload
 const madeIds = new Set<number>()
@@ -20,12 +18,6 @@ const seedStudent = async () => {
   })
   madeIds.add(student.id as number)
   return student
-}
-
-const form = (email: unknown) => {
-  const fd = new FormData()
-  if (typeof email === 'string') fd.set('email', email)
-  return fd
 }
 
 /** `resetPasswordToken` is a hidden auth field, so it needs asking for by name. */
@@ -57,7 +49,7 @@ describe('forgotPasswordAction — a student who exists', () => {
     expect(await tokenOf(student.id as number)).toBeFalsy()
     const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
 
-    const res = await forgotPasswordAction(idle, form(student.email))
+    const res = await forgotPasswordAction(student.email)
 
     expect(res.status).toBe('success')
     expect(await tokenOf(student.id as number)).toBeTruthy()
@@ -70,8 +62,8 @@ describe('forgotPasswordAction — anti-enumeration', () => {
     const known = await seedStudent()
     const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
 
-    const hit = await forgotPasswordAction(idle, form(known.email))
-    const miss = await forgotPasswordAction(idle, form(uniqueEmail()))
+    const hit = await forgotPasswordAction(known.email)
+    const miss = await forgotPasswordAction(uniqueEmail())
 
     // Identical down to the wording — the response must not distinguish the two.
     expect(miss.status).toBe(hit.status)
@@ -79,11 +71,11 @@ describe('forgotPasswordAction — anti-enumeration', () => {
     expect(sendEmail).toHaveBeenCalledTimes(1)
   })
 
-  it('rejects a malformed address with a field error instead', async () => {
-    const res = await forgotPasswordAction(idle, form('not-an-email'))
+  it('rejects a malformed address with one message, not a field map', async () => {
+    const res = await forgotPasswordAction('not-an-email')
 
     expect(res.status).toBe('error')
-    expect(res.fieldErrors?.email).toBeTruthy()
+    expect(res.message).toBeTruthy()
   })
 })
 
@@ -97,12 +89,23 @@ describe('forgotPasswordAction — staff are not students', () => {
     const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
 
     try {
-      const res = await forgotPasswordAction(idle, form(email))
+      const res = await forgotPasswordAction(email)
 
       expect(res.status).toBe('success')
       expect(sendEmail).not.toHaveBeenCalled()
     } finally {
       await payload.delete({ collection: 'users', id: staff.id }).catch(() => {})
     }
+  })
+})
+
+describe('forgotPasswordAction — a genuine failure', () => {
+  // `payload.forgotPassword` never throws for "not found" (it returns `null` — see its own
+  // source comment on why). A thrown error here is therefore a real failure, and must reach
+  // the caller instead of being reported as the same fixed success every other case gets.
+  it('propagates instead of being swallowed as a fake success', async () => {
+    vi.spyOn(payload, 'forgotPassword').mockRejectedValue(new Error('db unreachable'))
+
+    await expect(forgotPasswordAction(uniqueEmail())).rejects.toThrow('db unreachable')
   })
 })

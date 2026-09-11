@@ -22,7 +22,7 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
-const { logoutAction } = await import('@/actions/auth/logout')
+const { logoutAction } = await import('@/actions/student/logout')
 
 const ACCESS_COOKIE = 'coursely-access'
 const REFRESH_COOKIE = 'coursely-refresh'

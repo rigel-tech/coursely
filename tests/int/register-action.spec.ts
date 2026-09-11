@@ -29,7 +29,7 @@ vi.mock('next/headers', () => ({
 }))
 
 // Imported after the mocks are registered.
-const { registerAction } = await import('@/actions/auth/register')
+const { registerAction } = await import('@/actions/student/register')
 
 let payload: Payload
 
