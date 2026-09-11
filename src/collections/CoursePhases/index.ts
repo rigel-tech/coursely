@@ -16,7 +16,10 @@ export const CoursePhases: CollectionConfig<'course-phases'> = {
     update: authenticated,
   },
   admin: {
-    group: 'Academic',
+    group: {
+      vi: 'Khóa học & Đào tạo',
+      en: 'Academic',
+    },
     defaultColumns: ['title', 'course', 'sortOrder', 'updatedAt'],
     useAsTitle: 'title',
   },

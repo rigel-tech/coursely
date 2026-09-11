@@ -21,7 +21,10 @@ export const Media: CollectionConfig = {
     plural: { vi: 'Thư viện media', en: 'Media' },
   },
   admin: {
-    group: 'Content',
+    group: {
+      vi: 'Nội dung',
+      en: 'Content',
+    },
   },
   folders: true,
   access: {

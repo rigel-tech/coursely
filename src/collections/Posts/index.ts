@@ -52,7 +52,10 @@ export const Posts: CollectionConfig<'posts'> = {
     },
   },
   admin: {
-    group: 'Content',
+    group: {
+      vi: 'Nội dung',
+      en: 'Content',
+    },
     defaultColumns: ['title', 'slug', 'updatedAt'],
     livePreview: {
       url: ({ data, req }) =>

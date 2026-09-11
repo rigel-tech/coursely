@@ -8,7 +8,10 @@ export const SiteSettings: GlobalConfig = {
     en: 'Site Settings',
   },
   admin: {
-    group: 'Configuration',
+    group: {
+      vi: 'Cấu hình',
+      en: 'Configuration',
+    },
   },
   access: {
     read: () => true,

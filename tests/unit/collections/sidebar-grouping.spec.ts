@@ -14,7 +14,12 @@ import { Footer } from '@/globals/Footer/config'
 import { Header } from '@/globals/Header/config'
 import { SiteSettings } from '@/globals/SiteSettings/config'
 
-const ALLOWED_GROUPS = ['Academic', 'Content', 'Users & Security', 'Configuration']
+const ALLOWED_GROUPS = [
+  { vi: 'Khóa học & Đào tạo', en: 'Academic' },
+  { vi: 'Nội dung', en: 'Content' },
+  { vi: 'Người dùng & Bảo mật', en: 'Users & Security' },
+  { vi: 'Cấu hình', en: 'Configuration' },
+]
 
 const collections = [
   Courses,
@@ -36,13 +41,16 @@ describe('Admin Sidebar Grouping', () => {
   it('assigns every collection to a valid functional group', () => {
     for (const col of collections) {
       expect(col.admin?.group).toBeDefined()
-      expect(ALLOWED_GROUPS).toContain(col.admin?.group)
+      expect(ALLOWED_GROUPS).toContainEqual(col.admin?.group)
     }
   })
 
   it('assigns every global to Configuration group', () => {
     for (const glob of globals) {
-      expect(glob.admin?.group).toBe('Configuration')
+      expect(glob.admin?.group).toEqual({
+        vi: 'Cấu hình',
+        en: 'Configuration',
+      })
     }
   })
 })

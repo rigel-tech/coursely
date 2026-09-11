@@ -17,7 +17,10 @@ export const Categories: CollectionConfig = {
     update: authenticated,
   },
   admin: {
-    group: 'Academic',
+    group: {
+      vi: 'Khóa học & Đào tạo',
+      en: 'Academic',
+    },
     useAsTitle: 'title',
   },
   fields: [

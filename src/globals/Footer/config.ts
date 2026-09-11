@@ -10,7 +10,10 @@ export const Footer: GlobalConfig = {
     en: 'Footer',
   },
   admin: {
-    group: 'Configuration',
+    group: {
+      vi: 'Cấu hình',
+      en: 'Configuration',
+    },
   },
   access: {
     read: () => true,

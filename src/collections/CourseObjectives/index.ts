@@ -16,7 +16,10 @@ export const CourseObjectives: CollectionConfig<'course-objectives'> = {
     update: authenticated,
   },
   admin: {
-    group: 'Academic',
+    group: {
+      vi: 'Khóa học & Đào tạo',
+      en: 'Academic',
+    },
     defaultColumns: ['title', 'course', 'sortOrder', 'updatedAt'],
     useAsTitle: 'title',
   },

@@ -26,7 +26,10 @@ export const Users: CollectionConfig = {
     update: authenticated,
   },
   admin: {
-    group: 'Users & Security',
+    group: {
+      vi: 'Người dùng & Bảo mật',
+      en: 'Users & Security',
+    },
     defaultColumns: ['email', 'fullName', 'role', 'status'],
     useAsTitle: 'email',
   },

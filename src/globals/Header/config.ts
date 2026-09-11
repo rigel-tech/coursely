@@ -10,7 +10,10 @@ export const Header: GlobalConfig = {
     en: 'Header',
   },
   admin: {
-    group: 'Configuration',
+    group: {
+      vi: 'Cấu hình',
+      en: 'Configuration',
+    },
   },
   access: {
     read: () => true,

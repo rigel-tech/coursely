@@ -25,7 +25,10 @@ export const Classes: CollectionConfig<'classes'> = {
     update: authenticated,
   },
   admin: {
-    group: 'Academic',
+    group: {
+      vi: 'Khóa học & Đào tạo',
+      en: 'Academic',
+    },
     defaultColumns: ['code', 'course', 'status', 'startDate', 'maxStudents', 'updatedAt'],
     useAsTitle: 'code',
   },
