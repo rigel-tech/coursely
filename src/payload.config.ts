@@ -29,17 +29,14 @@ const dirname = path.dirname(filename)
 
 export default buildConfig({
   admin: {
+    meta: {
+      titleSuffix: '- Coursely',
+    },
     components: {
       graphics: {
         Logo: '@/components/admin/Graphics/Logo#Logo',
         Icon: '@/components/admin/Graphics/Icon#Icon',
       },
-      // The `BeforeLogin` component renders a message that you see while logging into your admin panel.
-      // Feel free to delete this at any time. Simply remove the line below.
-      beforeLogin: ['@/components/admin/BeforeLogin'],
-      // The `BeforeDashboard` component renders the 'welcome' block that you see after logging into your admin panel.
-      // Feel free to delete this at any time. Simply remove the line below.
-      beforeDashboard: ['@/components/admin/BeforeDashboard'],
     },
     importMap: {
       baseDir: path.resolve(dirname),
