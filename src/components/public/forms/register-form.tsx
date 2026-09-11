@@ -1,46 +1,33 @@
 'use client'
 
-import * as React from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 
-import { FormField } from '@/components/design/forms/field'
-import {
-  MIN_PASSWORD_LENGTH,
-  email,
-  matches,
-  password,
-  required,
-} from '@/components/design/forms/validation'
+import { FormField } from '@/components/public/forms/field'
 import { Button } from '@/components/public/ui/button'
-import { Checkbox } from '@/components/public/ui/checkbox'
 import { Input } from '@/components/public/ui/input'
-import { Label } from '@/components/public/ui/label'
+import { registerSchema, type RegisterValues } from '@/lib/validation/register-schema'
 import { cn } from '@/utilities/ui'
-
-export type RegisterValues = {
-  fullName: string
-  email: string
-  password: string
-  confirmPassword: string
-  acceptedTerms: boolean
-}
 
 export type RegisterFormProps = {
   /** Resolve to create the account, reject to surface the message on the form. */
   onSubmit: (values: RegisterValues) => Promise<void> | void
   /** Server-side failure — an address already registered, for instance. */
   error?: string
-  /** Label beside the terms checkbox. Pass a node so it can contain links. */
-  termsLabel?: React.ReactNode
   className?: string
 }
 
 /**
- * Account creation: name, email, password with confirmation, and a terms checkbox.
+ * Account creation: name, email, and a password with confirmation.
  *
- * The confirmation is validated against the live value of the password field rather than a
- * snapshot, so correcting the first box re-checks the second. Terms consent is a required
- * field, not a pre-ticked box — a checked-by-default consent is not consent.
+ * Validated by `registerSchema` through `zodResolver` — the same schema
+ * `registerAction` re-checks server-side (see `lib/validation/register-schema.ts`), so a
+ * value this form accepts is never one the server then rejects.
+ *
+ * `onSubmit` receives one object holding every field — `registerAction` takes exactly that
+ * shape, so nothing between the two reshapes it. A phone number is deliberately absent:
+ * registration asks for the least that can create an account, and `/tai-khoan` collects the
+ * rest once there is one.
  *
  * @example
  * ```tsx
@@ -49,18 +36,16 @@ export type RegisterFormProps = {
  *     const res = await createAccount(values)
  *     if (!res.ok) throw new Error('Email này đã được đăng ký')
  *   }}
- *   termsLabel={<>Tôi đồng ý với <Link href="/dieu-khoan">điều khoản sử dụng</Link></>}
  * />
  * ```
  */
-export function RegisterForm({ className, error, onSubmit, termsLabel }: RegisterFormProps) {
+export function RegisterForm({ className, error, onSubmit }: RegisterFormProps) {
   const {
     formState: { errors, isSubmitting },
-    getValues,
     handleSubmit,
     register,
     setError,
-  } = useForm<RegisterValues>({ defaultValues: { acceptedTerms: false } })
+  } = useForm<RegisterValues>({ resolver: zodResolver(registerSchema) })
 
   const submit = handleSubmit(async (values) => {
     try {
@@ -90,7 +75,7 @@ export function RegisterForm({ className, error, onSubmit, termsLabel }: Registe
           aria-invalid={Boolean(errors.fullName)}
           autoComplete="name"
           id="register-name"
-          {...register('fullName', required('Họ và tên'))}
+          {...register('fullName')}
         />
       </FormField>
 
@@ -100,13 +85,13 @@ export function RegisterForm({ className, error, onSubmit, termsLabel }: Registe
           autoComplete="email"
           id="register-email"
           type="email"
-          {...register('email', email())}
+          {...register('email')}
         />
       </FormField>
 
       <FormField
         error={errors.password?.message}
-        hint={`Ít nhất ${MIN_PASSWORD_LENGTH} ký tự`}
+        hint="Ít nhất 8 ký tự, gồm cả chữ và số"
         htmlFor="register-password"
         label="Mật khẩu"
       >
@@ -115,7 +100,7 @@ export function RegisterForm({ className, error, onSubmit, termsLabel }: Registe
           autoComplete="new-password"
           id="register-password"
           type="password"
-          {...register('password', password())}
+          {...register('password')}
         />
       </FormField>
 
@@ -129,26 +114,9 @@ export function RegisterForm({ className, error, onSubmit, termsLabel }: Registe
           autoComplete="new-password"
           id="register-confirm"
           type="password"
-          {...register(
-            'confirmPassword',
-            matches(() => getValues('password'), 'Mật khẩu nhập lại không khớp'),
-          )}
+          {...register('confirmPassword')}
         />
       </FormField>
-
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-start gap-2">
-          <Checkbox id="register-terms" {...register('acceptedTerms', { required: true })} />
-          <Label className="text-muted-foreground text-sm font-normal" htmlFor="register-terms">
-            {termsLabel ?? 'Tôi đồng ý với điều khoản sử dụng'}
-          </Label>
-        </div>
-        {errors.acceptedTerms ? (
-          <p className="text-error-foreground text-xs" role="alert">
-            Bạn cần đồng ý với điều khoản để tiếp tục
-          </p>
-        ) : null}
-      </div>
 
       <Button disabled={isSubmitting} type="submit">
         {isSubmitting ? 'Đang tạo tài khoản…' : 'Tạo tài khoản'}

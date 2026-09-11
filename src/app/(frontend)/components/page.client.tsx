@@ -12,9 +12,9 @@ import { SpotlightTeacher } from '@/components/design/blocks/spotlight-teacher'
 import { Stats } from '@/components/design/blocks/stats'
 import { ClassAssignForm } from '@/components/design/forms/class-assign-form'
 import { CourseForm } from '@/components/design/forms/course-form'
-import { FormField } from '@/components/design/forms/field'
+import { FormField } from '@/components/public/forms/field'
 import { LoginForm } from '@/components/design/forms/login-form'
-import { RegisterForm } from '@/components/design/forms/register-form'
+import { RegisterForm } from '@/components/public/forms/register-form'
 import { Avatar } from '@/components/public/ui/avatar'
 import { EmptyState } from '@/components/public/ui/empty-state'
 import { Modal } from '@/components/design/ui/modal'
@@ -469,11 +469,11 @@ const STAGED_BLOCKS: Entry[] = [
   },
 ]
 
-const STAGED_FORMS: Entry[] = [
+const READY_FORMS: Entry[] = [
   {
     name: 'FormField',
-    path: '@/components/design/forms/field',
-    origin: 'design',
+    path: '@/components/public/forms/field',
+    origin: 'public',
     note: 'Nhãn + control + lỗi thành một khối, để bốn form không mô tả trạng thái lỗi khác nhau.',
     preview: (
       <div className="flex max-w-sm flex-col gap-4">
@@ -487,22 +487,25 @@ const STAGED_FORMS: Entry[] = [
     ),
   },
   {
+    name: 'RegisterForm',
+    path: '@/components/public/forms/register-form',
+    origin: 'public',
+    preview: (
+      <div className="max-w-sm">
+        <RegisterForm onSubmit={noop} />
+      </div>
+    ),
+  },
+]
+
+const STAGED_FORMS: Entry[] = [
+  {
     name: 'LoginForm',
     path: '@/components/design/forms/login-form',
     origin: 'design',
     preview: (
       <div className="max-w-sm">
         <LoginForm onSubmit={noop} />
-      </div>
-    ),
-  },
-  {
-    name: 'RegisterForm',
-    path: '@/components/design/forms/register-form',
-    origin: 'design',
-    preview: (
-      <div className="max-w-sm">
-        <RegisterForm onSubmit={noop} />
       </div>
     ),
   },
@@ -581,6 +584,12 @@ export function ComponentGallery() {
 
       <Section title="Đang chờ — khối nghiệp vụ">
         {STAGED_BLOCKS.map((entry) => (
+          <Item entry={entry} key={entry.path} />
+        ))}
+      </Section>
+
+      <Section title="Biểu mẫu — dùng được ngay">
+        {READY_FORMS.map((entry) => (
           <Item entry={entry} key={entry.path} />
         ))}
       </Section>

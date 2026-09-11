@@ -26,7 +26,12 @@ describe('/components', () => {
   it('shows both staged and ready components, and says which is which', () => {
     render(<ComponentGallery />)
 
-    expect(screen.getAllByText(/@\/components\/design\//).length).toBeGreaterThan(10)
+    // Was 10. `field`, `validation` and `register-form` were promoted out of design/ into
+    // public/forms/ when the registration screen took them, so two entries left the staged
+    // count for good. The number is a sentinel against an empty gallery, not an inventory —
+    // `tests/unit/repo/showcase.spec.ts` is what enforces completeness exactly.
+    expect(screen.getAllByText(/@\/components\/design\//).length).toBeGreaterThan(8)
+    expect(screen.getAllByText(/@\/components\/public\/forms\//).length).toBeGreaterThan(1)
     expect(screen.getAllByText(/@\/components\/public\/ui\//).length).toBeGreaterThan(5)
   })
 })

@@ -19,10 +19,13 @@ describe('RegisterCta', () => {
 
     expect(screen.getByLabelText('Email')).toBeTruthy()
     expect(screen.getByLabelText('Mật khẩu')).toBeTruthy()
-    expect(screen.getByLabelText('Xác nhận mật khẩu')).toBeTruthy()
+    expect(screen.getByLabelText('Nhập lại mật khẩu')).toBeTruthy()
     expect(screen.getByLabelText('Họ và tên')).toBeTruthy()
-    expect(screen.getByLabelText('Số điện thoại')).toBeTruthy()
-    expect(screen.getByLabelText(/điều khoản/i)).toBeTruthy()
+
+    // Both gone with the move onto the shared form: consent is no longer collected here, and
+    // a phone number is something `/tai-khoan` asks for once the account exists.
+    expect(screen.queryByLabelText(/điều khoản/i)).toBeNull()
+    expect(screen.queryByLabelText(/điện thoại/i)).toBeNull()
   })
 
   it('hides the form again on a second click', () => {

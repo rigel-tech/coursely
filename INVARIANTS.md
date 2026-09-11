@@ -242,12 +242,21 @@ but `/verify-otp` finds no `pending_email` and bounces to `/`, or `/admin` sees 
 There is no console warning.
 
 **Where** — `src/actions/auth/register.ts`, `src/actions/auth/login.ts`,
-`src/actions/auth/verify-otp.ts` (now sets `coursely-*` + returns `redirectTo`),
-`src/actions/auth/logout.ts` and `src/actions/auth/logout-all.ts` (clear `coursely-*` +
-return `redirectTo`) — all return `redirectTo`, never `redirect()`. Client navigation lives
-in the form: `src/components/public/RegisterCta/RegisterForm.tsx`,
-`src/components/public/LoginCta/LoginForm.tsx` and `src/app/(frontend)/verify-otp/OtpForm.tsx`
-navigate from a `useEffect` on `state.status`.
+`src/actions/auth/verify-otp.ts` (sets `coursely-*` + returns `redirectTo`) and
+`src/actions/auth/logout.ts` (clears `coursely-*` + returns `redirectTo`) — all return,
+never `redirect()`.
+
+Client navigation lives in the form, in one of two shapes. A `react-hook-form` form awaits
+the action in its submit handler and navigates on the resolved value:
+`src/components/public/RegisterCta/RegisterForm.tsx` (`router.push`),
+`src/app/(frontend)/student/login/LoginForm.tsx` and
+`src/components/public/LogoutCta/index.tsx` (`window.location.assign`). A `useActionState`
+form navigates from a `useEffect` on `state.status` instead:
+`src/app/(frontend)/student/verify-otp/OtpForm.tsx`.
+
+Both are safe for the same reason — the browser applies the action response's `Set-Cookie`
+before the promise resolves or the new state arrives, so either way the navigation happens
+after the cookie exists. What is **not** safe is navigating from inside the action.
 
 ## Routing
 

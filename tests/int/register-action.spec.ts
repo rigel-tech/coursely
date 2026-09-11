@@ -3,17 +3,17 @@ import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
 import { clearOtp, readOtp } from './helpers/otp-record'
+import type { RegisterValues } from '@/lib/validation/register-schema'
 
 /**
- * Server-action context. `next/headers` has no request scope under vitest, so it
- * is mocked: cookies land in `ctx.cookieJar`, request headers are read from
- * `ctx.reqHeaders`. The happy path resolves to `{ status: 'success' }` — the
- * client owns the navigation to `/xac-thuc-otp`, so nothing here throws.
+ * Server-action context. `next/headers` has no request scope under vitest, so `cookies` is
+ * mocked and every write lands in `ctx.cookieJar`. `headers` is not mocked and does not
+ * need to be: the action reads nothing off the request any more. The happy path resolves
+ * to `{ status: 'success' }` — the client owns the navigation to `/xac-thuc-otp`.
  */
 const ctx = vi.hoisted(() => ({
   cookieJar: new Map<string, string>(),
   cookieOptions: new Map<string, unknown>(),
-  reqHeaders: new Map<string, string>(),
 }))
 
 vi.mock('next/headers', () => ({
@@ -26,14 +26,10 @@ vi.mock('next/headers', () => ({
     },
     delete: (name: string) => ctx.cookieJar.delete(name),
   }),
-  headers: async () => ({
-    get: (name: string) => ctx.reqHeaders.get(name.toLowerCase()) ?? null,
-  }),
 }))
 
 // Imported after the mocks are registered.
 const { registerAction } = await import('@/actions/auth/register')
-const { initialRegisterState } = await import('@/lib/constants/register-state')
 
 let payload: Payload
 
@@ -44,24 +40,25 @@ const uniqueEmail = (tag = 'reg') => {
   return e
 }
 
-const form = (fields: Record<string, string>) => {
-  const fd = new FormData()
-  for (const [k, v] of Object.entries(fields)) fd.set(k, v)
-  return fd
-}
+/**
+ * What `<RegisterForm>` hands the action: one object, no `FormData`, no `terms`. The form
+ * itself no longer collects a phone number, but the schema still accepts one, so it stays
+ * here — an account created through some other caller must not be rejected for it.
+ */
+const validForm = (email: string, over: Record<string, string> = {}) => ({
+  email,
+  password: 'abcd1234',
+  confirmPassword: 'abcd1234',
+  fullName: 'Người Test',
+  phone: '0900000000',
+  ...over,
+})
 
-const validForm = (email: string, over: Record<string, string> = {}) =>
-  form({
-    email,
-    password: 'abcd1234',
-    confirmPassword: 'abcd1234',
-    fullName: 'Người Test',
-    phone: '0900000000',
-    terms: 'on',
-    ...over,
-  })
-
-const run = (fd: FormData) => registerAction(initialRegisterState, fd)
+// `registerAction` is typed to what `<RegisterForm>` actually sends (`RegisterValues`, no
+// `phone`), same as `loginAction`. These cases deliberately send more or less than that —
+// a caller bypassing the form, exactly the one `parseRegisterInput` still guards against
+// at runtime — so the cast is the point, not a workaround.
+const run = (values: Record<string, unknown>) => registerAction(values as RegisterValues)
 
 beforeAll(async () => {
   payload = await getPayload({ config: await configPromise })
@@ -70,12 +67,6 @@ beforeAll(async () => {
 beforeEach(() => {
   ctx.cookieJar.clear()
   ctx.cookieOptions.clear()
-  ctx.reqHeaders.clear()
-  ctx.reqHeaders.set('user-agent', 'vitest-agent')
-  ctx.reqHeaders.set(
-    'x-forwarded-for',
-    `10.0.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-  )
 })
 
 afterEach(async () => {
@@ -127,6 +118,12 @@ describe('registerAction — new email', () => {
     })
     expect(notes.docs).toHaveLength(1)
     expect(notes.docs[0].type).toBe('ACCOUNT_CREATED')
+
+    // The action stopped reading `headers()`, so there is no IP and no user agent to
+    // record. The `metadata` column is still on the collection and still writable by
+    // anything else that raises a notification — what must not come back is this shape.
+    expect(notes.docs[0].metadata ?? {}).not.toHaveProperty('ip')
+    expect(notes.docs[0].metadata ?? {}).not.toHaveProperty('userAgent')
 
     expect(await readOtp(payload, email)).toBeTruthy()
     expect(ctx.cookieJar.get('pending_email')).toBe(email)
@@ -214,7 +211,10 @@ describe('registerAction — DISABLED email', () => {
 })
 
 describe('registerAction — transaction atomicity', () => {
-  it('rolls the user back when the notification write fails', async () => {
+  // The failure now leaves by `throw` instead of coming back as `AUTH_003`: an error
+  // nobody wrote copy for is a bug, and returning "please try again" buried it. The form
+  // catches this and shows its system-failure banner.
+  it('rolls the student back when the notification write fails, and rethrows', async () => {
     const email = uniqueEmail('rollback')
     const realCreate = payload.create.bind(payload)
     vi.spyOn(payload, 'create').mockImplementation(
@@ -224,8 +224,7 @@ describe('registerAction — transaction atomicity', () => {
       },
     )
 
-    const result = await run(validForm(email))
-    expect(result.code).toBe('AUTH_003')
+    await expect(run(validForm(email))).rejects.toThrow('boom')
 
     vi.restoreAllMocks()
     const { totalDocs } = await payload.find({
@@ -238,12 +237,14 @@ describe('registerAction — transaction atomicity', () => {
 })
 
 describe('registerAction — guards', () => {
-  it('returns AUTH_001 with fieldErrors on invalid input and writes nothing', async () => {
+  it('returns one error message on invalid input and writes nothing', async () => {
     const email = uniqueEmail('invalid')
     const result = await run(validForm(email, { email: 'nope', confirmPassword: 'mismatch99' }))
 
-    expect(result.code).toBe('AUTH_001')
-    expect(result.fieldErrors).toBeTruthy()
+    expect(result).toEqual({
+      status: 'error',
+      message: 'Vui lòng kiểm tra lại thông tin đã nhập.',
+    })
     const { totalDocs } = await payload.find({
       collection: 'students',
       where: { email: { equals: email } },
