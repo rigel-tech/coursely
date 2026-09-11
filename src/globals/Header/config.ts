@@ -5,6 +5,10 @@ import { revalidateHeader } from './hooks/revalidateHeader'
 
 export const Header: GlobalConfig = {
   slug: 'header',
+  label: {
+    vi: 'Đầu trang (Header)',
+    en: 'Header',
+  },
   access: {
     read: () => true,
   },
@@ -12,6 +16,7 @@ export const Header: GlobalConfig = {
     {
       name: 'navItems',
       type: 'array',
+      label: { vi: 'Các mục menu điều hướng', en: 'Navigation Items' },
       fields: [
         link({
           appearances: false,

@@ -23,6 +23,10 @@ import {
 
 export const Pages: CollectionConfig<'pages'> = {
   slug: 'pages',
+  labels: {
+    singular: { vi: 'Trang', en: 'Page' },
+    plural: { vi: 'Các trang tĩnh', en: 'Pages' },
+  },
   access: {
     create: authenticated,
     delete: authenticated,

@@ -27,6 +27,10 @@ export const plugins: Plugin[] = [
   redirectsPlugin({
     collections: ['pages', 'posts'],
     overrides: {
+      labels: {
+        singular: { vi: 'Chuyển hướng link', en: 'Redirect' },
+        plural: { vi: 'Chuyển hướng link', en: 'Redirects' },
+      },
       // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
       fields: ({ defaultFields }) => {
         return defaultFields.map((field) => {
@@ -59,6 +63,10 @@ export const plugins: Plugin[] = [
       payment: false,
     },
     formOverrides: {
+      labels: {
+        singular: { vi: 'Biểu mẫu', en: 'Form' },
+        plural: { vi: 'Biểu mẫu', en: 'Forms' },
+      },
       fields: ({ defaultFields }) => {
         return defaultFields.map((field) => {
           if ('name' in field && field.name === 'confirmationMessage') {

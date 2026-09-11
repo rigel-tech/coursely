@@ -443,13 +443,13 @@ export interface User {
   role: 'ADMIN' | 'STUDENT';
   status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
   /**
-   * Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.
+   * Account created directly at the counter by Admin, not via self-registration.
    */
   isWalkIn?: boolean | null;
   verifiedAt?: string | null;
   lastLoginAt?: string | null;
   /**
-   * Admin đã tạo tài khoản này. Trống với tài khoản tự đăng ký.
+   * Admin who created this account. Blank for self-registered users.
    */
   createdBy?: (number | null) | User;
   updatedAt: string;
@@ -830,7 +830,7 @@ export interface Course {
   } | null;
   duration?: string | null;
   /**
-   * Chỉ hiển thị khi loại khóa học là MOODLE
+   * Only shown when course type is MOODLE
    */
   moodleUrl?: string | null;
   registrationStartAt?: string | null;
@@ -937,9 +937,6 @@ export interface Notification {
   type: 'ACCOUNT_CREATED';
   title: string;
   content: string;
-  /**
-   * Ngữ cảnh tạo thông báo, ví dụ { ip, userAgent }.
-   */
   metadata?:
     | {
         [k: string]: unknown;
@@ -2017,11 +2014,11 @@ export interface SiteSetting {
   siteName: string;
   tagline: string;
   /**
-   * Logo hiển thị tại Header, Footer và màn hình Admin.
+   * Logo displayed in Header, Footer, and Admin panel.
    */
   logo?: (number | null) | Media;
   /**
-   * Biểu tượng tab trình duyệt (Khuyên dùng PNG, ICO, WEBP).
+   * Browser tab icon (PNG, ICO, WEBP recommended).
    */
   favicon?: (number | null) | Media;
   updatedAt?: string | null;

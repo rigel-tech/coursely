@@ -6,6 +6,10 @@ import { slugField } from 'payload'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
+  labels: {
+    singular: { vi: 'Danh mục', en: 'Category' },
+    plural: { vi: 'Danh mục', en: 'Categories' },
+  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -19,6 +23,7 @@ export const Categories: CollectionConfig = {
     {
       name: 'title',
       type: 'text',
+      label: { vi: 'Tên danh mục', en: 'Category Title' },
       required: true,
     },
     slugField({

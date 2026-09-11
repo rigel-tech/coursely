@@ -14,6 +14,10 @@ import { authenticated } from '../../access/authenticated'
  */
 export const Users: CollectionConfig = {
   slug: 'users',
+  labels: {
+    singular: { vi: 'Người dùng', en: 'User' },
+    plural: { vi: 'Người dùng', en: 'Users' },
+  },
   access: {
     admin: authenticated,
     create: authenticated,
@@ -30,23 +34,29 @@ export const Users: CollectionConfig = {
     {
       name: 'fullName',
       type: 'text',
-      label: 'Họ và tên',
+      label: { vi: 'Họ và tên', en: 'Full Name' },
       maxLength: 255,
     },
     {
       name: 'phone',
       type: 'text',
+      label: { vi: 'Số điện thoại', en: 'Phone Number' },
       maxLength: 30,
     },
     {
       name: 'avatar',
       type: 'upload',
       relationTo: 'media',
+      label: { vi: 'Ảnh đại diện', en: 'Avatar' },
     },
     {
       name: 'role',
       type: 'select',
-      options: ['ADMIN', 'STUDENT'],
+      label: { vi: 'Vai trò', en: 'Role' },
+      options: [
+        { label: { vi: 'Quản trị viên (ADMIN)', en: 'Administrator (ADMIN)' }, value: 'ADMIN' },
+        { label: { vi: 'Học viên (STUDENT)', en: 'Student (STUDENT)' }, value: 'STUDENT' },
+      ],
       defaultValue: 'STUDENT',
       required: true,
       saveToJWT: true,
@@ -54,7 +64,15 @@ export const Users: CollectionConfig = {
     {
       name: 'status',
       type: 'select',
-      options: ['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'],
+      label: { vi: 'Trạng thái tài khoản', en: 'Account Status' },
+      options: [
+        {
+          label: { vi: 'Chờ xác thực OTP', en: 'Pending Verification' },
+          value: 'PENDING_VERIFICATION',
+        },
+        { label: { vi: 'Đang hoạt động', en: 'Active' }, value: 'ACTIVE' },
+        { label: { vi: 'Đã vô hiệu hóa', en: 'Disabled' }, value: 'DISABLED' },
+      ],
       defaultValue: 'PENDING_VERIFICATION',
       required: true,
       saveToJWT: true,
@@ -62,27 +80,37 @@ export const Users: CollectionConfig = {
     {
       name: 'isWalkIn',
       type: 'checkbox',
+      label: { vi: 'Tạo tại quầy', en: 'Walk-in Account' },
       defaultValue: false,
       admin: {
-        description: 'Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.',
+        description: {
+          vi: 'Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.',
+          en: 'Account created directly at the counter by Admin, not via self-registration.',
+        },
       },
     },
     {
       name: 'verifiedAt',
       type: 'date',
+      label: { vi: 'Thời điểm xác thực', en: 'Verified At' },
       admin: { readOnly: true },
     },
     {
       name: 'lastLoginAt',
       type: 'date',
+      label: { vi: 'Đăng nhập lần cuối', en: 'Last Login At' },
       admin: { readOnly: true },
     },
     {
       name: 'createdBy',
       type: 'relationship',
       relationTo: 'users',
+      label: { vi: 'Người tạo', en: 'Created By' },
       admin: {
-        description: 'Admin đã tạo tài khoản này. Trống với tài khoản tự đăng ký.',
+        description: {
+          vi: 'Admin đã tạo tài khoản này. Trống với tài khoản tự đăng ký.',
+          en: 'Admin who created this account. Blank for self-registered users.',
+        },
       },
     },
   ],
