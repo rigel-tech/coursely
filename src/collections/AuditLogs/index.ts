@@ -21,6 +21,7 @@ export const AuditLogs: CollectionConfig = {
     update: () => false,
   },
   admin: {
+    group: 'Users & Security',
     defaultColumns: ['action', 'user', 'ip', 'createdAt'],
     useAsTitle: 'action',
   },

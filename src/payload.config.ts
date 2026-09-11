@@ -104,15 +104,18 @@ export default buildConfig({
     skipVerify: true,
   }),
   collections: [
+    // --- 1. Academic (Khóa học & Đào tạo) ---
+    Courses,
+    Classes,
+    CoursePhases,
+    CourseObjectives,
+    Categories,
+    // --- 2. Content (Nội dung & Truyền thông) ---
     Pages,
     Posts,
     Media,
-    Categories,
+    // --- 3. Users & Security (Người dùng & Bảo mật) ---
     Users,
-    Courses,
-    CourseObjectives,
-    CoursePhases,
-    Classes,
     Notifications,
     AuditLogs,
   ],

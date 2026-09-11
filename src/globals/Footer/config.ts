@@ -9,6 +9,9 @@ export const Footer: GlobalConfig = {
     vi: 'Chân trang (Footer)',
     en: 'Footer',
   },
+  admin: {
+    group: 'Configuration',
+  },
   access: {
     read: () => true,
   },

@@ -16,6 +16,7 @@ export const CourseObjectives: CollectionConfig<'course-objectives'> = {
     update: authenticated,
   },
   admin: {
+    group: 'Academic',
     defaultColumns: ['title', 'course', 'sortOrder', 'updatedAt'],
     useAsTitle: 'title',
   },

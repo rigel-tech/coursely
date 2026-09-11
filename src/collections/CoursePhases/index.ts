@@ -16,6 +16,7 @@ export const CoursePhases: CollectionConfig<'course-phases'> = {
     update: authenticated,
   },
   admin: {
+    group: 'Academic',
     defaultColumns: ['title', 'course', 'sortOrder', 'updatedAt'],
     useAsTitle: 'title',
   },

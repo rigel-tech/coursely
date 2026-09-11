@@ -31,6 +31,9 @@ export const plugins: Plugin[] = [
         singular: { vi: 'Chuyển hướng link', en: 'Redirect' },
         plural: { vi: 'Chuyển hướng link', en: 'Redirects' },
       },
+      admin: {
+        group: 'Configuration',
+      },
       // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
       fields: ({ defaultFields }) => {
         return defaultFields.map((field) => {
@@ -67,6 +70,9 @@ export const plugins: Plugin[] = [
         singular: { vi: 'Biểu mẫu', en: 'Form' },
         plural: { vi: 'Biểu mẫu', en: 'Forms' },
       },
+      admin: {
+        group: 'Content',
+      },
       fields: ({ defaultFields }) => {
         return defaultFields.map((field) => {
           if ('name' in field && field.name === 'confirmationMessage') {
@@ -87,11 +93,19 @@ export const plugins: Plugin[] = [
         })
       },
     },
+    formSubmissionOverrides: {
+      admin: {
+        group: 'Content',
+      },
+    },
   }),
   searchPlugin({
     collections: ['posts'],
     beforeSync: beforeSyncWithSearch,
     searchOverrides: {
+      admin: {
+        group: 'Content',
+      },
       fields: ({ defaultFields }) => {
         return [...defaultFields, ...searchFields]
       },

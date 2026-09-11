@@ -7,6 +7,9 @@ export const SiteSettings: GlobalConfig = {
     vi: 'Cấu hình website',
     en: 'Site Settings',
   },
+  admin: {
+    group: 'Configuration',
+  },
   access: {
     read: () => true,
     update: authenticated,

@@ -9,6 +9,9 @@ export const Header: GlobalConfig = {
     vi: 'Đầu trang (Header)',
     en: 'Header',
   },
+  admin: {
+    group: 'Configuration',
+  },
   access: {
     read: () => true,
   },
