@@ -269,7 +269,7 @@ export const seed = async ({
               type: 'custom',
               label: 'Payload',
               newTab: true,
-              url: 'https://payloadcms.com/',
+              url: 'https://coursely.vn/',
             },
           },
         ],
