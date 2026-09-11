@@ -29,7 +29,7 @@ export const Students: CollectionConfig = {
   slug: 'students',
   access: {
     admin: () => false,
-    create: () => true,
+    create: () => false,
     delete: authenticated,
     read: authenticated,
     update: authenticated,
