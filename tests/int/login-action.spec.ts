@@ -7,6 +7,7 @@ import configPromise from '@payload-config'
 
 import { clearOtp, readOtp } from './helpers/otp-record'
 import { REFRESH_TTL_SEC } from '@/lib/constants/auth'
+import { verifyAccessToken, verifyRefreshToken } from '@/lib/auth/session-token'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so the
@@ -154,6 +155,22 @@ describe('loginAction — success', () => {
       limit: 0,
     })
     expect(notes.totalDocs).toBe(0)
+  })
+
+  // `toBeTruthy` above cannot tell a token from a pending promise, and signing is async:
+  // a missing `await` anywhere on this path writes "[object Promise]" into the cookie and
+  // signs every visitor out on a build that compiles. Read the cookies back instead.
+  it('writes cookies that verify back to the student who signed in', async () => {
+    const { email, password, user } = await makeUser()
+
+    await run(form({ email, password }))
+
+    await expect(verifyAccessToken(ctx.cookieJar.get(ACCESS_COOKIE))).resolves.toMatchObject({
+      id: user.id,
+    })
+    await expect(verifyRefreshToken(ctx.cookieJar.get(REFRESH_COOKIE))).resolves.toMatchObject({
+      id: user.id,
+    })
   })
 
   it('gives every session the same length; the access cookie stays a session cookie', async () => {

@@ -25,19 +25,19 @@ const baseFlags = {
 }
 
 /** Start a session: both tokens, freshly signed, at the one length every session gets. */
-export function setSessionCookies(jar: CookieJar, claims: StudentClaims): void {
-  jar.set(ACCESS_TOKEN_COOKIE, signAccessToken(claims), baseFlags)
+export async function setSessionCookies(jar: CookieJar, claims: StudentClaims): Promise<void> {
+  jar.set(ACCESS_TOKEN_COOKIE, await signAccessToken(claims), baseFlags)
   // Cookie and token carry the same lifetime, so a copy taken off the wire does not
   // outlive the cookie it came from.
-  jar.set(REFRESH_TOKEN_COOKIE, signRefreshToken(claims, REFRESH_TTL_SEC), {
+  jar.set(REFRESH_TOKEN_COOKIE, await signRefreshToken(claims, REFRESH_TTL_SEC), {
     ...baseFlags,
     maxAge: REFRESH_TTL_SEC,
   })
 }
 
 /** Renewal writes the access cookie and nothing else — the refresh token is not rotated. */
-export function refreshAccessCookie(jar: CookieJar, claims: StudentClaims): void {
-  jar.set(ACCESS_TOKEN_COOKIE, signAccessToken(claims), baseFlags)
+export async function refreshAccessCookie(jar: CookieJar, claims: StudentClaims): Promise<void> {
+  jar.set(ACCESS_TOKEN_COOKIE, await signAccessToken(claims), baseFlags)
 }
 
 export function clearSessionCookies(jar: CookieJar): void {

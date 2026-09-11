@@ -38,7 +38,7 @@ const seedStudent = async (status: 'ACTIVE' | 'PENDING_VERIFICATION' = 'ACTIVE')
     data: { email: uniqueEmail(), password: 'Secret123', fullName: 'Tên Cũ', status },
   })
   madeIds.add(student.id as number)
-  ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken({ id: student.id as number, status }))
+  ctx.cookieJar.set(ACCESS_COOKIE, await signAccessToken({ id: student.id as number, status }))
   return student
 }
 

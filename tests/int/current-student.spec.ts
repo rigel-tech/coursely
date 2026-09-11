@@ -34,8 +34,8 @@ const seedStudent = async (status: 'ACTIVE' | 'DISABLED' = 'ACTIVE') => {
 }
 
 /** Put a well-formed access token for `id` in the jar. */
-const signIn = (id: number, status = 'ACTIVE') => {
-  ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken({ id: id, status }))
+const signIn = async (id: number, status = 'ACTIVE') => {
+  ctx.cookieJar.set(ACCESS_COOKIE, await signAccessToken({ id: id, status }))
 }
 
 beforeAll(async () => {
@@ -55,7 +55,7 @@ afterEach(async () => {
 describe('getSessionStudent — a signed-in student', () => {
   it('returns the student document the access token points at', async () => {
     const student = await seedStudent()
-    signIn(student.id as number)
+    await signIn(student.id as number)
 
     const session = await getSessionStudent()
 
@@ -66,7 +66,7 @@ describe('getSessionStudent — a signed-in student', () => {
 
   it('reads the live status, not the one stamped into the token at sign-in', async () => {
     const student = await seedStudent()
-    signIn(student.id as number, 'ACTIVE')
+    await signIn(student.id as number, 'ACTIVE')
     await payload.update({
       collection: 'students',
       id: student.id,
@@ -84,7 +84,7 @@ describe('getSessionStudent — no session', () => {
 
   it('returns null for a tampered signature', async () => {
     const student = await seedStudent()
-    const token = signAccessToken({ id: student.id as number, status: 'ACTIVE' })
+    const token = await signAccessToken({ id: student.id as number, status: 'ACTIVE' })
     ctx.cookieJar.set(ACCESS_COOKIE, token.slice(0, -1) + (token.at(-1) === 'A' ? 'B' : 'A'))
 
     expect(await getSessionStudent()).toBeNull()
@@ -93,7 +93,7 @@ describe('getSessionStudent — no session', () => {
   it('returns null for an expired token', async () => {
     const student = await seedStudent()
     vi.setSystemTime(new Date(Date.now() - 60 * 60 * 1000))
-    const stale = signAccessToken({ id: student.id as number, status: 'ACTIVE' })
+    const stale = await signAccessToken({ id: student.id as number, status: 'ACTIVE' })
     vi.useRealTimers()
     ctx.cookieJar.set(ACCESS_COOKIE, stale)
 
@@ -103,7 +103,7 @@ describe('getSessionStudent — no session', () => {
 
 describe('getSessionStudent — a session trouble must not break the page', () => {
   it('returns null when the token is valid but no such student exists', async () => {
-    signIn(2_000_000_000)
+    await signIn(2_000_000_000)
 
     expect(await getSessionStudent()).toBeNull()
   })

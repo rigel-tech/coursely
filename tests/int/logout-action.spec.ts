@@ -33,8 +33,8 @@ beforeEach(() => ctx.cookieJar.clear())
 
 describe('logoutAction', () => {
   it('clears both cookies and hands the caller a destination', async () => {
-    ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken(student))
-    ctx.cookieJar.set(REFRESH_COOKIE, signRefreshToken(student, REFRESH_TTL_SEC))
+    ctx.cookieJar.set(ACCESS_COOKIE, await signAccessToken(student))
+    ctx.cookieJar.set(REFRESH_COOKIE, await signRefreshToken(student, REFRESH_TTL_SEC))
 
     expect(await logoutAction()).toEqual({ redirectTo: '/' })
 

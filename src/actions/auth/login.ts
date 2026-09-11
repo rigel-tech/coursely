@@ -37,7 +37,7 @@ export async function loginAction(input: LoginInput): Promise<LoginState> {
 
   try {
     const { student, redirectTo } = await authenticateStudent(parsed.data)
-    setSessionCookies(await cookies(), student)
+    await setSessionCookies(await cookies(), student)
 
     return { status: 'success', redirectTo }
   } catch (err) {

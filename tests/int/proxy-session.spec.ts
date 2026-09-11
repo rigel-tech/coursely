@@ -31,7 +31,7 @@ beforeAll(async () => {
 
 describe('proxy — student session', () => {
   it('valid access token: serves the page and writes no cookie', async () => {
-    const res = await proxy(req(`${ACCESS_COOKIE}=${signAccessToken(activeStudent)}`))
+    const res = await proxy(req(`${ACCESS_COOKIE}=${await signAccessToken(activeStudent)}`))
 
     expect(res.headers.get('location')).toBeNull()
     expect(res.cookies.get(ACCESS_COOKIE)).toBeUndefined()
@@ -39,17 +39,19 @@ describe('proxy — student session', () => {
   })
 
   it('no access token but a valid refresh: mints a new access cookie and serves the page', async () => {
-    const refresh = signRefreshToken(activeStudent, REFRESH_TTL_SEC)
+    const refresh = await signRefreshToken(activeStudent, REFRESH_TTL_SEC)
 
     const res = await proxy(req(`${REFRESH_COOKIE}=${refresh}`))
 
     expect(res.headers.get('location')).toBeNull()
-    expect(verifyAccessToken(res.cookies.get(ACCESS_COOKIE)?.value)).toEqual(activeStudent)
+    await expect(verifyAccessToken(res.cookies.get(ACCESS_COOKIE)?.value)).resolves.toEqual(
+      activeStudent,
+    )
   })
 
   it('renewal leaves the refresh cookie alone — the session is not rotated', async () => {
     const res = await proxy(
-      req(`${REFRESH_COOKIE}=${signRefreshToken(activeStudent, REFRESH_TTL_SEC)}`),
+      req(`${REFRESH_COOKIE}=${await signRefreshToken(activeStudent, REFRESH_TTL_SEC)}`),
     )
 
     expect(res.cookies.get(REFRESH_COOKIE)).toBeUndefined()
@@ -64,7 +66,7 @@ describe('proxy — student session', () => {
   })
 
   it('an expired refresh token is no better than a forged one', async () => {
-    const expired = signRefreshToken(activeStudent, -60)
+    const expired = await signRefreshToken(activeStudent, -60)
 
     const res = await proxy(req(`${REFRESH_COOKIE}=${expired}`))
 
@@ -82,7 +84,7 @@ describe('proxy — student session', () => {
   it('a student who is not ACTIVE is not let into the student area', async () => {
     const pending = { id: 2, status: 'PENDING_VERIFICATION' }
 
-    const res = await proxy(req(`${ACCESS_COOKIE}=${signAccessToken(pending)}`))
+    const res = await proxy(req(`${ACCESS_COOKIE}=${await signAccessToken(pending)}`))
 
     expect(res.headers.get('location')).toContain('/dang-nhap?callbackUrl=')
   })
@@ -93,12 +95,14 @@ describe('proxy — student session', () => {
 // session is renewed and cleared there exactly as it is everywhere else.
 describe('proxy — /admin is an ordinary path for the student session', () => {
   it('renews the access cookie on /admin, like anywhere else', async () => {
-    const refresh = signRefreshToken(activeStudent, REFRESH_TTL_SEC)
+    const refresh = await signRefreshToken(activeStudent, REFRESH_TTL_SEC)
 
     const res = await proxy(adminReq(`${REFRESH_COOKIE}=${refresh}`))
 
     expect(res.headers.get('location')).toBeNull()
-    expect(verifyAccessToken(res.cookies.get(ACCESS_COOKIE)?.value)).toEqual(activeStudent)
+    await expect(verifyAccessToken(res.cookies.get(ACCESS_COOKIE)?.value)).resolves.toEqual(
+      activeStudent,
+    )
   })
 
   it('clears both cookies on /admin when the refresh token no longer verifies', async () => {
@@ -115,7 +119,7 @@ describe('proxy — /admin is an ordinary path for the student session', () => {
 // writes neither — which is exactly what "proxy does not touch request headers" means.
 describe('proxy — identity is never forwarded as a request header', () => {
   it('a signed-in student: no x-user-* is written onto the forwarded request', async () => {
-    const res = await proxy(req(`${ACCESS_COOKIE}=${signAccessToken(activeStudent)}`))
+    const res = await proxy(req(`${ACCESS_COOKIE}=${await signAccessToken(activeStudent)}`))
 
     expect(res.headers.get('x-middleware-request-x-user-id')).toBeNull()
     expect(res.headers.get('x-middleware-request-x-user-status')).toBeNull()

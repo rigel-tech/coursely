@@ -16,7 +16,8 @@
  * There is no session record anywhere: the refresh token *is* the session. A
  * session therefore cannot be revoked before it expires — see INVARIANTS.
  */
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
+import { createHash } from 'node:crypto'
+import { SignJWT, jwtVerify } from 'jose'
 
 import { ACCESS_TTL_SEC } from '@/lib/constants/auth'
 
@@ -30,62 +31,49 @@ const keyFor = (kind: TokenKind): Buffer =>
     .update(`coursely/${kind}-token\0${process.env.PAYLOAD_SECRET ?? ''}`)
     .digest()
 
-const encode = (value: unknown): string =>
-  Buffer.from(JSON.stringify(value), 'utf8').toString('base64url')
-
-function sign(kind: TokenKind, claims: StudentClaims, ttlSec: number): string {
+// `iat` and `exp` are written into the claims object by hand rather than through jose's
+// `.setIssuedAt()` / `.setExpirationTime()`, which append: those would emit
+// `{sub, status, iat, exp}` and change the bytes of a token shape that is already in
+// browsers. The order below is the one the hand-rolled signer produced.
+function sign(kind: TokenKind, claims: StudentClaims, ttlSec: number): Promise<string> {
   const iat = Math.floor(Date.now() / 1000)
   const body: Record<string, unknown> = { sub: claims.id, iat, exp: iat + ttlSec }
   if (claims.status !== undefined) body.status = claims.status
 
-  const header = encode({ alg: 'HS256', typ: 'JWT' })
-  const payload = encode(body)
-  const signature = createHmac('sha256', keyFor(kind))
-    .update(`${header}.${payload}`)
-    .digest('base64url')
-
-  return `${header}.${payload}.${signature}`
+  return new SignJWT(body).setProtectedHeader({ alg: 'HS256', typ: 'JWT' }).sign(keyFor(kind))
 }
 
 /** `null` for every failure — no cookie, wrong key, tampered, expired, malformed. */
-function verify(kind: TokenKind, token: string | undefined): StudentClaims | null {
+async function verify(kind: TokenKind, token: string | undefined): Promise<StudentClaims | null> {
   if (!token) return null
 
-  const [header, payload, signature] = token.split('.')
-  if (!header || !payload || !signature) return null
-
-  const expected = createHmac('sha256', keyFor(kind)).update(`${header}.${payload}`).digest()
-  let given: Buffer
   try {
-    given = Buffer.from(signature, 'base64url')
+    const { payload } = await jwtVerify(token, keyFor(kind), {
+      algorithms: ['HS256'],
+      requiredClaims: ['exp'],
+    })
+
+    // Read `sub` as `unknown`: jose types it as a string because that is what the spec
+    // says, but document IDs are numbers here and that is what this module signs.
+    const sub: unknown = payload.sub
+    if (typeof sub !== 'number') return null
+
+    return { id: sub, status: typeof payload.status === 'string' ? payload.status : undefined }
   } catch {
     return null
   }
-  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null
-
-  let body: Record<string, unknown>
-  try {
-    body = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
-  } catch {
-    return null
-  }
-
-  if (typeof body.sub !== 'number') return null
-  if (typeof body.exp === 'number' && body.exp * 1000 <= Date.now()) return null
-
-  return { id: body.sub, status: typeof body.status === 'string' ? body.status : undefined }
 }
 
 /** Sign the short-lived token `proxy` and the server components read. */
-export const signAccessToken = (claims: StudentClaims): string =>
+export const signAccessToken = (claims: StudentClaims): Promise<string> =>
   sign('access', claims, ACCESS_TTL_SEC)
 
-export const verifyAccessToken = (token: string | undefined): StudentClaims | null =>
+export const verifyAccessToken = (token: string | undefined): Promise<StudentClaims | null> =>
   verify('access', token)
 
 /** Sign the long-lived token that buys a new access token. `ttlSec` is the session's length. */
-export const signRefreshToken = (claims: StudentClaims, ttlSec: number): string =>
+export const signRefreshToken = (claims: StudentClaims, ttlSec: number): Promise<string> =>
   sign('refresh', claims, ttlSec)
 
-export const verifyRefreshToken = (token: string | undefined): StudentClaims | null =>
+export const verifyRefreshToken = (token: string | undefined): Promise<StudentClaims | null> =>
   verify('refresh', token)

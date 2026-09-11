@@ -1,3 +1,6 @@
+// @vitest-environment node
+// jsdom's Uint8Array is a different realm from jose's `instanceof` check, so the session
+// signing this action now does throws there. This spec is pure server code.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
@@ -5,6 +8,7 @@ import configPromise from '@payload-config'
 import { issueOtp } from '@/services/otp-challenge'
 import { clearOtp, readOtp } from './helpers/otp-record'
 import { PENDING_EMAIL_COOKIE, REFRESH_TTL_SEC } from '@/lib/constants/auth'
+import { verifyAccessToken, verifyRefreshToken } from '@/lib/auth/session-token'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so the
@@ -111,6 +115,23 @@ describe('verifyOtpAction — happy path', () => {
     expect((ctx.cookieOptions.get(REFRESH_COOKIE) as Record<string, unknown>).maxAge).toBe(
       REFRESH_TTL_SEC,
     )
+  })
+
+  // `toBeTruthy` above cannot tell a token from a pending promise, and signing is async:
+  // a missing `await` anywhere on this path writes "[object Promise]" into the cookie and
+  // signs every visitor out on a build that compiles. Read the cookies back instead.
+  it('writes cookies that verify back to the student who was just verified', async () => {
+    const { email, user } = await seed('PENDING_VERIFICATION')
+    const { otp } = await issueOtp(payload, email)
+
+    await run(form(otp))
+
+    await expect(verifyAccessToken(ctx.cookieJar.get(ACCESS_COOKIE))).resolves.toMatchObject({
+      id: user.id,
+    })
+    await expect(verifyRefreshToken(ctx.cookieJar.get(REFRESH_COOKIE))).resolves.toMatchObject({
+      id: user.id,
+    })
   })
 
   it('is idempotent for an already-ACTIVE account and still issues a session', async () => {

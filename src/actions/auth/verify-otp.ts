@@ -56,7 +56,7 @@ export async function verifyOtpAction(
 
   const jar = await cookies()
   jar.delete(PENDING_EMAIL_COOKIE)
-  setSessionCookies(jar, result.student)
+  await setSessionCookies(jar, result.student)
 
   return { status: 'success', redirectTo: '/' }
 }

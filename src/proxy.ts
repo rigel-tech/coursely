@@ -38,19 +38,19 @@ type Identity = {
   clear?: true
 }
 
-function resolveIdentity(request: NextRequest): Identity {
-  const student = verifyAccessToken(request.cookies.get(ACCESS_TOKEN_COOKIE)?.value)
+async function resolveIdentity(request: NextRequest): Promise<Identity> {
+  const student = await verifyAccessToken(request.cookies.get(ACCESS_TOKEN_COOKIE)?.value)
   if (student) return { user: student }
 
   const refreshCookie = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value
   if (!refreshCookie) return { user: null }
 
-  const renewed = verifyRefreshToken(refreshCookie)
+  const renewed = await verifyRefreshToken(refreshCookie)
   return renewed ? { user: renewed, renew: renewed } : { user: null, clear: true }
 }
 
-export function proxy(request: NextRequest): NextResponse {
-  const { user, renew, clear } = resolveIdentity(request)
+export async function proxy(request: NextRequest): Promise<NextResponse> {
+  const { user, renew, clear } = await resolveIdentity(request)
 
   const decision = decideRoute(
     request.nextUrl.pathname,
@@ -66,7 +66,7 @@ export function proxy(request: NextRequest): NextResponse {
   // A renewal must reach the browser even if the request then redirects for an
   // unrelated reason. `resolveIdentity` never sets both — one is the renewed branch and
   // the other the failed one — so these are two independent guards, not a chain.
-  if (renew) refreshAccessCookie(response.cookies, renew)
+  if (renew) await refreshAccessCookie(response.cookies, renew)
   if (clear) clearSessionCookies(response.cookies)
 
   return response
