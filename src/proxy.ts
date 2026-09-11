@@ -52,11 +52,17 @@ async function resolveIdentity(request: NextRequest): Promise<Identity> {
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { user, renew, clear } = await resolveIdentity(request)
 
-  const decision = decideRoute(
-    request.nextUrl.pathname,
-    user,
-    request.cookies.has(PENDING_EMAIL_COOKIE),
-  )
+  // A Server Action POST (Next sends `next-action` on every one) must reach its own
+  // handler even with no valid session. `decideRoute` cannot tell one apart from an
+  // ordinary page request, and a redirect response in place of the action's own is
+  // followed by the browser with no chance for the calling component to render
+  // anything — the person is signed out with no error ever shown. The action's own
+  // `getSessionStudent()` check is what turns "no session" into an in-app message.
+  const isServerAction = request.headers.has('next-action')
+
+  const decision = isServerAction
+    ? { type: 'next' as const }
+    : decideRoute(request.nextUrl.pathname, user, request.cookies.has(PENDING_EMAIL_COOKIE))
 
   const response =
     decision.type === 'redirect'

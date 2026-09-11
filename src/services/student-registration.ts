@@ -45,7 +45,7 @@ export async function registerStudent(input: RegisterInput): Promise<string> {
 
   if (sendOtp) {
     // §5.1 step 6 — issue OTP (after commit)
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
     // §5.1 step 7 — verification email (after commit, fire-and-forget)
     void sendVerifyOtpEmail(payload, email, otp).catch((err) =>
       payload.logger.error({ err }, 'EMAIL_VERIFY_OTP send failed'),

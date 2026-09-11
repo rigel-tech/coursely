@@ -5,28 +5,29 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { getSessionStudent } from '@/lib/auth/session-student'
-import { parseProfileInput } from '@/lib/validation/profile-schema'
-
-export type ProfileFormState = {
-  status: 'idle' | 'success' | 'error'
-  message?: string
-  fieldErrors?: Record<string, string>
-}
+import { profileSchema } from '@/lib/validation/profile-schema'
+import type { ProfileState } from '@/lib/constants/profile-state'
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024 // 5MB
 
 /**
- * Server action to update the authenticated student's profile (US-205).
- * Updates `fullName`, `phone`, and uploads a new `avatar` if provided.
- * Enforces that students can only mutate their own record.
+ * Server action to update the authenticated student's profile (US-205). Updates
+ * `fullName` and `phone`, and uploads a new `avatar` if one was chosen.
+ *
+ * Takes `FormData`, not a plain object: `avatar` is a `File`, and Next's documented
+ * Server Action pattern for a file is `FormData`, so `<ProfileForm>` builds one inside
+ * its `react-hook-form` submit handler rather than relying on `<form action>`.
+ * `profileSchema.safeParse` runs directly here, the same one `<ProfileForm>`'s
+ * `zodResolver` runs — the type says nothing at runtime about what a hand-built request
+ * sends.
+ *
+ * An unexpected failure — the avatar upload, or the save itself — leaves by `throw`, the
+ * same way `registerAction`/`resetPasswordAction` do. `<ProfileForm>` catches it and
+ * shows a system-failure banner.
  */
-export async function updateProfileAction(
-  _prevState: ProfileFormState,
-  formData: FormData,
-): Promise<ProfileFormState> {
+export async function updateProfileAction(formData: FormData): Promise<ProfileState> {
   const student = await getSessionStudent()
-
   if (!student || student.status !== 'ACTIVE') {
     return {
       status: 'error',
@@ -34,93 +35,55 @@ export async function updateProfileAction(
     }
   }
 
-  const rawFullName = formData.get('fullName')
-  const rawPhone = formData.get('phone')
-  const avatarFile = formData.get('avatar')
-
-  const parsed = parseProfileInput({
-    fullName: typeof rawFullName === 'string' ? rawFullName : undefined,
-    phone: typeof rawPhone === 'string' ? rawPhone : undefined,
+  const parsed = profileSchema.safeParse({
+    fullName: formData.get('fullName'),
+    phone: formData.get('phone'),
   })
-
-  if (!parsed.ok) {
-    return {
-      status: 'error',
-      fieldErrors: parsed.errors,
-    }
+  if (!parsed.success) {
+    return { status: 'error', message: 'Vui lòng kiểm tra lại thông tin đã nhập.' }
   }
+
+  const fullName = parsed.data.fullName.trim() || undefined
+  const phone = parsed.data.phone.trim() || null
 
   const payload = await getPayload({ config: configPromise })
 
-  let avatarMediaId: number | null = null
+  const avatarFile = formData.get('avatar')
+  let avatarMediaId: number | undefined
 
   if (avatarFile instanceof File && avatarFile.size > 0) {
     if (!ALLOWED_MIME_TYPES.includes(avatarFile.type)) {
       return {
         status: 'error',
-        fieldErrors: {
-          avatar: 'Định dạng ảnh không hỗ trợ. Vui lòng chọn tệp JPG, PNG, WEBP hoặc GIF.',
-        },
+        message: 'Định dạng ảnh không hỗ trợ. Vui lòng chọn tệp JPG, PNG, WEBP hoặc GIF.',
       }
     }
-
     if (avatarFile.size > MAX_AVATAR_SIZE) {
-      return {
-        status: 'error',
-        fieldErrors: {
-          avatar: 'Kích thước ảnh vượt quá 5MB. Vui lòng chọn tệp nhỏ hơn.',
-        },
-      }
+      return { status: 'error', message: 'Kích thước ảnh vượt quá 5MB. Vui lòng chọn tệp nhỏ hơn.' }
     }
 
-    try {
-      const buffer = Buffer.from(await avatarFile.arrayBuffer())
-      const mediaDoc = await payload.create({
-        collection: 'media',
-        data: {
-          alt: `Ảnh đại diện của ${parsed.data.fullName || 'học viên'}`,
-        },
-        file: {
-          data: buffer,
-          mimetype: avatarFile.type,
-          name: avatarFile.name,
-          size: avatarFile.size,
-        },
-        overrideAccess: true,
-      })
-      avatarMediaId = mediaDoc.id
-    } catch (err) {
-      console.error('Failed to upload avatar media:', err)
-      return {
-        status: 'error',
-        message: 'Không thể tải ảnh đại diện lên. Vui lòng thử lại.',
-      }
-    }
-  }
-
-  try {
-    await payload.update({
-      collection: 'students',
-      id: student.id,
-      data: {
-        fullName: parsed.data.fullName,
-        phone: parsed.data.phone,
-        ...(avatarMediaId ? { avatar: avatarMediaId } : {}),
+    const mediaDoc = await payload.create({
+      collection: 'media',
+      data: { alt: `Ảnh đại diện của ${fullName || 'học viên'}` },
+      file: {
+        data: Buffer.from(await avatarFile.arrayBuffer()),
+        mimetype: avatarFile.type,
+        name: avatarFile.name,
+        size: avatarFile.size,
       },
       overrideAccess: true,
     })
-
-    revalidatePath('/tai-khoan')
-
-    return {
-      status: 'success',
-      message: 'Cập nhật hồ sơ thành công!',
-    }
-  } catch (err) {
-    console.error('Failed to update student profile:', err)
-    return {
-      status: 'error',
-      message: 'Có lỗi xảy ra khi lưu thông tin. Vui lòng thử lại sau.',
-    }
+    avatarMediaId = mediaDoc.id
   }
+
+  await payload.update({
+    collection: 'students',
+    id: student.id,
+    data: { fullName, phone, ...(avatarMediaId ? { avatar: avatarMediaId } : {}) },
+    overrideAccess: true,
+  })
+
+  revalidatePath('/tai-khoan')
+
+  return { status: 'success', message: 'Cập nhật hồ sơ thành công!' }
 }

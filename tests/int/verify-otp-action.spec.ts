@@ -99,7 +99,7 @@ afterEach(async () => {
 describe('verifyOtpAction — happy path', () => {
   it('flips the account to ACTIVE, signs the user in, clears the cookie, consumes the code', async () => {
     const { email, user } = await seed('PENDING_VERIFICATION')
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
 
     expect(await run(form(otp))).toEqual({ status: 'success', redirectTo: '/' })
 
@@ -122,7 +122,7 @@ describe('verifyOtpAction — happy path', () => {
   // signs every visitor out on a build that compiles. Read the cookies back instead.
   it('writes cookies that verify back to the student who was just verified', async () => {
     const { email, user } = await seed('PENDING_VERIFICATION')
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
 
     await run(form(otp))
 
@@ -168,7 +168,7 @@ describe('verifyOtpAction — rejected input', () => {
 describe('verifyOtpAction — wrong code', () => {
   it('reports the remaining tries and leaves the account pending', async () => {
     const { email, user } = await seed('PENDING_VERIFICATION')
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
     const wrong = String((Number(otp) + 1) % 1_000_000).padStart(6, '0')
 
     const result = await run(form(wrong))
@@ -182,8 +182,8 @@ describe('verifyOtpAction — wrong code', () => {
 
   it('rejects a superseded code after a resend, then accepts the fresh one', async () => {
     const { email } = await seed('PENDING_VERIFICATION')
-    const first = (await issueOtp(payload, email)).otp
-    const second = (await issueOtp(payload, email)).otp
+    const first = await issueOtp(payload, email)
+    const second = await issueOtp(payload, email)
 
     if (first !== second) {
       const stale = await run(form(first))
@@ -197,7 +197,7 @@ describe('verifyOtpAction — wrong code', () => {
 describe('verifyOtpAction — disabled account', () => {
   it('refuses without consuming the code', async () => {
     const { email, user } = await seed('DISABLED')
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
 
     const result = await run(form(otp))
     expect(result.status).toBe('error')

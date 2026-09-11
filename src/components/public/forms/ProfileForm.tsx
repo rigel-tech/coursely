@@ -1,5 +1,6 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   AlertCircle,
   BookOpen,
@@ -11,7 +12,8 @@ import {
   User as UserIcon,
 } from 'lucide-react'
 import Link from 'next/link'
-import React, { useActionState, useId, useRef, useState } from 'react'
+import { type ChangeEvent, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 
 import { Avatar } from '@/components/public/ui/avatar'
 import { Badge } from '@/components/public/ui/badge'
@@ -27,11 +29,14 @@ import { EmptyState } from '@/components/public/ui/empty-state'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
 import { LogoutCta } from '@/components/public/LogoutCta'
-import { updateProfileAction, type ProfileFormState } from '@/actions/student/profile'
+import { updateProfileAction } from '@/actions/student/profile'
+import { initialProfileState, type ProfileState } from '@/lib/constants/profile-state'
+import { profileSchema, type ProfileValues } from '@/lib/validation/profile-schema'
 import type { Student, Media } from '@/payload-types'
 
-const initialState: ProfileFormState = {
-  status: 'idle',
+const SYSTEM_FAILURE: ProfileState = {
+  status: 'error',
+  message: 'Có lỗi hệ thống. Vui lòng thử lại sau.',
 }
 
 const STATUS_LABELS: Record<
@@ -56,26 +61,56 @@ interface ProfileFormProps {
   user: Student
 }
 
+/**
+ * The student's own profile: read-only view plus an edit form for `fullName`, `phone`
+ * and `avatar`. `react-hook-form` validates the text fields against the same
+ * `profileSchema` the action re-checks server-side, then builds a `FormData` to call
+ * `updateProfileAction` directly — `avatar` is a `File`, and `FormData` is the
+ * documented way a Next.js Server Action receives one.
+ *
+ * Edit mode only closes on a confirmed `'success'`: a failed save leaves the form open,
+ * with the banner and the person's typed values both still there, instead of bouncing
+ * them back to the read-only view before they can see what went wrong.
+ */
 export function ProfileForm({ user }: ProfileFormProps) {
-  const [state, formAction, isPending] = useActionState(updateProfileAction, initialState)
-  const formId = useId()
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [state, setState] = useState<ProfileState>(initialProfileState)
   const [isEditing, setIsEditing] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [courseTab, setCourseTab] = useState<CourseTab>('all')
 
   const initialAvatarUrl =
     typeof user.avatar === 'object' && user.avatar !== null
       ? (user.avatar as Media).url || null
       : null
-
   const [avatarPreview, setAvatarPreview] = useState<string | null>(initialAvatarUrl)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+  } = useForm<ProfileValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { fullName: user.fullName ?? '', phone: user.phone ?? '' },
+  })
+
+  const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      const previewUrl = URL.createObjectURL(file)
-      setAvatarPreview(previewUrl)
+      setAvatarFile(file)
+      setAvatarPreview(URL.createObjectURL(file))
     }
+  }
+
+  const onSubmit = async (values: ProfileValues) => {
+    const formData = new FormData()
+    formData.set('fullName', values.fullName)
+    formData.set('phone', values.phone)
+    if (avatarFile) formData.set('avatar', avatarFile)
+
+    const result = await updateProfileAction(formData).catch(() => SYSTEM_FAILURE)
+    setState(result)
+    if (result.status === 'success') setIsEditing(false)
   }
 
   const statusInfo = STATUS_LABELS[user.status || 'ACTIVE'] || {
@@ -108,9 +143,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               )}
               <input
                 ref={fileInputRef}
-                form={formId}
                 type="file"
-                name="avatar"
                 accept="image/png, image/jpeg, image/webp, image/gif"
                 className="hidden"
                 onChange={handleAvatarChange}
@@ -180,12 +213,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               )}
 
               {isEditing ? (
-                <form
-                  id={formId}
-                  action={formAction}
-                  className="space-y-5"
-                  onSubmit={() => setIsEditing(false)}
-                >
+                <form className="space-y-5" noValidate onSubmit={handleSubmit(onSubmit)}>
                   <div className="space-y-2">
                     <Label
                       htmlFor="fullName"
@@ -196,16 +224,15 @@ export function ProfileForm({ user }: ProfileFormProps) {
                     </Label>
                     <Input
                       id="fullName"
-                      name="fullName"
                       type="text"
-                      defaultValue={user.fullName || ''}
                       placeholder="Nhập họ và tên đầy đủ"
                       maxLength={255}
-                      aria-invalid={!!state.fieldErrors?.fullName}
+                      aria-invalid={Boolean(errors.fullName)}
+                      {...register('fullName')}
                     />
-                    {state.fieldErrors?.fullName && (
+                    {errors.fullName && (
                       <p className="text-destructive-foreground text-xs font-medium">
-                        {state.fieldErrors.fullName}
+                        {errors.fullName.message}
                       </p>
                     )}
                   </div>
@@ -220,34 +247,29 @@ export function ProfileForm({ user }: ProfileFormProps) {
                     </Label>
                     <Input
                       id="phone"
-                      name="phone"
                       type="tel"
-                      defaultValue={user.phone || ''}
                       placeholder="Ví dụ: 0912345678"
                       maxLength={30}
-                      aria-invalid={!!state.fieldErrors?.phone}
+                      aria-invalid={Boolean(errors.phone)}
+                      {...register('phone')}
                     />
-                    {state.fieldErrors?.phone && (
+                    {errors.phone && (
                       <p className="text-destructive-foreground text-xs font-medium">
-                        {state.fieldErrors.phone}
+                        {errors.phone.message}
                       </p>
                     )}
                   </div>
-                  {state.fieldErrors?.avatar && (
-                    <p className="text-destructive-foreground text-xs font-medium">
-                      {state.fieldErrors.avatar}
-                    </p>
-                  )}
 
                   <div className="flex items-center gap-3 pt-2">
-                    <Button type="submit" disabled={isPending} className="flex-1">
-                      {isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
+                    <Button type="submit" disabled={isSubmitting} className="flex-1">
+                      {isSubmitting ? 'Đang lưu…' : 'Lưu thay đổi'}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={isPending}
+                      disabled={isSubmitting}
                       onClick={() => {
+                        setAvatarFile(null)
                         setAvatarPreview(initialAvatarUrl)
                         setIsEditing(false)
                       }}

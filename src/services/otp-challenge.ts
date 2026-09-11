@@ -40,8 +40,6 @@ async function readLive(payload: Payload, email: string): Promise<OtpRecord | nu
   return record
 }
 
-export type IssuedOtp = { otp: string }
-
 export type ResendResult = { ok: true; otp: string } | { ok: false; reason: 'cooldown' }
 
 /**
@@ -49,7 +47,7 @@ export type ResendResult = { ok: true; otp: string } | { ok: false; reason: 'coo
  * working immediately and both windows restart. Returns the plaintext for the
  * caller to put in the email; it is never stored.
  */
-export async function issueOtp(payload: Payload, email: string): Promise<IssuedOtp> {
+export async function issueOtp(payload: Payload, email: string): Promise<string> {
   const otp = generateOtp()
   const now = nowSec()
 
@@ -60,7 +58,7 @@ export async function issueOtp(payload: Payload, email: string): Promise<IssuedO
     nextResendAt: now + OTP_COOLDOWN_SEC,
   })
 
-  return { otp }
+  return otp
 }
 
 /**
@@ -73,7 +71,7 @@ export async function resendOtp(payload: Payload, email: string): Promise<Resend
   const live = await readLive(payload, email)
   if (live && nowSec() < live.nextResendAt) return { ok: false, reason: 'cooldown' }
 
-  const { otp } = await issueOtp(payload, email)
+  const otp = await issueOtp(payload, email)
   return { ok: true, otp }
 }
 
@@ -113,7 +111,6 @@ export async function verifyOtp(
   await payload.kv.set(key(email), { ...live, attempts })
 
   const remaining = OTP_MAX_VERIFY_ATTEMPTS - attempts
-  return remaining > 0
-    ? { ok: false, reason: 'mismatch', remaining }
-    : { ok: false, reason: 'locked' }
+  if (remaining > 0) return { ok: false, reason: 'mismatch', remaining }
+  return { ok: false, reason: 'locked' }
 }

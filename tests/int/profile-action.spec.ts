@@ -25,7 +25,6 @@ vi.mock('next/cache', () => ({
 const { updateProfileAction } = await import('@/actions/student/profile')
 
 const ACCESS_COOKIE = 'coursely-access'
-const idle = { status: 'idle' as const }
 
 let payload: Payload
 const madeIds = new Set<number>()
@@ -66,10 +65,7 @@ describe('updateProfileAction — happy path', () => {
   it('writes fullName and phone onto the students document', async () => {
     const student = await seedStudent()
 
-    const res = await updateProfileAction(
-      idle,
-      form({ fullName: 'Nguyễn Văn A', phone: '0912345678' }),
-    )
+    const res = await updateProfileAction(form({ fullName: 'Nguyễn Văn A', phone: '0912345678' }))
     expect(res.status).toBe('success')
 
     const after = await payload.findByID({ collection: 'students', id: student.id, depth: 0 })
@@ -81,7 +77,7 @@ describe('updateProfileAction — happy path', () => {
 
 describe('updateProfileAction — refuses without a usable session', () => {
   it('errors with no cookie and writes nothing', async () => {
-    const res = await updateProfileAction(idle, form({ fullName: 'Không Được Ghi' }))
+    const res = await updateProfileAction(form({ fullName: 'Không Được Ghi' }))
 
     expect(res.status).toBe('error')
     expect(res.message).toMatch(/đăng nhập/i)
@@ -90,7 +86,7 @@ describe('updateProfileAction — refuses without a usable session', () => {
   it('errors for an account that is not ACTIVE and leaves the document alone', async () => {
     const student = await seedStudent('PENDING_VERIFICATION')
 
-    const res = await updateProfileAction(idle, form({ fullName: 'Không Được Ghi' }))
+    const res = await updateProfileAction(form({ fullName: 'Không Được Ghi' }))
     expect(res.status).toBe('error')
 
     const after = await payload.findByID({ collection: 'students', id: student.id, depth: 0 })
@@ -99,14 +95,28 @@ describe('updateProfileAction — refuses without a usable session', () => {
 })
 
 describe('updateProfileAction — invalid input', () => {
-  it('rejects a malformed phone number with a field error and writes nothing', async () => {
+  it('rejects a malformed phone number with one message and writes nothing', async () => {
     const student = await seedStudent()
 
-    const res = await updateProfileAction(idle, form({ fullName: 'Tên Mới', phone: '123' }))
+    const res = await updateProfileAction(form({ fullName: 'Tên Mới', phone: '123' }))
     expect(res.status).toBe('error')
-    expect(res.fieldErrors?.phone).toBeTruthy()
+    expect(res.message).toBeTruthy()
 
     const after = await payload.findByID({ collection: 'students', id: student.id, depth: 0 })
     expect(after.fullName).toBe('Tên Cũ')
+  })
+})
+
+describe('updateProfileAction — a genuine failure', () => {
+  // A save failure used to be swallowed and logged with console.error. It now propagates,
+  // the same as registerAction/resetPasswordAction/forgotPasswordAction — `<ProfileForm>`
+  // catches it and shows a system-failure banner instead of the page crashing silently.
+  it('propagates instead of being logged and reported as a generic message', async () => {
+    await seedStudent()
+    vi.spyOn(payload, 'update').mockRejectedValue(new Error('db unreachable'))
+
+    await expect(
+      updateProfileAction(form({ fullName: 'Tên Mới', phone: '0912345678' })),
+    ).rejects.toThrow('db unreachable')
   })
 })

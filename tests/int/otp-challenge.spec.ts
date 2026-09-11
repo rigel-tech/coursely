@@ -55,7 +55,7 @@ describe('issueOtp', () => {
   it('writes one KV record carrying the hash, a zeroed counter and a ~5 minute expiry', async () => {
     const email = freshEmail()
 
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
 
     const record = await read(email)
     expect(record).toBeTruthy()
@@ -69,8 +69,8 @@ describe('issueOtp', () => {
   it('overwrites the previous code so the old one no longer verifies', async () => {
     const email = freshEmail()
 
-    const first = (await issueOtp(payload, email)).otp
-    const second = (await issueOtp(payload, email)).otp
+    const first = await issueOtp(payload, email)
+    const second = await issueOtp(payload, email)
 
     const record = await read(email)
     expect(verifyOtpHash(second, record!.hash)).toBe(true)
@@ -101,7 +101,7 @@ describe('resendOtp', () => {
 
   it('refuses inside the cooldown without touching the live challenge', async () => {
     const email = freshEmail()
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
 
     expect(await resendOtp(payload, email)).toEqual({ ok: false, reason: 'cooldown' })
     // The original code must still be the one that verifies.
@@ -110,7 +110,7 @@ describe('resendOtp', () => {
 
   it('issues again once the cooldown has elapsed, killing the old code', async () => {
     const email = freshEmail()
-    const { otp: first } = await issueOtp(payload, email)
+    const first = await issueOtp(payload, email)
     await expire(email, 'nextResendAt')
 
     const result = await resendOtp(payload, email)
@@ -124,7 +124,7 @@ describe('resendOtp', () => {
 describe('verifyOtp', () => {
   it('accepts the right code once, then the record is consumed', async () => {
     const email = freshEmail()
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
 
     expect(await verifyOtp(payload, email, otp)).toEqual({ ok: true })
     expect(await read(email)).toBeNull()
@@ -142,7 +142,7 @@ describe('verifyOtp', () => {
   // an elapsed `expiresAt` is the whole of the cleanup.
   it('reports expired past `expiresAt` and drops the record on the way out', async () => {
     const email = freshEmail()
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
     await expire(email, 'expiresAt')
 
     expect(await verifyOtp(payload, email, otp)).toEqual({ ok: false, reason: 'expired' })
@@ -151,7 +151,7 @@ describe('verifyOtp', () => {
 
   it('rejects a wrong code, counts the attempt and reports the remaining tries', async () => {
     const email = freshEmail()
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
 
     expect(await verifyOtp(payload, email, wrongOf(otp))).toEqual({
       ok: false,
@@ -163,7 +163,7 @@ describe('verifyOtp', () => {
 
   it('a wrong guess does not extend the expiry', async () => {
     const email = freshEmail()
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
     const before = (await read(email))!.expiresAt
 
     await verifyOtp(payload, email, wrongOf(otp))
@@ -173,7 +173,7 @@ describe('verifyOtp', () => {
 
   it('locks out after the 5th wrong attempt and stops counting past it', async () => {
     const email = freshEmail()
-    const { otp } = await issueOtp(payload, email)
+    const otp = await issueOtp(payload, email)
     const wrong = wrongOf(otp)
 
     for (let i = 1; i < OTP_MAX_VERIFY_ATTEMPTS; i++) {

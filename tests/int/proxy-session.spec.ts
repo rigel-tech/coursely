@@ -90,6 +90,21 @@ describe('proxy — student session', () => {
   })
 })
 
+// Next.js sends `next-action` on every Server Action invocation — including the POST a
+// form on a protected page makes to save. `decideRoute` has no idea a request is one of
+// these, so without this exemption `proxy` hands back an HTTP redirect in place of the
+// action's own response the moment the session is stale, and the browser follows it with
+// no chance for the calling component to ever render an error: an abrupt, silent sign-out.
+describe('proxy — a Server Action reaches its own handler even with no session', () => {
+  it('does not redirect a Server Action POST to a protected page, even with no session', async () => {
+    const res = await proxy(
+      new NextRequest(PROTECTED, { method: 'POST', headers: { 'next-action': 'abc123' } }),
+    )
+
+    expect(res.headers.get('location')).toBeNull()
+  })
+})
+
 // Payload's own `canAccessAdmin` guards the panel, so `proxy` has no admin branch left and
 // `/admin` is an ordinary path to it. What it must not become is a dead zone: the student
 // session is renewed and cleared there exactly as it is everywhere else.

@@ -1,53 +1,36 @@
 import { describe, expect, it } from 'vitest'
-import { parseProfileInput } from '@/lib/validation/profile-schema'
+import { profileSchema } from '@/lib/validation/profile-schema'
 
-describe('profile-schema', () => {
-  it('accepts valid full name and phone number', () => {
-    const res = parseProfileInput({
-      fullName: 'Nguyễn Văn A',
-      phone: '0987654321',
-    })
-
-    expect(res.ok).toBe(true)
-    if (res.ok) {
-      expect(res.data.fullName).toBe('Nguyễn Văn A')
-      expect(res.data.phone).toBe('0987654321')
-    }
+describe('profileSchema', () => {
+  it('accepts a valid full name and phone number', () => {
+    expect(profileSchema.safeParse({ fullName: 'Nguyễn Văn A', phone: '0987654321' }).success).toBe(
+      true,
+    )
   })
 
-  it('accepts empty or whitespace-only phone as null/empty', () => {
-    const res = parseProfileInput({
-      fullName: 'Trần Thị B',
-      phone: '',
-    })
-
-    expect(res.ok).toBe(true)
-    if (res.ok) {
-      expect(res.data.phone).toBeNull()
-    }
+  it('accepts an empty phone', () => {
+    expect(profileSchema.safeParse({ fullName: 'Trần Thị B', phone: '' }).success).toBe(true)
   })
 
-  it('rejects full name exceeding 255 characters', () => {
-    const res = parseProfileInput({
-      fullName: 'A'.repeat(256),
-      phone: '0912345678',
-    })
-
-    expect(res.ok).toBe(false)
-    if (!res.ok) {
-      expect(res.errors.fullName).toBeDefined()
-    }
+  it('rejects a full name exceeding 255 characters', () => {
+    expect(
+      profileSchema.safeParse({ fullName: 'A'.repeat(256), phone: '0912345678' }).success,
+    ).toBe(false)
   })
 
-  it('rejects invalid Vietnamese phone number format', () => {
-    const res = parseProfileInput({
-      fullName: 'Lê Văn C',
-      phone: '123456',
-    })
+  it('rejects a malformed Vietnamese phone number', () => {
+    expect(profileSchema.safeParse({ fullName: 'Lê Văn C', phone: '123456' }).success).toBe(false)
+  })
 
-    expect(res.ok).toBe(false)
-    if (!res.ok) {
-      expect(res.errors.phone).toBeDefined()
+  // The schema validates only — trimming and mapping a blank phone to `null` for storage
+  // is `updateProfileAction`'s job now, not a transform buried inside the schema. The same
+  // schema drives `<ProfileForm>`'s `zodResolver`, which has no use for a `null`.
+  it('does not trim or transform — that is the action, not the schema', () => {
+    const res = profileSchema.safeParse({ fullName: '  Nguyễn Văn A  ', phone: '' })
+    expect(res.success).toBe(true)
+    if (res.success) {
+      expect(res.data.fullName).toBe('  Nguyễn Văn A  ')
+      expect(res.data.phone).toBe('')
     }
   })
 })
