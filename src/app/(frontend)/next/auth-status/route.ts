@@ -10,10 +10,10 @@
  * is gone — reports `authenticated: false`. The header then offers sign-in, which is
  * the only action that can help.
  */
-import { getCurrentStudent } from '@/lib/auth/current-student'
+import { getSessionStudent } from '@/lib/auth/session-student'
 
 export async function GET(): Promise<Response> {
-  const student = await getCurrentStudent()
+  const student = await getSessionStudent()
 
   if (!student) {
     return Response.json({ authenticated: false })

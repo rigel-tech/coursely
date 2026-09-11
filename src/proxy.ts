@@ -1,36 +1,33 @@
-import { createHash } from 'node:crypto'
 import { NextResponse, type NextRequest } from 'next/server'
 
 import {
   ACCESS_TOKEN_COOKIE,
-  AUTH_TOKEN_COOKIE,
   PENDING_EMAIL_COOKIE,
   REFRESH_TOKEN_COOKIE,
 } from '@/lib/constants/auth'
 import { decideRoute, type RoutePrincipal } from '@/lib/auth/route-guard'
-import { verifyAdminToken } from '@/lib/auth/admin-token'
 import { verifyAccessToken, verifyRefreshToken, type StudentClaims } from '@/lib/auth/session-token'
 import { clearSessionCookies, refreshAccessCookie } from '@/lib/auth/session-cookies'
 
 /**
- * Auth guard (Next 16 Proxy, formerly Middleware — Node runtime). Gates `/admin`,
- * the student area and `/xac-thuc-otp`. It decides routing and cookies only: the
- * request headers pass through untouched, so nothing this file learns about the
- * visitor reaches a Server Component. Server code asks `getCurrentStudent`;
- * public UI asks `/next/auth-status` from the browser (see INVARIANTS).
+ * Auth guard (Next 16 Proxy, formerly Middleware — Node runtime). Gates the student
+ * area and `/xac-thuc-otp`. It decides routing and cookies only: the request headers
+ * pass through untouched, so nothing this file learns about the visitor reaches a
+ * Server Component. Server code asks `getSessionStudent`; public UI asks
+ * `/next/auth-status` from the browser (see INVARIANTS).
  *
- * Two identity sources, split by area:
- *   `/admin*`  — Payload's `payload-token`, verified with no DB hit.
- *   elsewhere  — the `coursely-access` token. When it is absent or expired, a
- *                valid `coursely-refresh` mints a replacement right here. Both
- *                tokens are self-contained, so this costs no I/O at all and the
- *                refresh cookie is left exactly as it was. A refresh cookie that
- *                does not verify means signed out, and both cookies are cleared.
+ * `/admin` is deliberately not gated here and is an ordinary path to this file.
+ * Payload's own `RootPage` checks `permissions.canAccessAdmin` on every request and
+ * redirects to `/admin/login`, and `Students.access.admin` is `() => false` — so a
+ * student is refused the panel whatever this file believes. Duplicating that check
+ * from the `payload-token` cookie only adds a second, weaker copy of the rule.
+ *
+ * One identity source, then: the `coursely-access` token. When it is absent or
+ * expired, a valid `coursely-refresh` mints a replacement right here. Both tokens are
+ * self-contained, so this costs no I/O at all and the refresh cookie is left exactly
+ * as it was. A refresh cookie that does not verify means signed out, and both cookies
+ * are cleared.
  */
-const jwtSecret = createHash('sha256')
-  .update(process.env.PAYLOAD_SECRET ?? '')
-  .digest('hex')
-  .slice(0, 32)
 
 /** The visitor, plus what the response owes the session cookies. */
 type Identity = {
@@ -41,13 +38,7 @@ type Identity = {
   clear?: true
 }
 
-const isAdminPath = (pathname: string) => pathname === '/admin' || pathname.startsWith('/admin/')
-
 function resolveIdentity(request: NextRequest): Identity {
-  if (isAdminPath(request.nextUrl.pathname)) {
-    return { user: verifyAdminToken(request.cookies.get(AUTH_TOKEN_COOKIE)?.value, jwtSecret) }
-  }
-
   const student = verifyAccessToken(request.cookies.get(ACCESS_TOKEN_COOKIE)?.value)
   if (student) return { user: student }
 

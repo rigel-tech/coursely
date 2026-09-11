@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers'
 
 import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_TTL_SEC } from '@/lib/constants/auth'
-import { parseLoginInput } from '@/lib/validation/login-schema'
+import { loginInputSchema, type LoginInput } from '@/lib/validation/login-schema'
 import { authenticateStudent } from '@/services/student-login'
 import { setSessionCookies } from '@/lib/auth/session-cookies'
 import type { LoginState } from '@/lib/constants/login-state'
@@ -16,23 +16,17 @@ const BAD_CREDENTIALS = 'Email hoặc mật khẩu không đúng.'
  * `coursely-refresh` cookies + `redirectTo` for `<LoginForm>` to act on. It never
  * calls `redirect()` itself — setting an auth cookie and redirecting in the same
  * action drops the cookie, so the client owns the navigation.
+ *
+ * It takes a plain object, not a `FormData`: the form is a `react-hook-form` one and
+ * calls this directly. `loginInputSchema` still runs — the type says nothing at runtime
+ * about what a hand-built request sends, and the schema is where `callbackUrl` is made
+ * safe to redirect to.
  */
-export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
-  const parsed = parseLoginInput({
-    email: formData.get('email'),
-    password: formData.get('password'),
-    rememberMe: formData.get('rememberMe'),
-    callbackUrl: formData.get('callbackUrl'),
-  })
-  if (!parsed.success) {
-    // Return specific field errors for inline UI feedback alongside fallback message.
-    return {
-      status: 'error',
-      code: 'AUTH_021',
-      message: BAD_CREDENTIALS,
-      fieldErrors: parsed.fieldErrors,
-    }
-  }
+export async function loginAction(input: LoginInput): Promise<LoginState> {
+  const parsed = loginInputSchema.safeParse(input)
+  // A malformed field is still just "wrong credentials" here: the form already
+  // reported it per-field, and a caller that skipped the form has no UI to tell.
+  if (!parsed.success) return { status: 'error', message: BAD_CREDENTIALS }
 
   let result
   try {
@@ -52,17 +46,12 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
         maxAge: PENDING_EMAIL_TTL_SEC,
         secure: process.env.NODE_ENV === 'production',
       })
-      return {
-        status: 'error',
-        code: 'AUTH_022',
-        message: result.message,
-        redirectTo: result.redirectTo,
-      }
+      return { status: 'error', message: result.message, redirectTo: result.redirectTo }
     }
-    return { status: 'error', code: result.code, message: result.message }
+    return { status: 'error', message: result.message }
   }
 
-  setSessionCookies(await cookies(), result.student, { rememberMe: result.rememberMe })
+  setSessionCookies(await cookies(), result.student)
 
   return { status: 'success', redirectTo: result.redirectTo }
 }

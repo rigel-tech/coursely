@@ -7,7 +7,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { signAccessToken, signRefreshToken } from '@/lib/auth/session-token'
-import { REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
+import { REFRESH_TTL_SEC } from '@/lib/constants/auth'
 
 const ctx = vi.hoisted(() => ({
   cookieJar: new Map<string, string>(),
@@ -34,7 +34,7 @@ beforeEach(() => ctx.cookieJar.clear())
 describe('logoutAction', () => {
   it('clears both cookies and hands the caller a destination', async () => {
     ctx.cookieJar.set(ACCESS_COOKIE, signAccessToken(student))
-    ctx.cookieJar.set(REFRESH_COOKIE, signRefreshToken(student, REMEMBER_ME_MAX_AGE_SEC))
+    ctx.cookieJar.set(REFRESH_COOKIE, signRefreshToken(student, REFRESH_TTL_SEC))
 
     expect(await logoutAction()).toEqual({ redirectTo: '/' })
 

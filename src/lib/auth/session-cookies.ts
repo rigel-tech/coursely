@@ -5,15 +5,11 @@
  * both the `next/headers` `cookies()` jar and `NextResponse.cookies`.
  *
  * The access cookie is always a browser-session cookie — it is short-lived and
- * `proxy` mints a replacement whenever it is missing. Only the refresh cookie
- * outlives the browser, and only with "remember me".
+ * `proxy` mints a replacement whenever it is missing. The refresh cookie is the one
+ * that outlives the browser, and it does so for every session: there is no "remember
+ * me" to opt into, so `REFRESH_TTL_SEC` is the session's length, full stop.
  */
-import {
-  ACCESS_TOKEN_COOKIE,
-  REFRESH_NO_REMEMBER_TTL_SEC,
-  REFRESH_TOKEN_COOKIE,
-  REMEMBER_ME_MAX_AGE_SEC,
-} from '@/lib/constants/auth'
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, REFRESH_TTL_SEC } from '@/lib/constants/auth'
 import { signAccessToken, signRefreshToken, type StudentClaims } from '@/lib/auth/session-token'
 
 type CookieJar = {
@@ -28,20 +24,15 @@ const baseFlags = {
   secure: process.env.NODE_ENV === 'production',
 }
 
-/** Start a session: both tokens, freshly signed. `rememberMe` sets the session's length. */
-export function setSessionCookies(
-  jar: CookieJar,
-  claims: StudentClaims,
-  { rememberMe }: { rememberMe: boolean },
-): void {
+/** Start a session: both tokens, freshly signed, at the one length every session gets. */
+export function setSessionCookies(jar: CookieJar, claims: StudentClaims): void {
   jar.set(ACCESS_TOKEN_COOKIE, signAccessToken(claims), baseFlags)
-  jar.set(
-    REFRESH_TOKEN_COOKIE,
-    signRefreshToken(claims, rememberMe ? REMEMBER_ME_MAX_AGE_SEC : REFRESH_NO_REMEMBER_TTL_SEC),
-    // Without "remember me" the cookie dies with the browser. The token carries the
-    // shorter lifetime too, so a copy taken off the wire does not outlive it either.
-    { ...baseFlags, ...(rememberMe ? { maxAge: REMEMBER_ME_MAX_AGE_SEC } : {}) },
-  )
+  // Cookie and token carry the same lifetime, so a copy taken off the wire does not
+  // outlive the cookie it came from.
+  jar.set(REFRESH_TOKEN_COOKIE, signRefreshToken(claims, REFRESH_TTL_SEC), {
+    ...baseFlags,
+    maxAge: REFRESH_TTL_SEC,
+  })
 }
 
 /** Renewal writes the access cookie and nothing else — the refresh token is not rotated. */

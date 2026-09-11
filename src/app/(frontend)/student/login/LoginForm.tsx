@@ -2,72 +2,75 @@
 
 import Link from 'next/link'
 import * as React from 'react'
-import { useActionState, useEffect } from 'react'
-import { useFormStatus } from 'react-dom'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+
 import { Alert, AlertDescription } from '@/components/public/ui/alert'
 import { Button } from '@/components/public/ui/button'
-import { Checkbox } from '@/components/public/ui/checkbox'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
 import { loginAction } from '@/actions/auth/login'
-import { initialLoginState } from '@/lib/constants/login-state'
-
-function SubmitButton() {
-  const { pending } = useFormStatus()
-  return (
-    <Button type="submit" className="w-full" disabled={pending} aria-busy={pending}>
-      {pending ? 'Đang đăng nhập…' : 'Đăng nhập'}
-    </Button>
-  )
-}
+import { initialLoginState, type LoginState } from '@/lib/constants/login-state'
+import { loginSchema, type LoginFormValues } from '@/lib/validation/login-schema'
 
 /**
- * Sign-in form for the `/dang-nhap` page, wired to `loginAction` through
- * `useActionState`. Any `redirectTo` the action returns — a success target or the
- * AUTH_022 "verify first" bounce — is followed with a full-document navigation
- * from an effect, so the fresh `payload-token` / `pending_email` cookie reaches
- * the destination and `/admin` (a separate route tree) re-renders server-side.
+ * Sign-in form for the `/dang-nhap` page. `react-hook-form` owns the fields and every
+ * field-level message, validating against the same `loginSchema` the action re-checks
+ * server-side. The action is called directly with a plain object, so this form needs
+ * JavaScript — the `<form action>` progressive-enhancement path is gone.
+ *
+ * The split is worth stating: `errors` is per-field and always client-side; `state` is
+ * the action's answer and only ever a banner or a navigation. Nothing merges them.
+ *
+ * Any `redirectTo` the action returns — a success target or the "verify first" bounce
+ * — is followed with a full-document navigation, not `router.push`, so the fresh
+ * `coursely-access` / `pending_email` cookie is read server-side at the destination
+ * and `/admin` (a separate route tree) re-renders.
  */
 export const LoginForm: React.FC = () => {
-  const [state, formAction] = useActionState(loginAction, initialLoginState)
+  const [state, setState] = useState<LoginState>(initialLoginState)
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  })
 
-  useEffect(() => {
-    // Full-document load, not router.push: the destination must re-read the auth
-    // cookie server-side, and `/admin` is outside this route tree.
-    if (state.redirectTo) window.location.assign(state.redirectTo)
-  }, [state.redirectTo])
+  const onSubmit = async (values: LoginFormValues) => {
+    // `route-guard` bounces a blocked visitor to `/dang-nhap?callbackUrl=<path>`. Fold
+    // it into the submission so a successful login returns there; the server
+    // re-validates it with `safeCallbackUrl`, so a tampered value is harmless.
+    const result = await loginAction({
+      ...values,
+      callbackUrl: new URLSearchParams(window.location.search).get('callbackUrl'),
+    })
 
-  // `route-guard` bounces a blocked visitor to `/dang-nhap?callbackUrl=<path>`. Fold
-  // it into the submission so a successful login returns there; the server
-  // re-validates it with `safeCallbackUrl`, so a tampered value is harmless.
-  const submit = (formData: FormData) => {
-    const callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl')
-    if (callbackUrl) formData.set('callbackUrl', callbackUrl)
-    formAction(formData)
+    setState(result)
+    if (result.redirectTo) window.location.assign(result.redirectTo)
   }
 
-  const hasFieldErrors = Boolean(state.fieldErrors && Object.keys(state.fieldErrors).length > 0)
-
   return (
-    <form action={submit} className="flex flex-col gap-4" noValidate>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="login-email">Email</Label>
         <Input
           id="login-email"
-          name="email"
           type="email"
           autoComplete="email"
-          required
-          aria-invalid={state.fieldErrors?.email ? true : undefined}
-          aria-describedby={state.fieldErrors?.email ? 'login-email-error' : undefined}
+          aria-invalid={errors.email ? true : undefined}
+          aria-describedby={errors.email ? 'login-email-error' : undefined}
+          {...register('email')}
         />
-        {state.fieldErrors?.email && (
+        {errors.email && (
           <p
             id="login-email-error"
             role="alert"
             className="text-destructive-foreground text-xs font-medium"
           >
-            {state.fieldErrors.email}
+            {errors.email.message}
           </p>
         )}
       </div>
@@ -76,43 +79,38 @@ export const LoginForm: React.FC = () => {
         <Label htmlFor="login-password">Mật khẩu</Label>
         <Input
           id="login-password"
-          name="password"
           type="password"
           autoComplete="current-password"
-          required
-          aria-invalid={state.fieldErrors?.password ? true : undefined}
-          aria-describedby={state.fieldErrors?.password ? 'login-password-error' : undefined}
+          aria-invalid={errors.password ? true : undefined}
+          aria-describedby={errors.password ? 'login-password-error' : undefined}
+          {...register('password')}
         />
-        {state.fieldErrors?.password && (
+        {errors.password && (
           <p
             id="login-password-error"
             role="alert"
             className="text-destructive-foreground text-xs font-medium"
           >
-            {state.fieldErrors.password}
+            {errors.password.message}
           </p>
         )}
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Checkbox id="login-remember" name="rememberMe" value="on" />
-          <Label htmlFor="login-remember" className="text-sm font-normal cursor-pointer">
-            Ghi nhớ đăng nhập
-          </Label>
-        </div>
+      <div className="flex items-center justify-end">
         <Link href="/quen-mat-khau" className="text-xs text-link hover:underline font-medium">
           Quên mật khẩu?
         </Link>
       </div>
 
-      {state.status === 'error' && state.message && !hasFieldErrors && (
+      {state.status === 'error' && state.message && (
         <Alert variant="destructive">
           <AlertDescription>{state.message}</AlertDescription>
         </Alert>
       )}
 
-      <SubmitButton />
+      <Button type="submit" className="w-full" disabled={isSubmitting} aria-busy={isSubmitting}>
+        {isSubmitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
+      </Button>
     </form>
   )
 }

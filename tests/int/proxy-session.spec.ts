@@ -11,15 +11,17 @@ import configPromise from '@payload-config'
 
 import { proxy } from '@/proxy'
 import { signAccessToken, signRefreshToken, verifyAccessToken } from '@/lib/auth/session-token'
-import { REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
+import { REFRESH_TTL_SEC } from '@/lib/constants/auth'
 
 const ACCESS_COOKIE = 'coursely-access'
 const REFRESH_COOKIE = 'coursely-refresh'
 const PROTECTED = 'http://localhost/tai-khoan'
+const ADMIN = 'http://localhost/admin'
 
 let payload: Payload
 
 const req = (cookie: string) => new NextRequest(PROTECTED, { headers: { cookie } })
+const adminReq = (cookie: string) => new NextRequest(ADMIN, { headers: { cookie } })
 
 const activeStudent = { id: 1, status: 'ACTIVE' }
 
@@ -37,7 +39,7 @@ describe('proxy — student session', () => {
   })
 
   it('no access token but a valid refresh: mints a new access cookie and serves the page', async () => {
-    const refresh = signRefreshToken(activeStudent, REMEMBER_ME_MAX_AGE_SEC)
+    const refresh = signRefreshToken(activeStudent, REFRESH_TTL_SEC)
 
     const res = await proxy(req(`${REFRESH_COOKIE}=${refresh}`))
 
@@ -47,7 +49,7 @@ describe('proxy — student session', () => {
 
   it('renewal leaves the refresh cookie alone — the session is not rotated', async () => {
     const res = await proxy(
-      req(`${REFRESH_COOKIE}=${signRefreshToken(activeStudent, REMEMBER_ME_MAX_AGE_SEC)}`),
+      req(`${REFRESH_COOKIE}=${signRefreshToken(activeStudent, REFRESH_TTL_SEC)}`),
     )
 
     expect(res.cookies.get(REFRESH_COOKIE)).toBeUndefined()
@@ -83,6 +85,27 @@ describe('proxy — student session', () => {
     const res = await proxy(req(`${ACCESS_COOKIE}=${signAccessToken(pending)}`))
 
     expect(res.headers.get('location')).toContain('/dang-nhap?callbackUrl=')
+  })
+})
+
+// Payload's own `canAccessAdmin` guards the panel, so `proxy` has no admin branch left and
+// `/admin` is an ordinary path to it. What it must not become is a dead zone: the student
+// session is renewed and cleared there exactly as it is everywhere else.
+describe('proxy — /admin is an ordinary path for the student session', () => {
+  it('renews the access cookie on /admin, like anywhere else', async () => {
+    const refresh = signRefreshToken(activeStudent, REFRESH_TTL_SEC)
+
+    const res = await proxy(adminReq(`${REFRESH_COOKIE}=${refresh}`))
+
+    expect(res.headers.get('location')).toBeNull()
+    expect(verifyAccessToken(res.cookies.get(ACCESS_COOKIE)?.value)).toEqual(activeStudent)
+  })
+
+  it('clears both cookies on /admin when the refresh token no longer verifies', async () => {
+    const res = await proxy(adminReq(`${REFRESH_COOKIE}=not.a.token`))
+
+    expect(res.cookies.get(ACCESS_COOKIE)?.value).toBe('')
+    expect(res.cookies.get(REFRESH_COOKIE)?.value).toBe('')
   })
 })
 

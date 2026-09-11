@@ -7,10 +7,10 @@ const staff: RoutePrincipal = { id: 1, status: 'ACTIVE' }
 const student: RoutePrincipal = { id: 2, status: 'ACTIVE' }
 const pending: RoutePrincipal = { id: 3, status: 'PENDING_VERIFICATION' }
 
-// The admin branch is gone. `verifyAdminToken` now rejects any token whose `collection`
-// claim is not `users`, so by the time a user object reaches here it is already staff —
-// and Payload's own `canAccessAdmin` is what actually guards the panel. Routing never
-// was authorisation; this asserts it has stopped pretending to be.
+// The admin branch is gone: Payload's own `canAccessAdmin` — backed by
+// `Students.access.admin` — guards the panel on every request to it, and nothing in this
+// module is asked. Routing never was authorisation; this asserts it has stopped pretending
+// to be.
 describe('decideRoute — /admin is no longer routed here', () => {
   it('passes through for a signed-in principal', () => {
     expect(decideRoute('/admin', staff, false)).toEqual({ type: 'next' })

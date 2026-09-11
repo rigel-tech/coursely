@@ -15,7 +15,7 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
-const { getCurrentStudent } = await import('@/lib/auth/current-student')
+const { getSessionStudent } = await import('@/lib/auth/session-student')
 
 const ACCESS_COOKIE = 'coursely-access'
 
@@ -52,12 +52,12 @@ afterEach(async () => {
   madeIds.clear()
 })
 
-describe('getCurrentStudent — a signed-in student', () => {
+describe('getSessionStudent — a signed-in student', () => {
   it('returns the student document the access token points at', async () => {
     const student = await seedStudent()
     signIn(student.id as number)
 
-    const session = await getCurrentStudent()
+    const session = await getSessionStudent()
 
     expect(session?.id).toBe(student.id)
     expect(session?.email).toBe(student.email)
@@ -73,13 +73,13 @@ describe('getCurrentStudent — a signed-in student', () => {
       data: { status: 'DISABLED' },
     })
 
-    expect((await getCurrentStudent())?.status).toBe('DISABLED')
+    expect((await getSessionStudent())?.status).toBe('DISABLED')
   })
 })
 
-describe('getCurrentStudent — no session', () => {
+describe('getSessionStudent — no session', () => {
   it('returns null with no cookie at all', async () => {
-    expect(await getCurrentStudent()).toBeNull()
+    expect(await getSessionStudent()).toBeNull()
   })
 
   it('returns null for a tampered signature', async () => {
@@ -87,7 +87,7 @@ describe('getCurrentStudent — no session', () => {
     const token = signAccessToken({ id: student.id as number, status: 'ACTIVE' })
     ctx.cookieJar.set(ACCESS_COOKIE, token.slice(0, -1) + (token.at(-1) === 'A' ? 'B' : 'A'))
 
-    expect(await getCurrentStudent()).toBeNull()
+    expect(await getSessionStudent()).toBeNull()
   })
 
   it('returns null for an expired token', async () => {
@@ -97,14 +97,14 @@ describe('getCurrentStudent — no session', () => {
     vi.useRealTimers()
     ctx.cookieJar.set(ACCESS_COOKIE, stale)
 
-    expect(await getCurrentStudent()).toBeNull()
+    expect(await getSessionStudent()).toBeNull()
   })
 })
 
-describe('getCurrentStudent — a session trouble must not break the page', () => {
+describe('getSessionStudent — a session trouble must not break the page', () => {
   it('returns null when the token is valid but no such student exists', async () => {
     signIn(2_000_000_000)
 
-    expect(await getCurrentStudent()).toBeNull()
+    expect(await getSessionStudent()).toBeNull()
   })
 })

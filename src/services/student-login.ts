@@ -26,7 +26,6 @@ export type LoginServiceResult =
   | {
       ok: true
       student: { id: number; status?: string }
-      rememberMe: boolean
       redirectTo: string
     }
   | { ok: false; code: 'AUTH_021' | 'AUTH_023' | 'AUTH_024'; message: string }
@@ -102,7 +101,6 @@ export async function authenticateStudent(input: LoginInput): Promise<LoginServi
   return {
     ok: true,
     student: { id: student.id, status: student.status },
-    rememberMe: input.rememberMe,
     redirectTo: input.callbackUrl ?? '/',
   }
 }

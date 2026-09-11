@@ -1,58 +1,60 @@
 /**
- * Zod schema + FormData adapter for login (§7).
+ * Zod schema for login (§7), used on both sides of the wire.
  *
- * `parseLoginInput` takes the raw string bag from a `FormData`. `email` and
- * `password` are validated individually to report specific field errors to the user.
- * `rememberMe` is a checkbox (`'on'` when ticked). `callbackUrl` is kept only when it
- * is a same-site absolute path (`/...`, not `//...`), so a crafted value can never drive
- * an open redirect.
+ * `loginSchema` is what `<LoginForm>` validates against through `zodResolver`.
+ * `loginInputSchema` adds the `callbackUrl` the client reads off the URL, and is what
+ * `loginAction` re-checks — the only check that counts, since a caller can invoke the
+ * action directly and never touch the form.
+ *
+ * `callbackUrl` is sanitised inside the schema rather than by the action, so there is no
+ * path into `loginAction` that skips it. Both exported types are derived from these two
+ * schemas; nothing here restates a field list by hand.
+ *
+ * There is no "remember me". Every session gets the same length — see
+ * `REFRESH_TTL_SEC` in `lib/constants/auth.ts`.
  */
 import { z } from 'zod'
 
-const schema = z.object({
-  email: z.string().trim().min(1, 'Vui lòng nhập email').email('Email không đúng định dạng'),
+/** Resolving against a fixed origin is what makes an off-site value detectable at all. */
+const SAME_SITE_ORIGIN = 'http://localhost'
+
+/**
+ * A same-site path we are willing to redirect to, or `undefined`.
+ *
+ * The leading-slash test has to come first: `new URL('evil', origin)` resolves to a
+ * same-origin path and would otherwise pass. Everything after it is the URL parser's
+ * job, which is the point — it folds a backslash into a slash, so `/\evil.com` is
+ * rejected as the off-site `//evil.com` a browser would turn it into.
+ *
+ * The path is returned resolved, not verbatim: `/a/../b` comes back as `/b`.
+ */
+export function safeCallbackUrl(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || !raw.startsWith('/')) return undefined
+
+  const url = new URL(raw, SAME_SITE_ORIGIN)
+  if (url.origin !== SAME_SITE_ORIGIN) return undefined
+
+  return `${url.pathname}${url.search}${url.hash}`
+}
+
+/** The fields the form owns. `callbackUrl` is not one — the client reads it off the URL. */
+export const loginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Vui lòng nhập email')
+    .pipe(z.email('Email không đúng định dạng')),
   password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
 })
 
-export type LoginFieldErrors = Partial<Record<'email' | 'password', string>>
+/**
+ * What `loginAction` accepts. `callbackUrl` takes `null` so the client can hand over
+ * `URLSearchParams.get` untouched.
+ */
+export const loginInputSchema = loginSchema.extend({
+  callbackUrl: z.string().nullish().transform(safeCallbackUrl),
+})
 
-export type LoginInput = {
-  email: string
-  password: string
-  rememberMe: boolean
-  callbackUrl?: string
-}
+export type LoginFormValues = z.infer<typeof loginSchema>
 
-export type LoginParseResult =
-  { success: true; data: LoginInput } | { success: false; fieldErrors: LoginFieldErrors }
-
-/** A same-site path we are willing to redirect to, or `undefined`. */
-export function safeCallbackUrl(raw: unknown): string | undefined {
-  return typeof raw === 'string' && /^\/(?!\/)/.test(raw) ? raw : undefined
-}
-
-export function parseLoginInput(raw: Record<string, unknown>): LoginParseResult {
-  const parsed = schema.safeParse({ email: raw.email, password: raw.password })
-  if (!parsed.success) {
-    const fieldErrors: LoginFieldErrors = {}
-    for (const issue of parsed.error.issues) {
-      const key = issue.path[0]
-      if ((key === 'email' || key === 'password') && !fieldErrors[key]) {
-        fieldErrors[key] = issue.message
-      }
-    }
-    return { success: false, fieldErrors }
-  }
-
-  const rememberMe = raw.rememberMe === 'on' || raw.rememberMe === 'true' || raw.rememberMe === true
-
-  return {
-    success: true,
-    data: {
-      email: parsed.data.email,
-      password: parsed.data.password,
-      rememberMe,
-      callbackUrl: safeCallbackUrl(raw.callbackUrl),
-    },
-  }
-}
+export type LoginInput = z.input<typeof loginInputSchema>

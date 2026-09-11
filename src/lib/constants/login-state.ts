@@ -1,22 +1,22 @@
-import type { LoginFieldErrors } from '@/lib/validation/login-schema'
-
 /**
- * Outcome surfaced to `<LoginForm>` via `useActionState`.
- * `AUTH_021` bad credentials · `AUTH_022` unverified (account exists but email
- * not confirmed) · `AUTH_023` Payload lockout · `AUTH_024` account disabled.
+ * Outcome surfaced to `<LoginForm>`. Three fields, because three is all the form
+ * renders: a banner (`message`) and a navigation (`redirectTo`).
+ *
+ * There is no error `code` and no per-field map. The AUTH_02x codes still exist
+ * where they do work — `AuthResult` in `services/student-login.ts`, which is how the
+ * action tells the "unverified" case apart — but nothing downstream of the action
+ * ever read them. Field-level messages are the client's job now: the form validates
+ * against `loginSchema` before it calls, so the server's own field errors could
+ * only be reached by a caller that has no UI to show them in.
  *
  * The action never calls `redirect()` — setting an auth cookie and redirecting in
- * the same server action drops the cookie. On `'success'` (where it sets
- * `coursely-access` / `coursely-refresh`), and on `AUTH_022` (where it sets
- * `pending_email`), it returns `redirectTo` and the client navigates. Lives
- * outside the `'use server'` module because that file may only export async
- * functions.
+ * the same server action drops the cookie — so it returns `redirectTo` and the
+ * client navigates. Lives outside the `'use server'` module because that file may
+ * only export async functions.
  */
 export type LoginState = {
   status: 'idle' | 'error' | 'success'
-  code?: 'AUTH_021' | 'AUTH_022' | 'AUTH_023' | 'AUTH_024'
   message?: string
-  fieldErrors?: LoginFieldErrors
   redirectTo?: string
 }
 

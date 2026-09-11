@@ -4,7 +4,7 @@ import configPromise from '@payload-config'
 
 import { issueOtp } from '@/services/otp-challenge'
 import { clearOtp, readOtp } from './helpers/otp-record'
-import { PENDING_EMAIL_COOKIE, REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
+import { PENDING_EMAIL_COOKIE, REFRESH_TTL_SEC } from '@/lib/constants/auth'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so the
@@ -109,7 +109,7 @@ describe('verifyOtpAction — happy path', () => {
     expect(ctx.cookieJar.get(ACCESS_COOKIE)).toBeTruthy()
     expect(ctx.cookieJar.get(REFRESH_COOKIE)).toBeTruthy()
     expect((ctx.cookieOptions.get(REFRESH_COOKIE) as Record<string, unknown>).maxAge).toBe(
-      REMEMBER_ME_MAX_AGE_SEC,
+      REFRESH_TTL_SEC,
     )
   })
 

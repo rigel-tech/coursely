@@ -249,30 +249,6 @@ in the form: `src/components/public/RegisterCta/RegisterForm.tsx`,
 `src/components/public/LoginCta/LoginForm.tsx` and `src/app/(frontend)/verify-otp/OtpForm.tsx`
 navigate from a `useEffect` on `state.status`.
 
-### `AUTH_TOKEN_COOKIE` is the admin cookie and must equal `${payloadConfig.cookiePrefix}-token`
-
-**Rule** — `AUTH_TOKEN_COOKIE` in `src/lib/constants/auth.ts` is hard-coded to `'payload-token'`
-because `payload.config.ts` sets no `cookiePrefix` (so the prefix is the default `payload`). If
-a `cookiePrefix` is ever added to the config, update this constant in the same commit. Since
-the custom access/refresh scheme shipped, `proxy` reads this cookie **only on `/admin*`**
-(Payload's native sign-in); every other route reads `ACCESS_TOKEN_COOKIE` and, when it is
-absent/expired, renews from `REFRESH_TOKEN_COOKIE`. The two flows must never write each
-other's cookie — a signed-in admin and a signed-in student coexist in one browser.
-
-**Why it breaks silently** — `proxy` cannot ask Payload for the real cookie name (no
-`getPayload` on that path), so it reads `AUTH_TOKEN_COOKIE`. If the config prefix and the
-constant drift apart, Payload's own auth still works (it uses the config) but `proxy` reads
-an admin cookie that is never set: `/admin` silently 302s every admin to `/` and no
-`x-user-*` header is forwarded there. If a login/logout path were changed to write
-`AUTH_TOKEN_COOKIE` for a _student_, `decideRoute`'s `/admin` branch would start bouncing or
-admitting the wrong people. Nothing errors.
-
-**Where** — `src/lib/constants/auth.ts` (`AUTH_TOKEN_COOKIE`, `ACCESS_TOKEN_COOKIE`,
-`REFRESH_TOKEN_COOKIE`), read by `src/proxy.ts` (`resolveIdentity` — admin branch vs. the
-access/refresh branch). The student cookies are written by `src/lib/auth/session-cookies.ts`
-(`setSessionCookies` / `clearSessionCookies`), used from the login/OTP/logout actions and
-`proxy`. The Payload prefix default lives in `payload/dist/index.js` (`cookiePrefix`).
-
 ## Sessions
 
 ### The `coursely-*` cookies carry `students` ids and nothing else
@@ -284,7 +260,7 @@ Staff sessions are Payload's own `payload-token` and never enter this scheme.
 **Why it breaks silently** — `users` and `students` are separate Postgres tables with
 independent `serial` primary keys, so their ids collide: `users.id = 7` and
 `students.id = 7` both exist and are different people. The claims carry that number and
-nothing else that would tell the tables apart, and `getCurrentStudent` looks the id up in
+nothing else that would tell the tables apart, and `getSessionStudent` looks the id up in
 `students` without question. A staff id in that cookie therefore signs a visitor in as
 whichever student happens to hold the same number — a real account, a real profile page, a
 real name in the header. Nothing throws, nothing logs, and every test that exercises one
@@ -310,7 +286,8 @@ adding the button alone ships a lie.
 **Why it breaks silently** — every such feature has an obvious-looking implementation that
 returns success. Clearing the cookies signs _this_ browser out and looks exactly like it
 worked; setting `status: 'DISABLED'` writes a row and returns 200. Meanwhile the other
-device holds a token that verifies on its own for up to `REMEMBER_ME_MAX_AGE_SEC` — 30 days
+device holds a token that verifies on its own for `REFRESH_TTL_SEC` — 30 days, now for
+_every_ session, since there is no "remember me" left to leave unticked for a shorter one
 — and `status` inside a live access token is whatever it was at signing time, so even the
 account gate reads stale for up to `ACCESS_TTL_SEC`. Nothing errors. The person who clicked
 "sign out everywhere" believes the stolen session is dead.
@@ -325,7 +302,7 @@ account gate reads stale for up to `ACCESS_TTL_SEC`. Nothing errors. The person 
 **Rule** — `proxy` returns a bare `NextResponse.next()`; it does not rewrite the request
 headers. An `x-user-id`, `x-user-status` or `x-user-role` arriving on a request is
 therefore whatever the caller typed, and no file in `src/` may read one. Server code that
-needs the signed-in student calls `getCurrentStudent()`; public UI asks
+needs the signed-in student calls `getSessionStudent()`; public UI asks
 `GET /next/auth-status` from the browser.
 
 **Why it breaks silently** — `proxy` used to forward the verified identity in these

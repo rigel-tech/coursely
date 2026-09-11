@@ -36,7 +36,7 @@ const readsAccessCookieFromHeaders = (file: string): boolean => {
 describe('who may read the student access cookie', () => {
   const readers = walk(SRC).filter(readsAccessCookieFromHeaders)
 
-  it('is exactly one file, and it is getCurrentStudent', () => {
+  it('is exactly one file, and it is getSessionStudent', () => {
     expect(readers).toEqual([HELPER])
   })
 

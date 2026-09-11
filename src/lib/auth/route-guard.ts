@@ -4,7 +4,7 @@
  */
 import { PROTECTED_PREFIXES } from '@/lib/constants/auth'
 
-/** All routing needs to know about whoever is signed in — staff or student. */
+/** All routing needs to know about the signed-in student. */
 export type RoutePrincipal = { id: number; status?: string }
 
 export type RouteDecision = { type: 'next' } | { type: 'redirect'; to: string }
@@ -16,11 +16,6 @@ export function decideRoute(
   user: RoutePrincipal | null,
   hasPendingEmail: boolean,
 ): RouteDecision {
-  // No `/admin` branch. `verifyAdminToken` rejects any token whose `collection` claim
-  // is not `users`, so a student reaches this function as `null` and Payload's own
-  // `canAccessAdmin` — backed by `Students.access.admin` — is what refuses the panel.
-  // Routing was never authorisation; it only looked like it.
-
   // OTP step needs the cookie `registerAction` / AUTH_022 set.
   if (pathname === '/xac-thuc-otp') {
     return hasPendingEmail ? NEXT : { type: 'redirect', to: '/' }

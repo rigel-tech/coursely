@@ -6,7 +6,7 @@ import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
 import { clearOtp, readOtp } from './helpers/otp-record'
-import { REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
+import { REFRESH_TTL_SEC } from '@/lib/constants/auth'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so the
@@ -35,7 +35,11 @@ vi.mock('next/headers', () => ({
 }))
 
 const { loginAction } = await import('@/actions/auth/login')
-const { initialLoginState } = await import('@/lib/constants/login-state')
+
+type LoginInput = Parameters<typeof loginAction>[0]
+
+/** The action no longer ships an error code, so the copy is what tells the cases apart. */
+const BAD_CREDENTIALS = 'Email hoặc mật khẩu không đúng.'
 
 const ACCESS_COOKIE = 'coursely-access'
 const REFRESH_COOKIE = 'coursely-refresh'
@@ -76,12 +80,10 @@ const makeStaff = async (tag = 'staff') => {
   return { email, password, user }
 }
 
-const form = (fields: Record<string, string>) => {
-  const fd = new FormData()
-  for (const [k, v] of Object.entries(fields)) fd.set(k, v)
-  return fd
-}
-const run = (fd: FormData) => loginAction(initialLoginState, fd)
+/** The object `<LoginForm>` would send. There is no "remember me" left to vary. */
+const form = (fields: LoginInput): LoginInput => fields
+
+const run = (input: LoginInput) => loginAction(input)
 
 beforeAll(async () => {
   payload = await getPayload({ config: await configPromise })
@@ -137,10 +139,10 @@ describe('loginAction — success', () => {
     expect(accessOpts).toMatchObject({ httpOnly: true, sameSite: 'lax', path: '/' })
     expect(accessOpts.maxAge).toBeUndefined()
 
-    // no "remember me" → the refresh cookie is a session cookie too
+    // one session length for everyone now — the refresh cookie always outlives the browser
     const refreshOpts = ctx.cookieOptions.get(REFRESH_COOKIE) as Record<string, unknown>
     expect(refreshOpts).toMatchObject({ httpOnly: true, sameSite: 'lax', path: '/' })
-    expect(refreshOpts.maxAge).toBeUndefined()
+    expect(refreshOpts.maxAge).toBe(REFRESH_TTL_SEC)
 
     expect(
       (await payload.findByID({ collection: 'students', id: user.id, depth: 0 })).lastLoginAt,
@@ -154,11 +156,11 @@ describe('loginAction — success', () => {
     expect(notes.totalDocs).toBe(0)
   })
 
-  it('rememberMe extends the refresh cookie to 30 days; the access cookie stays a session cookie', async () => {
+  it('gives every session the same length; the access cookie stays a session cookie', async () => {
     const { email, password } = await makeUser()
-    await run(form({ email, password, rememberMe: 'on' }))
+    await run(form({ email, password }))
     expect((ctx.cookieOptions.get(REFRESH_COOKIE) as Record<string, unknown>).maxAge).toBe(
-      REMEMBER_ME_MAX_AGE_SEC,
+      REFRESH_TTL_SEC,
     )
     expect((ctx.cookieOptions.get(ACCESS_COOKIE) as Record<string, unknown>).maxAge).toBeUndefined()
   })
@@ -181,11 +183,7 @@ describe('loginAction — a staff account is not a principal here', () => {
     const { email, password } = await makeStaff()
 
     const res = await run(form({ email, password }))
-    expect(res).toMatchObject({
-      status: 'error',
-      code: 'AUTH_021',
-      message: 'Email hoặc mật khẩu không đúng.',
-    })
+    expect(res).toMatchObject({ status: 'error', message: BAD_CREDENTIALS })
 
     // No student session may ever be minted for a `users` document: the two tables
     // have colliding serial ids, so one leaking into `session:index:{id}` puts two
@@ -200,21 +198,13 @@ describe('loginAction — bad credentials', () => {
   it('wrong password: AUTH_021, no cookie', async () => {
     const { email } = await makeUser()
     const res = await run(form({ email, password: 'WrongPass1' }))
-    expect(res).toMatchObject({
-      status: 'error',
-      code: 'AUTH_021',
-      message: 'Email hoặc mật khẩu không đúng.',
-    })
+    expect(res).toMatchObject({ status: 'error', message: BAD_CREDENTIALS })
     expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
   })
 
   it('unknown email is indistinguishable from a wrong password', async () => {
     const res = await run(form({ email: uniqueEmail('ghost'), password: 'Whatever1' }))
-    expect(res).toMatchObject({
-      status: 'error',
-      code: 'AUTH_021',
-      message: 'Email hoặc mật khẩu không đúng.',
-    })
+    expect(res).toMatchObject({ status: 'error', message: BAD_CREDENTIALS })
   })
 })
 
@@ -230,7 +220,7 @@ describe('loginAction — no per-IP throttle', () => {
       const res = await run(
         form({ email: `burst-${stamp}-${i}@example.com`, password: 'x1234567' }),
       )
-      expect(res).toMatchObject({ status: 'error', code: 'AUTH_021' })
+      expect(res).toMatchObject({ status: 'error', message: BAD_CREDENTIALS })
     }
   })
 })
@@ -239,7 +229,7 @@ describe('loginAction — status gate', () => {
   it('DISABLED: AUTH_024, no cookie, lastLoginAt untouched', async () => {
     const { email, password, user } = await makeUser({ status: 'DISABLED' })
     const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_024' })
+    expect(res).toMatchObject({ status: 'error' })
     expect(res.message).toMatch(/khóa/)
     expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
     expect(
@@ -250,7 +240,7 @@ describe('loginAction — status gate', () => {
   it('PENDING_VERIFICATION: AUTH_022, pending_email set, points at /xac-thuc-otp', async () => {
     const { email, password } = await makeUser({ status: 'PENDING_VERIFICATION' })
     const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_022', redirectTo: '/xac-thuc-otp' })
+    expect(res).toMatchObject({ status: 'error', redirectTo: '/xac-thuc-otp' })
     expect(ctx.cookieJar.get('pending_email')).toBe(email)
     expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
   })
@@ -281,7 +271,7 @@ describe('loginAction — status gate', () => {
 
     const res = await run(form({ email, password: 'WrongPass1' }))
 
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_021' })
+    expect(res).toMatchObject({ status: 'error', message: BAD_CREDENTIALS })
     expect(sendEmail).not.toHaveBeenCalled()
   })
 })
@@ -292,7 +282,9 @@ describe('loginAction — Payload lockout', () => {
     for (let i = 0; i < 5; i++) await run(form({ email, password: 'WrongPass1' }))
 
     const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_023' })
+    // The lockout copy is now the only thing separating this from a wrong password.
+    expect(res).toMatchObject({ status: 'error' })
+    expect(res.message).not.toBe(BAD_CREDENTIALS)
     expect(res.message).toMatch(/\d/)
   })
 })
