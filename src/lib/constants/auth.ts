@@ -24,5 +24,14 @@ export const ACCESS_TTL_SEC = 15 * 60
  */
 export const REFRESH_TTL_SEC = 30 * 24 * 60 * 60
 
-/** Route prefixes `proxy` gates behind a signed-in `ACTIVE` account. */
-export const PROTECTED_PREFIXES = ['/tai-khoan', '/khoa-hoc-cua-toi'] as const
+/**
+ * Route prefixes `proxy` gates behind a signed-in `ACTIVE` account.
+ *
+ * A page that `rewrites.ts` gives a public Vietnamese URL to appears here **twice** —
+ * once under that URL and once under the folder it lives in. A rewrite adds a name, it
+ * does not retire the old one, and `proxy` runs before the rewrite, so it sees whichever
+ * of the two the browser asked for and nothing translates between them. Listing only the
+ * public name leaves the folder name ungated, and nothing anywhere errors;
+ * `tests/unit/repo/protected-prefixes.spec.ts` is what notices.
+ */
+export const PROTECTED_PREFIXES = ['/tai-khoan', '/student/account', '/khoa-hoc-cua-toi'] as const

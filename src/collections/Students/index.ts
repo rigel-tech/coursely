@@ -64,7 +64,6 @@ export const Students: CollectionConfig = {
       options: ['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'],
       defaultValue: 'PENDING_VERIFICATION',
       required: true,
-      saveToJWT: true,
     },
     {
       name: 'isWalkIn',

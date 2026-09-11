@@ -5,11 +5,10 @@
  * notification: a login is routine and one per sign-in would flood the bell.
  *
  * Every refusal leaves by `throw`, never as a return value, and everything thrown is an
- * `APIError`: Payload's own `AuthenticationError` when Payload is the one refusing, one
- * of the two classes below when this app is. Callers branch with `instanceof` — Payload's
- * `APIError.js` carries a deprecation notice saying to do exactly that instead of
- * comparing `err.name`, and a name comparison would keep passing while every branch fell
- * through if a second copy of payload ever landed in `node_modules`.
+ * `APIError`: Payload's own `AuthenticationError` when Payload is the one refusing, and
+ * `LoginRefused` / `EmailNotVerified` from `@/lib/errors/auth` when this app is. Those two
+ * live over there, not here, because the action that catches them must be able to name
+ * them without importing this module and everything it loads.
  *
  * Brute force is Payload's job alone: `maxLoginAttempts` locks the account after five
  * failures and arrives here as `LockedAuth`. There is no per-IP axis, so one address may
@@ -21,33 +20,16 @@
  * also what keeps the session cookies free of `users` ids; the two tables have colliding
  * serial ids. Staff sign in at Payload's own `/admin/login`.
  */
-import { APIError, LockedAuth, getPayload, type Payload } from 'payload'
+import { LockedAuth, getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
 import type { LoginInput } from '@/lib/validation/login-schema'
+import { EmailNotVerified, LoginRefused } from '@/lib/errors/auth'
 import { sendVerifyOtpEmail } from '@/email/send'
 import { resendOtp } from '@/services/otp-challenge'
 
 /** Who signed in. Deliberately not `Student` — the caller only mints a token from this. */
-export type AuthenticatedStudent = { id: number; status?: string }
-
-/**
- * The password was right, but this account may not sign in. `message` is written for the
- * person at the form and is shown as-is, which is why Payload's own English copy never
- * becomes one of these.
- */
-export class LoginRefused extends APIError {
-  constructor(message: string) {
-    super(message, 403)
-  }
-}
-
-/** The password was right, the address is not verified. Carries what the OTP flow needs. */
-export class EmailNotVerified extends APIError {
-  constructor(readonly email: string) {
-    super('Tài khoản chưa xác minh email.', 403)
-  }
-}
+export type AuthenticatedStudent = { id: number; status: string }
 
 const DISABLED = 'Tài khoản đã bị khóa, vui lòng liên hệ trung tâm.'
 
@@ -57,7 +39,7 @@ export async function authenticateStudent(
   const email = input.email.trim().toLowerCase()
   const payload = await getPayload({ config: await configPromise })
 
-  const student = await signIn(payload, email, input.password)
+  const student = await signIn(payload, input)
 
   // §7 — `status` lives in our schema, so Payload never looked at it.
   if (student.status === 'DISABLED') throw new LoginRefused(DISABLED)
@@ -83,18 +65,17 @@ export async function authenticateStudent(
  * untouched: §7 wants a wrong address and a wrong password reported identically, and
  * Payload already gives both the same error.
  */
-async function signIn(
-  payload: Payload,
-  email: string,
-  password: string,
-): Promise<AuthenticatedStudent> {
+async function signIn(payload: Payload, data: LoginInput): Promise<AuthenticatedStudent> {
   try {
-    const { user } = await payload.login({ collection: 'students', data: { email, password } })
-    return user as AuthenticatedStudent
+    const { user } = await payload.login({
+      collection: 'students',
+      data: { email: data.email, password: data.password },
+    })
+    return { id: user!.id, status: user!.status }
   } catch (err) {
     // Payload's own lockout copy is English and says nothing about when the lock lifts.
     if (err instanceof LockedAuth) {
-      throw new LoginRefused(lockedMessage(await lockUntil(payload, email)))
+      throw new LoginRefused(lockedMessage(await lockUntil(payload, data.email)))
     }
     throw err
   }
@@ -129,7 +110,7 @@ async function lockUntil(payload: Payload, email: string): Promise<Date | null> 
       depth: 0,
       showHiddenFields: true,
     })
-  ).docs[0] as { lockUntil?: string } | undefined
+  ).docs[0]
 
   return doc?.lockUntil ? new Date(doc.lockUntil) : null
 }

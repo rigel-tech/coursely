@@ -5,7 +5,8 @@ import { AuthenticationError } from 'payload'
 
 import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_TTL_SEC } from '@/lib/constants/auth'
 import { loginInputSchema, type LoginInput } from '@/lib/validation/login-schema'
-import { authenticateStudent, EmailNotVerified, LoginRefused } from '@/services/student-login'
+import { authenticateStudent } from '@/services/student-login'
+import { EmailNotVerified, LoginRefused } from '@/lib/errors/auth'
 import { setSessionCookies } from '@/lib/auth/session-cookies'
 import type { LoginState } from '@/lib/constants/login-state'
 

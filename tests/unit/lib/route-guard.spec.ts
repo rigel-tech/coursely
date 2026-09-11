@@ -60,6 +60,19 @@ describe('decideRoute — protected student area', () => {
   it('does not match a look-alike prefix', () => {
     expect(decideRoute('/tai-khoan-cong-khai', null, false)).toEqual({ type: 'next' })
   })
+
+  // `rewrites.ts` aliases `/tai-khoan` onto the folder it actually lives in, and a rewrite
+  // adds a name without removing the old one — so the folder path stays reachable and
+  // arrives here on its own. Proxy runs before the rewrite, so it only ever sees whichever
+  // of the two the browser asked for.
+  it('guards the folder path the rewrite points at, not just the public one', () => {
+    expect(decideRoute('/student/account', null, false)).toEqual({
+      type: 'redirect',
+      to: '/dang-nhap?callbackUrl=%2Fstudent%2Faccount',
+    })
+    expect(decideRoute('/student/account', pending, false)).toMatchObject({ type: 'redirect' })
+    expect(decideRoute('/student/account', student, false)).toEqual({ type: 'next' })
+  })
 })
 
 describe('decideRoute — everything else', () => {

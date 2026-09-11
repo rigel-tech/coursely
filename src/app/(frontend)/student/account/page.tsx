@@ -17,8 +17,12 @@ export default async function ProfilePage() {
 
   // `status` is read from the document, not from the token: an account disabled
   // mid-session loses the page on its next navigation rather than at token expiry.
+  //
+  // Same destination `route-guard` uses — this page is the second gate on one door, and
+  // two gates answering differently is how a visitor ends up somewhere with no way to
+  // sign in. The path is the public one; the folder name never goes in a redirect.
   if (!student || student.status !== 'ACTIVE') {
-    redirect('/?callbackUrl=%2Ftai-khoan')
+    redirect('/dang-nhap?callbackUrl=%2Ftai-khoan')
   }
 
   return (

@@ -6,7 +6,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { AuthenticationError, getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { authenticateStudent, EmailNotVerified, LoginRefused } from '@/services/student-login'
+import { authenticateStudent } from '@/services/student-login'
+import { EmailNotVerified, LoginRefused } from '@/lib/errors/auth'
 import { clearOtp } from './helpers/otp-record'
 
 let payload: Payload

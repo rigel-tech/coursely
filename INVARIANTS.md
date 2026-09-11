@@ -249,6 +249,33 @@ in the form: `src/components/public/RegisterCta/RegisterForm.tsx`,
 `src/components/public/LoginCta/LoginForm.tsx` and `src/app/(frontend)/verify-otp/OtpForm.tsx`
 navigate from a `useEffect` on `state.status`.
 
+## Routing
+
+### A rewritten page has two live paths — link the public one, gate both
+
+**Rule** — `rewrites.ts` gives the pages under `src/app/(frontend)/student/` public
+Vietnamese URLs (`/dang-nhap`, `/tai-khoan`, `/xac-thuc-otp`, `/quen-mat-khau`,
+`/dat-lai-mat-khau`), and `/courses` the URL `/khoa-hoc`. A rewrite **adds** a name; it
+does not retire the folder path, so both reach the app. Two rules follow. Every
+`redirect()`, `Link href`, `revalidatePath` and e-mail link uses the **public** path on the
+left of that table, never the folder name on the right. And anything that decides by
+pathname — `PROTECTED_PREFIXES` is the only one today — must list **both** names, because
+`proxy` runs before the rewrite and sees whichever one the browser asked for.
+
+**Why it breaks silently** — the two paths render the identical page, so every manual
+check of the public URL passes while the folder path stays wide open; no request errors,
+no log line, and the page still looks guarded. It ran that way here: `/tai-khoan` was
+gated and `/student/account` was not, and only the page's own `getSessionStudent()` check
+kept it from being a hole. Linking the folder name fails the other way round and just as
+quietly — the page loads, so nothing looks wrong, but the URL the user now has bookmarked
+is one the guard does not cover and one no redirect will ever send them back to.
+
+**Where** — `rewrites.ts` (the table, and its header states the same rule),
+`src/lib/constants/auth.ts` (`PROTECTED_PREFIXES` — each guarded page listed under both
+names), `src/lib/auth/route-guard.ts` (`decideRoute` matches on the raw pathname) and
+`src/proxy.ts` (runs before the rewrite). `tests/unit/repo/protected-prefixes.spec.ts`
+reads the rewrite table and fails if a guarded source has an unguarded destination.
+
 ## Sessions
 
 ### The `coursely-*` cookies carry `students` ids and nothing else

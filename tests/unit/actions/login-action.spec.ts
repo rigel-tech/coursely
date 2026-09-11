@@ -15,24 +15,45 @@ vi.mock('next/headers', () => ({
 
 const authenticateStudent = vi.fn()
 
-// The real service reaches for the Payload config, which a unit test has no business
-// booting — `tests/int/student-login.spec.ts` is where that runs for real. The two error
-// classes are stubbed alongside it so the action's `instanceof` branches still resolve;
-// the plain `Error` these tests throw must match neither of them.
+// Only the service is mocked — it reaches for the Payload config, which a unit test has no
+// business booting (`tests/int/student-login.spec.ts` is where that runs for real). The
+// error classes come from their own module and stay real, so the `instanceof` branches
+// exercised here are the ones that ship.
 vi.mock('@/services/student-login', () => ({
   authenticateStudent: (...args: unknown[]) => authenticateStudent(...args),
-  LoginRefused: class LoginRefused extends Error {},
-  EmailNotVerified: class EmailNotVerified extends Error {},
 }))
 
+const { EmailNotVerified, LoginRefused } = await import('@/lib/errors/auth')
 const { loginAction } = await import('@/actions/auth/login')
+
+const credentials = { email: 'a@b.com', password: 'secret12' }
 
 describe('loginAction — an error it does not recognise', () => {
   it('rethrows it rather than flattening it into a banner', async () => {
     authenticateStudent.mockRejectedValue(new Error('database is on fire'))
 
-    await expect(loginAction({ email: 'a@b.com', password: 'secret12' })).rejects.toThrow(
-      'database is on fire',
-    )
+    await expect(loginAction(credentials)).rejects.toThrow('database is on fire')
+  })
+})
+
+describe('loginAction — the refusals it does have copy for', () => {
+  it("shows LoginRefused's own message, which is already written for the reader", async () => {
+    authenticateStudent.mockRejectedValue(new LoginRefused('Tài khoản đã bị khóa.'))
+
+    expect(await loginAction(credentials)).toEqual({
+      status: 'error',
+      message: 'Tài khoản đã bị khóa.',
+    })
+  })
+
+  it('turns EmailNotVerified into the OTP bounce, cookie and all', async () => {
+    ctx.jar.clear()
+    authenticateStudent.mockRejectedValue(new EmailNotVerified('a@b.com'))
+
+    expect(await loginAction(credentials)).toMatchObject({
+      status: 'error',
+      redirectTo: '/xac-thuc-otp',
+    })
+    expect(ctx.jar.get('pending_email')).toBe('a@b.com')
   })
 })

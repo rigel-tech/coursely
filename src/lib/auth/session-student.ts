@@ -35,12 +35,12 @@ export async function getSessionStudent(): Promise<Student | null> {
   const payload = await getPayload({ config: configPromise })
 
   try {
-    return (await payload.findByID({
+    return await payload.findByID({
       collection: 'students',
       id: claims.id,
       depth: 1,
       overrideAccess: true,
-    })) as Student
+    })
   } catch (err) {
     // Still `null`, not a rethrow — see the banner. It goes through Payload's logger so
     // it lands wherever the rest of the server's logs do; a swallowed failure with no
