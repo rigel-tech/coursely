@@ -22,12 +22,22 @@ import { SiteSettings } from './globals/SiteSettings/config'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
+import { en } from 'payload/i18n/en'
+import { vi } from 'payload/i18n/vi'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
 export default buildConfig({
+  i18n: {
+    supportedLanguages: { en, vi },
+    translations: {
+      en,
+      vi,
+    },
+    fallbackLanguage: 'vi',
+  },
   admin: {
     components: {
       graphics: {
