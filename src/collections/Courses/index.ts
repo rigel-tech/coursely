@@ -21,6 +21,7 @@ export const Courses: CollectionConfig<'courses'> = {
     update: authenticated,
   },
   admin: {
+    group: 'Academic',
     defaultColumns: ['title', 'category', 'courseType', 'duration', '_status', 'updatedAt'],
     useAsTitle: 'title',
   },

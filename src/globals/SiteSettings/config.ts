@@ -4,6 +4,9 @@ import { authenticated } from '@/access/authenticated'
 export const SiteSettings: GlobalConfig = {
   slug: 'site-settings',
   label: 'Site Settings',
+  admin: {
+    group: 'Configuration',
+  },
   access: {
     read: () => true,
     update: authenticated,
