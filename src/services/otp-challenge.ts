@@ -81,36 +81,56 @@ export type OtpVerification =
   | { ok: false; reason: 'expired' | 'locked' }
   | { ok: false; reason: 'mismatch'; remaining: number }
 
-/**
- * Check `otp` against the live challenge for `email`.
- *
- * `expired` — no challenge: never issued, already spent, or past `expiresAt`.
- * `locked` — `OTP_MAX_VERIFY_ATTEMPTS` wrong tries are spent; the code is dead
- * even if the next guess is right, and the caller must re-issue.
- * `mismatch` — wrong guess, now counted; `remaining` tries left.
- * `ok` — correct, and the record is deleted so it cannot be replayed.
- *
- * A wrong guess rewrites `attempts` and nothing else, so it never pushes
- * `expiresAt` further out.
- */
 export async function verifyOtp(
   payload: Payload,
   email: string,
   otp: string,
 ): Promise<OtpVerification> {
-  const live = await readLive(payload, email)
-  if (!live) return { ok: false, reason: 'expired' }
-  if (live.attempts >= OTP_MAX_VERIFY_ATTEMPTS) return { ok: false, reason: 'locked' }
+  const pendingOtp = await readLive(payload, email)
 
-  if (verifyOtpHash(otp, live.hash)) {
-    await payload.kv.delete(key(email))
-    return { ok: true }
+  if (!pendingOtp) {
+    return {
+      ok: false,
+      reason: 'expired',
+    }
   }
 
-  const attempts = live.attempts + 1
-  await payload.kv.set(key(email), { ...live, attempts })
+  if (pendingOtp.attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
+    return {
+      ok: false,
+      reason: 'locked',
+    }
+  }
 
-  const remaining = OTP_MAX_VERIFY_ATTEMPTS - attempts
-  if (remaining > 0) return { ok: false, reason: 'mismatch', remaining }
-  return { ok: false, reason: 'locked' }
+  const isOtpValid = verifyOtpHash(otp, pendingOtp.hash)
+
+  if (isOtpValid) {
+    await payload.kv.delete(key(email))
+
+    return {
+      ok: true,
+    }
+  }
+
+  const updatedAttempts = pendingOtp.attempts + 1
+
+  await payload.kv.set(key(email), {
+    ...pendingOtp,
+    attempts: updatedAttempts,
+  })
+
+  const remainingAttempts = OTP_MAX_VERIFY_ATTEMPTS - updatedAttempts
+
+  if (remainingAttempts > 0) {
+    return {
+      ok: false,
+      reason: 'mismatch',
+      remaining: remainingAttempts,
+    }
+  }
+
+  return {
+    ok: false,
+    reason: 'locked',
+  }
 }

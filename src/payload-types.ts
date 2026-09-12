@@ -197,11 +197,10 @@ export interface Student {
   fullName?: string | null;
   phone?: string | null;
   avatar?: (number | null) | Media;
-  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
   /**
-   * Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.
+   * Trạng thái tài khoản học viên
    */
-  isWalkIn?: boolean | null;
+  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
   verifiedAt?: string | null;
   lastLoginAt?: string | null;
   /**
@@ -1305,7 +1304,6 @@ export interface StudentsSelect<T extends boolean = true> {
   phone?: T;
   avatar?: T;
   status?: T;
-  isWalkIn?: T;
   verifiedAt?: T;
   lastLoginAt?: T;
   createdBy?: T;

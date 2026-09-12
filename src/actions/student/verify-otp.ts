@@ -6,8 +6,7 @@ import { PENDING_EMAIL_COOKIE } from '@/lib/constants/auth'
 import type { VerifyOtpState } from '@/lib/constants/verify-otp-state'
 import { verifyRegistration } from '@/services/student-verification'
 import { setSessionCookies } from '@/lib/auth/session-cookies'
-
-const SESSION_EXPIRED = 'Phiên xác minh đã hết hạn. Vui lòng đăng ký lại.'
+import { getVerifyOtpErrorMessage, SESSION_EXPIRED } from '@/lib/errors/auth'
 
 /**
  * Server action for the OTP step (§5.2). Validates the request surface — the
@@ -17,46 +16,43 @@ const SESSION_EXPIRED = 'Phiên xác minh đã hết hạn. Vui lòng đăng ký
  * has no such control), sets the `coursely-access` / `coursely-refresh` cookies,
  * and returns `redirectTo` for `<OtpForm>` to navigate. It never calls
  * `redirect()` (see INVARIANTS). Every other outcome is a message.
- */
-export async function verifyOtpAction(
+ */ export async function verifyOtpAction(
   _prev: VerifyOtpState,
   formData: FormData,
 ): Promise<VerifyOtpState> {
-  const email = (await cookies()).get(PENDING_EMAIL_COOKIE)?.value
-  if (!email) return { status: 'error', message: SESSION_EXPIRED }
+  const cookieStore = await cookies()
+  const email = cookieStore.get(PENDING_EMAIL_COOKIE)?.value
 
-  const otp = String(formData.get('otp') ?? '').trim()
-  if (!/^\d{6}$/.test(otp)) return { status: 'error', message: 'Mã xác minh gồm 6 chữ số.' }
-
-  let result
-  try {
-    result = await verifyRegistration(email, otp)
-  } catch (err) {
-    console.error('verifyOtpAction failed', err)
-    return { status: 'error', message: 'Có lỗi hệ thống. Vui lòng thử lại sau.' }
-  }
-
-  if (!result.ok) {
-    switch (result.reason) {
-      case 'session_expired':
-        return { status: 'error', message: SESSION_EXPIRED }
-      case 'disabled':
-        return { status: 'error', message: 'Tài khoản này đã bị khoá.' }
-      case 'expired':
-        return { status: 'error', message: 'Mã đã hết hạn. Bấm "Gửi lại mã" để nhận mã mới.' }
-      case 'locked':
-        return {
-          status: 'error',
-          message: 'Bạn đã nhập sai quá nhiều lần. Bấm "Gửi lại mã" để nhận mã mới.',
-        }
-      case 'mismatch':
-        return { status: 'error', message: `Mã không đúng. Bạn còn ${result.remaining} lần thử.` }
+  if (!email) {
+    return {
+      status: 'error',
+      message: SESSION_EXPIRED,
     }
   }
 
-  const jar = await cookies()
-  jar.delete(PENDING_EMAIL_COOKIE)
-  await setSessionCookies(jar, result.student)
+  const otp = String(formData.get('otp') ?? '').trim()
 
-  return { status: 'success', redirectTo: '/' }
+  if (!/^\d{6}$/.test(otp)) {
+    return {
+      status: 'error',
+      message: 'Mã xác minh gồm 6 chữ số.',
+    }
+  }
+
+  const result = await verifyRegistration(email, otp)
+
+  if (!result.ok) {
+    return {
+      status: 'error',
+      message: getVerifyOtpErrorMessage(result),
+    }
+  }
+
+  cookieStore.delete(PENDING_EMAIL_COOKIE)
+  await setSessionCookies(cookieStore, result.student)
+
+  return {
+    status: 'success',
+    redirectTo: '/',
+  }
 }

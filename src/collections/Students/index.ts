@@ -29,7 +29,7 @@ export const Students: CollectionConfig = {
   slug: 'students',
   access: {
     admin: () => false,
-    create: () => false,
+    create: authenticated,
     delete: authenticated,
     read: authenticated,
     update: authenticated,
@@ -65,13 +65,8 @@ export const Students: CollectionConfig = {
       options: ['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'],
       defaultValue: 'ACTIVE',
       required: true,
-    },
-    {
-      name: 'isWalkIn',
-      type: 'checkbox',
-      defaultValue: false,
       admin: {
-        description: 'Tài khoản do Admin tạo trực tiếp tại quầy, không qua tự đăng ký web.',
+        description: 'Trạng thái tài khoản học viên',
       },
     },
     {
@@ -89,6 +84,7 @@ export const Students: CollectionConfig = {
       type: 'relationship',
       relationTo: 'users',
       admin: {
+        readOnly: true,
         description: 'Nhân sự đã tạo tài khoản này. Trống với tài khoản tự đăng ký.',
       },
     },

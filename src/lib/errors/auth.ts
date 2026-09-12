@@ -17,7 +17,10 @@
  * Payload's own English errors are never re-thrown as one of these — they are either
  * passed through untouched for the caller to translate, or replaced outright.
  */
+import { verifyRegistration } from '@/services/student-verification'
 import { APIError } from 'payload'
+
+export const SESSION_EXPIRED = 'Phiên xác minh đã hết hạn. Vui lòng đăng ký lại.'
 
 /** The password was right, but this account may not sign in — disabled, or locked out. */
 export class LoginRefused extends APIError {
@@ -30,5 +33,29 @@ export class LoginRefused extends APIError {
 export class EmailNotVerified extends APIError {
   constructor(readonly email: string) {
     super('Tài khoản chưa xác minh email.', 403)
+  }
+}
+
+export function getVerifyOtpErrorMessage(
+  result: Extract<Awaited<ReturnType<typeof verifyRegistration>>, { ok: false }>,
+): string {
+  switch (result.reason) {
+    case 'session_expired':
+      return SESSION_EXPIRED
+
+    case 'disabled':
+      return 'Tài khoản này đã bị khoá.'
+
+    case 'expired':
+      return 'Mã đã hết hạn. Bấm "Gửi lại mã" để nhận mã mới.'
+
+    case 'locked':
+      return 'Bạn đã nhập sai quá nhiều lần. Bấm "Gửi lại mã" để nhận mã mới.'
+
+    case 'mismatch':
+      return `Mã không đúng. Bạn còn ${result.remaining} lần thử.`
+
+    default:
+      return 'Có lỗi xảy ra. Vui lòng thử lại sau.'
   }
 }

@@ -34,7 +34,7 @@ export async function verifyRegistration(
   if (!student) return { ok: false, reason: 'session_expired' }
   if (student.status === 'DISABLED') return { ok: false, reason: 'disabled' }
 
-  const verified = { id: student.id, status: 'ACTIVE' as const }
+  const verified = { id: student.id, status: 'ACTIVE' }
   if (student.status === 'ACTIVE') return { ok: true, student: verified }
 
   const result = await verifyOtp(payload, email, otp)
