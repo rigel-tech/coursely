@@ -110,7 +110,6 @@ async function createStudentWithWelcomeNotification(
         fullName: data.fullName,
         phone: data.phone,
         status: 'PENDING_VERIFICATION',
-        isWalkIn: false,
       },
       req,
     })
