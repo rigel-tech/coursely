@@ -9,10 +9,8 @@ describe('emailSchema', () => {
     if (res.success) expect(res.data).toBe('student@example.com')
   })
 
-  it('trims whitespace around email', () => {
-    const res = emailSchema.safeParse('  student@example.com  ')
-    expect(res.success).toBe(true)
-    if (res.success) expect(res.data).toBe('student@example.com')
+  it('rejects whitespace around email', () => {
+    expect(emailSchema.safeParse('  student@example.com  ').success).toBe(false)
   })
 
   it('rejects empty email', () => {
@@ -31,6 +29,10 @@ describe('forgotPasswordSchema', () => {
     const res = forgotPasswordSchema.safeParse({ email: 'student@example.com' })
     expect(res.success).toBe(true)
     if (res.success) expect(res.data.email).toBe('student@example.com')
+  })
+
+  it('rejects whitespace around the email field', () => {
+    expect(forgotPasswordSchema.safeParse({ email: '  student@example.com  ' }).success).toBe(false)
   })
 
   it('rejects a malformed email', () => {
