@@ -8,10 +8,9 @@
 import { z } from 'zod'
 
 export const emailSchema = z
-  .string()
+  .email('Email không đúng định dạng')
   .trim()
   .min(1, 'Email không được để trống')
-  .email('Email không đúng định dạng')
 
 export const forgotPasswordSchema = z.object({ email: emailSchema })
 
