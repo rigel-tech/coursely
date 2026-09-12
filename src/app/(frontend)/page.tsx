@@ -78,7 +78,8 @@ export default async function HomePage() {
     }
   })
 
-  const { hero, layout } = page
+  const hero = page?.hero || { type: 'none' }
+  const layout = page?.layout || []
 
   return (
     <article className="pt-16 pb-24">
