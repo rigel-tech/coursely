@@ -1,10 +1,15 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { anyone } from '../../access/anyone'
 import { authenticated } from '../../access/authenticated'
 
 export const CourseObjectives: CollectionConfig<'course-objectives'> = {
   slug: 'course-objectives',
+  labels: {
+    singular: { vi: 'Mục tiêu khóa học', en: 'Course Objective' },
+    plural: { vi: 'Mục tiêu khóa học', en: 'Course Objectives' },
+  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -12,7 +17,7 @@ export const CourseObjectives: CollectionConfig<'course-objectives'> = {
     update: authenticated,
   },
   admin: {
-    group: 'Academic',
+    group: adminGroups.academic,
     defaultColumns: ['title', 'course', 'sortOrder', 'updatedAt'],
     useAsTitle: 'title',
   },
@@ -20,32 +25,28 @@ export const CourseObjectives: CollectionConfig<'course-objectives'> = {
     {
       name: 'title',
       type: 'text',
-      label: 'Nội dung/Tiêu đề mục tiêu đầu ra',
+      label: { vi: 'Tiêu đề mục tiêu đầu ra', en: 'Objective Title' },
       required: true,
     },
     {
       name: 'description',
       type: 'textarea',
-      label: 'Mô tả chi tiết hơn về mục tiêu học tập (description)',
+      label: { vi: 'Mô tả chi tiết mục tiêu', en: 'Objective Description' },
     },
     {
       name: 'course',
       type: 'relationship',
       relationTo: 'courses',
-      label: 'Thuộc về khóa học (course_id)',
+      label: { vi: 'Thuộc khóa học', en: 'Course' },
       required: true,
-      admin: {
-        position: 'sidebar',
-      },
+      admin: { position: 'sidebar' },
     },
     {
       name: 'sortOrder',
       type: 'number',
-      label: 'Số thứ tự sắp xếp hiển thị (sort_order)',
+      label: { vi: 'Thứ tự hiển thị', en: 'Sort Order' },
       defaultValue: 0,
-      admin: {
-        position: 'sidebar',
-      },
+      admin: { position: 'sidebar' },
     },
   ],
 }

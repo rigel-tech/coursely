@@ -32,10 +32,15 @@ describe('Users collection config', () => {
   it('constrains role and status to the DBML enums with the right defaults', () => {
     const role = field(Users.fields, 'role') as Extract<Field, { type: 'select' }>
     const status = field(Users.fields, 'status') as Extract<Field, { type: 'select' }>
-
-    expect(role.options).toEqual(['ADMIN', 'STUDENT'])
+    const roleValues = role.options.map((opt) =>
+      typeof opt === 'object' && 'value' in opt ? opt.value : opt,
+    )
+    const statusValues = status.options.map((opt) =>
+      typeof opt === 'object' && 'value' in opt ? opt.value : opt,
+    )
+    expect(roleValues).toEqual(['ADMIN', 'STUDENT'])
     expect(role.defaultValue).toBe('STUDENT')
-    expect(status.options).toEqual(['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'])
+    expect(statusValues).toEqual(['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'])
     expect(status.defaultValue).toBe('PENDING_VERIFICATION')
   })
 

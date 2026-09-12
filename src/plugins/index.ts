@@ -9,6 +9,7 @@ import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import { searchFields } from '@/search/fieldOverrides'
 import { beforeSyncWithSearch } from '@/search/beforeSync'
+import { adminGroups } from '@/lib/constants/adminGroups'
 
 import { Page, Post } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
@@ -27,8 +28,12 @@ export const plugins: Plugin[] = [
   redirectsPlugin({
     collections: ['pages', 'posts'],
     overrides: {
+      labels: {
+        singular: { vi: 'Chuyển hướng link', en: 'Redirect' },
+        plural: { vi: 'Chuyển hướng link', en: 'Redirects' },
+      },
       admin: {
-        group: 'Configuration',
+        group: adminGroups.configuration,
       },
       // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
       fields: ({ defaultFields }) => {
@@ -62,8 +67,12 @@ export const plugins: Plugin[] = [
       payment: false,
     },
     formOverrides: {
+      labels: {
+        singular: { vi: 'Biểu mẫu', en: 'Form' },
+        plural: { vi: 'Biểu mẫu', en: 'Forms' },
+      },
       admin: {
-        group: 'Content',
+        group: adminGroups.content,
       },
       fields: ({ defaultFields }) => {
         return defaultFields.map((field) => {
@@ -86,8 +95,12 @@ export const plugins: Plugin[] = [
       },
     },
     formSubmissionOverrides: {
+      labels: {
+        singular: { vi: 'Dữ liệu gửi biểu mẫu', en: 'Form Submission' },
+        plural: { vi: 'Dữ liệu gửi biểu mẫu', en: 'Form Submissions' },
+      },
       admin: {
-        group: 'Content',
+        group: adminGroups.content,
       },
     },
   }),
@@ -95,8 +108,12 @@ export const plugins: Plugin[] = [
     collections: ['posts'],
     beforeSync: beforeSyncWithSearch,
     searchOverrides: {
+      labels: {
+        singular: { vi: 'Kết quả tìm kiếm', en: 'Search Result' },
+        plural: { vi: 'Kết quả tìm kiếm', en: 'Search Results' },
+      },
       admin: {
-        group: 'Content',
+        group: adminGroups.content,
       },
       fields: ({ defaultFields }) => {
         return [...defaultFields, ...searchFields]

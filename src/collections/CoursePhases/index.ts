@@ -1,10 +1,15 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { anyone } from '../../access/anyone'
 import { authenticated } from '../../access/authenticated'
 
 export const CoursePhases: CollectionConfig<'course-phases'> = {
   slug: 'course-phases',
+  labels: {
+    singular: { vi: 'Giai đoạn khóa học', en: 'Course Phase' },
+    plural: { vi: 'Giai đoạn khóa học', en: 'Course Phases' },
+  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -12,7 +17,7 @@ export const CoursePhases: CollectionConfig<'course-phases'> = {
     update: authenticated,
   },
   admin: {
-    group: 'Academic',
+    group: adminGroups.academic,
     defaultColumns: ['title', 'course', 'sortOrder', 'updatedAt'],
     useAsTitle: 'title',
   },
@@ -20,32 +25,28 @@ export const CoursePhases: CollectionConfig<'course-phases'> = {
     {
       name: 'title',
       type: 'text',
-      label: 'Tên giai đoạn/lộ trình (title)',
+      label: { vi: 'Tên giai đoạn / lộ trình', en: 'Phase Title' },
       required: true,
     },
     {
       name: 'description',
       type: 'richText',
-      label: 'Nội dung chi tiết về lượng kiến thức và hoạt động trong giai đoạn (description)',
+      label: { vi: 'Nội dung chi tiết giai đoạn', en: 'Phase Description' },
     },
     {
       name: 'course',
       type: 'relationship',
       relationTo: 'courses',
-      label: 'Thuộc về khóa học (course_id)',
+      label: { vi: 'Thuộc khóa học', en: 'Course' },
       required: true,
-      admin: {
-        position: 'sidebar',
-      },
+      admin: { position: 'sidebar' },
     },
     {
       name: 'sortOrder',
       type: 'number',
-      label: 'Số thứ tự theo tiến trình học (sort_order)',
+      label: { vi: 'Thứ tự hiển thị', en: 'Sort Order' },
       defaultValue: 0,
-      admin: {
-        position: 'sidebar',
-      },
+      admin: { position: 'sidebar' },
     },
   ],
 }

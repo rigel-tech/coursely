@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import {
   FixedToolbarFeature,
   InlineToolbarFeature,
@@ -16,8 +17,12 @@ const dirname = path.dirname(filename)
 
 export const Media: CollectionConfig = {
   slug: 'media',
+  labels: {
+    singular: { vi: 'Tập tin media', en: 'Media' },
+    plural: { vi: 'Thư viện media', en: 'Media' },
+  },
   admin: {
-    group: 'Content',
+    group: adminGroups.content,
   },
   folders: true,
   access: {
@@ -30,11 +35,12 @@ export const Media: CollectionConfig = {
     {
       name: 'alt',
       type: 'text',
-      //required: true,
+      label: { vi: 'Văn bản thay thế (Alt Text)', en: 'Alt Text' },
     },
     {
       name: 'caption',
       type: 'richText',
+      label: { vi: 'Chú thích ảnh', en: 'Caption' },
       editor: lexicalEditor({
         features: ({ rootFeatures }) => {
           return [...rootFeatures, FixedToolbarFeature(), InlineToolbarFeature()]

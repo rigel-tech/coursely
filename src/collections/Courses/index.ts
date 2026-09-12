@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
 import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
 import { slugField } from 'payload'
@@ -14,6 +15,10 @@ import {
 
 export const Courses: CollectionConfig<'courses'> = {
   slug: 'courses',
+  labels: {
+    singular: { vi: 'Khóa học', en: 'Course' },
+    plural: { vi: 'Khóa học', en: 'Courses' },
+  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -21,7 +26,7 @@ export const Courses: CollectionConfig<'courses'> = {
     update: authenticated,
   },
   admin: {
-    group: 'Academic',
+    group: adminGroups.academic,
     defaultColumns: ['title', 'category', 'courseType', 'duration', '_status', 'updatedAt'],
     useAsTitle: 'title',
   },
@@ -29,41 +34,41 @@ export const Courses: CollectionConfig<'courses'> = {
     {
       name: 'title',
       type: 'text',
-      label: 'Tên khóa học hiển thị',
+      label: { vi: 'Tên khóa học', en: 'Course Title' },
       required: true,
     },
     {
       type: 'tabs',
       tabs: [
         {
-          label: 'Thông tin chung',
+          label: { vi: 'Thông tin chung', en: 'General Info' },
           fields: [
             {
               name: 'image',
               type: 'upload',
               relationTo: 'media',
-              label: 'Ảnh đại diện/Thumbnail khóa học (image_id)',
+              label: { vi: 'Ảnh đại diện khóa học', en: 'Thumbnail Image' },
             },
             {
               name: 'shortDescription',
               type: 'textarea',
-              label: 'Mô tả ngắn gọn (short_description)',
+              label: { vi: 'Mô tả ngắn', en: 'Short Description' },
               maxLength: 500,
             },
             {
               name: 'description',
               type: 'richText',
-              label: 'Bài viết giới thiệu tổng quan chi tiết khóa học (description)',
+              label: { vi: 'Mô tả chi tiết khóa học', en: 'Detailed Description' },
             },
           ],
         },
         {
-          label: 'Cấu hình đào tạo & Đăng ký',
+          label: { vi: 'Cấu hình đào tạo & Đăng ký', en: 'Training & Registration Config' },
           fields: [
             {
               name: 'duration',
               type: 'text',
-              label: 'Thời lượng tổng quan của khóa học (duration)',
+              label: { vi: 'Thời lượng khóa học', en: 'Duration' },
               maxLength: 100,
               admin: {
                 placeholder: 'Ví dụ: 8 tuần, 24 buổi',
@@ -72,11 +77,14 @@ export const Courses: CollectionConfig<'courses'> = {
             {
               name: 'moodleUrl',
               type: 'text',
-              label: 'Đường dẫn liên kết sang hệ thống Moodle (moodle_url)',
+              label: { vi: 'Đường dẫn Moodle', en: 'Moodle URL' },
               admin: {
                 condition: (data) => data?.courseType === 'MOODLE',
                 placeholder: 'https://moodle.example.com/course/view.php?id=...',
-                description: 'Chỉ hiển thị khi loại khóa học là MOODLE',
+                description: {
+                  vi: 'Chỉ hiển thị khi loại khóa học là MOODLE',
+                  en: 'Only shown when course type is MOODLE',
+                },
               },
             },
             {
@@ -85,11 +93,9 @@ export const Courses: CollectionConfig<'courses'> = {
                 {
                   name: 'registrationStartAt',
                   type: 'date',
-                  label: 'Thời điểm bắt đầu cho phép học viên đăng ký (registration_start_at)',
+                  label: { vi: 'Thời điểm bắt đầu nhận đăng ký', en: 'Registration Starts At' },
                   admin: {
-                    date: {
-                      pickerAppearance: 'dayAndTime',
-                    },
+                    date: { pickerAppearance: 'dayAndTime' },
                     condition: (data) => data?.courseType === 'OFFLINE',
                     width: '50%',
                   },
@@ -97,11 +103,9 @@ export const Courses: CollectionConfig<'courses'> = {
                 {
                   name: 'registrationEndAt',
                   type: 'date',
-                  label: 'Thời điểm đóng/kết thúc nhận đăng ký (registration_end_at)',
+                  label: { vi: 'Thời điểm kết thúc nhận đăng ký', en: 'Registration Ends At' },
                   admin: {
-                    date: {
-                      pickerAppearance: 'dayAndTime',
-                    },
+                    date: { pickerAppearance: 'dayAndTime' },
                     condition: (data) => data?.courseType === 'OFFLINE',
                     width: '50%',
                   },
@@ -111,21 +115,21 @@ export const Courses: CollectionConfig<'courses'> = {
           ],
         },
         {
-          label: 'Mục tiêu & Lộ trình',
+          label: { vi: 'Mục tiêu & Lộ trình', en: 'Objectives & Phases' },
           fields: [
             {
               name: 'objectives',
               type: 'join',
               collection: 'course-objectives',
               on: 'course',
-              label: 'Mục tiêu đầu ra (Course Objectives)',
+              label: { vi: 'Mục tiêu đầu ra', en: 'Course Objectives' },
             },
             {
               name: 'phases',
               type: 'join',
               collection: 'course-phases',
               on: 'course',
-              label: 'Lộ trình các giai đoạn (Course Phases)',
+              label: { vi: 'Lộ trình các giai đoạn', en: 'Course Phases' },
             },
           ],
         },
@@ -138,12 +142,8 @@ export const Courses: CollectionConfig<'courses'> = {
               descriptionPath: 'meta.description',
               imagePath: 'meta.image',
             }),
-            MetaTitleField({
-              hasGenerateFn: true,
-            }),
-            MetaImageField({
-              relationTo: 'media',
-            }),
+            MetaTitleField({ hasGenerateFn: true }),
+            MetaImageField({ relationTo: 'media' }),
             MetaDescriptionField({}),
             PreviewField({
               hasGenerateFn: true,
@@ -159,53 +159,52 @@ export const Courses: CollectionConfig<'courses'> = {
       type: 'relationship',
       relationTo: 'categories',
       hasMany: false,
-      label: 'Danh mục khóa học',
-      admin: {
-        position: 'sidebar',
-      },
+      label: { vi: 'Danh mục khóa học', en: 'Course Category' },
+      admin: { position: 'sidebar' },
     },
     {
       name: 'tags',
       type: 'array',
-      label: 'Thẻ tag',
+      label: { vi: 'Thẻ tag', en: 'Tags' },
       fields: [
         {
           name: 'tag',
           type: 'text',
+          label: { vi: 'Tên thẻ', en: 'Tag' },
           required: true,
         },
       ],
-      admin: {
-        position: 'sidebar',
-      },
+      admin: { position: 'sidebar' },
     },
     {
       name: 'courseType',
       type: 'select',
-      label: 'Loại khóa học (course_type)',
+      label: { vi: 'Loại khóa học', en: 'Course Type' },
       required: true,
       defaultValue: 'OFFLINE',
       options: [
         {
-          label: 'MOODLE (Miễn phí, chỉ redirect sang hệ thống Moodle ngoài)',
+          label: {
+            vi: 'MOODLE (Miễn phí, chuyển hướng sang Moodle ngoài)',
+            en: 'MOODLE (Free, redirects to external Moodle)',
+          },
           value: 'MOODLE',
         },
         {
-          label: 'OFFLINE (Học viên đăng ký trên web, Admin xếp lớp)',
+          label: {
+            vi: 'OFFLINE (Học viên đăng ký trên web, Admin xếp lớp)',
+            en: 'OFFLINE (Students register on the website, admin assigns classes)',
+          },
           value: 'OFFLINE',
         },
       ],
-      admin: {
-        position: 'sidebar',
-      },
+      admin: { position: 'sidebar' },
     },
     slugField(),
   ],
   versions: {
     drafts: {
-      autosave: {
-        interval: 100,
-      },
+      autosave: { interval: 100 },
       schedulePublish: true,
     },
     maxPerDoc: 50,
