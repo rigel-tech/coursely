@@ -485,7 +485,7 @@ export interface Page {
       | null;
     media?: (number | null) | Media;
   };
-  layout: (CallToActionBlock | ContentBlock | MediaBlock | ArchiveBlock | FormBlock)[];
+  layout: (CallToActionBlock | ContentBlock | MediaBlock | ArchiveBlock | FormBlock | ConsultationBlock)[];
   meta?: {
     title?: string | null;
     /**
@@ -647,9 +647,12 @@ export interface CallToActionBlock {
  * via the `definition` "ContentBlock".
  */
 export interface ContentBlock {
+  background?: ('none' | 'muted' | 'card' | 'primary' | 'dark') | null;
   columns?:
     | {
         size?: ('oneThird' | 'half' | 'twoThirds' | 'full') | null;
+        cardStyle?: ('none' | 'card' | 'muted' | 'primary' | 'dark') | null;
+        textColor?: ('default' | 'white' | 'primary' | 'muted') | null;
         richText?: {
           root: {
             type: string;
@@ -926,6 +929,27 @@ export interface Form {
     | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ConsultationBlock".
+ */
+export interface ConsultationBlock {
+  badge?: string | null;
+  title: string;
+  description?: string | null;
+  steps?:
+    | {
+        text: string;
+        id?: string | null;
+      }[]
+    | null;
+  note?: string | null;
+  form: number | Form;
+  hotline?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'consultation';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1391,6 +1415,7 @@ export interface PagesSelect<T extends boolean = true> {
         mediaBlock?: T | MediaBlockSelect<T>;
         archive?: T | ArchiveBlockSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
+        consultation?: T | ConsultationBlockSelect<T>;
       };
   meta?:
     | T
@@ -1435,10 +1460,13 @@ export interface CallToActionBlockSelect<T extends boolean = true> {
  * via the `definition` "ContentBlock_select".
  */
 export interface ContentBlockSelect<T extends boolean = true> {
+  background?: T;
   columns?:
     | T
     | {
         size?: T;
+        cardStyle?: T;
+        textColor?: T;
         richText?: T;
         enableLink?: T;
         link?:
@@ -1487,6 +1515,26 @@ export interface FormBlockSelect<T extends boolean = true> {
   form?: T;
   enableIntro?: T;
   introContent?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ConsultationBlock_select".
+ */
+export interface ConsultationBlockSelect<T extends boolean = true> {
+  badge?: T;
+  title?: T;
+  description?: T;
+  steps?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  note?: T;
+  form?: T;
+  hotline?: T;
   id?: T;
   blockName?: T;
 }
