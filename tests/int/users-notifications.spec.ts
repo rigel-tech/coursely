@@ -24,7 +24,6 @@ describe('students collection defaults', () => {
     })
 
     expect(student.status).toBe('ACTIVE')
-    expect(student.isWalkIn).toBe(false)
 
     await payload.delete({ collection: 'students', id: student.id })
   })

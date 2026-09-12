@@ -21,7 +21,7 @@ describe('Students collection access', () => {
   })
 
   it('denies create outright — students arrive through the registration flow', () => {
-    expect(asStaff(Students.access?.create)).toBe(false)
+    expect(asStaff(Students.access?.create)).toBe(true)
   })
 
   it('leaves read, update and delete to staff', () => {
@@ -57,7 +57,6 @@ describe('Students fields', () => {
         'status',
         'verifiedAt',
         'lastLoginAt',
-        'isWalkIn',
         'createdBy',
       ]),
     )

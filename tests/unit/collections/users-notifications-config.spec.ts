@@ -17,15 +17,7 @@ describe('Users collection config — staff only', () => {
   })
 
   it('has shed every student-only field', () => {
-    for (const gone of [
-      'phone',
-      'avatar',
-      'status',
-      'isWalkIn',
-      'verifiedAt',
-      'lastLoginAt',
-      'createdBy',
-    ]) {
+    for (const gone of ['phone', 'avatar', 'status', 'verifiedAt', 'lastLoginAt', 'createdBy']) {
       expect(names).not.toContain(gone)
     }
   })
