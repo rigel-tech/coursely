@@ -27,7 +27,6 @@ import { getPayload, type RequiredDataFromCollectionSlug } from 'payload'
 import { draftMode } from 'next/headers'
 import Link from 'next/link'
 import React, { cache } from 'react'
-import { homeStatic } from '@/endpoints/seed/home-static'
 
 import { RenderBlocks } from '@/blocks/RenderBlocks'
 import { RenderHero } from '@/heros/RenderHero'
@@ -46,10 +45,6 @@ export default async function HomePage() {
   let page: RequiredDataFromCollectionSlug<'pages'> | null = null
 
   page = await queryHomePage()
-
-  if (!page) {
-    page = homeStatic
-  }
 
   // Lấy các khóa học nổi bật hiển thị trên Trang Chủ
   const coursesRes = await payload.find({
@@ -83,7 +78,8 @@ export default async function HomePage() {
     }
   })
 
-  const { hero, layout } = page
+  const hero = page?.hero || { type: 'none' }
+  const layout = page?.layout || []
 
   return (
     <article className="pt-16 pb-24">
@@ -269,7 +265,7 @@ export default async function HomePage() {
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await queryHomePage()
-  return generateMeta({ doc: page || homeStatic })
+  return generateMeta({ doc: page })
 }
 
 const queryHomePage = cache(async () => {

@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
 import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
 import { Archive } from '../../blocks/ArchiveBlock/config'
@@ -23,6 +24,10 @@ import {
 
 export const Pages: CollectionConfig<'pages'> = {
   slug: 'pages',
+  labels: {
+    singular: { vi: 'Trang', en: 'Page' },
+    plural: { vi: 'Trang', en: 'Pages' },
+  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -37,7 +42,7 @@ export const Pages: CollectionConfig<'pages'> = {
     slug: true,
   },
   admin: {
-    group: 'Content',
+    group: adminGroups.content,
     defaultColumns: ['title', 'slug', 'updatedAt'],
     livePreview: {
       url: ({ data, req }) =>

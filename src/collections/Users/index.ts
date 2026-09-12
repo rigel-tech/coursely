@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
 
 /**
@@ -15,6 +16,10 @@ import { authenticated } from '../../access/authenticated'
  */
 export const Users: CollectionConfig = {
   slug: 'users',
+  labels: {
+    singular: { vi: 'Người dùng', en: 'User' },
+    plural: { vi: 'Người dùng', en: 'Users' },
+  },
   access: {
     admin: authenticated,
     create: authenticated,
@@ -32,7 +37,7 @@ export const Users: CollectionConfig = {
     {
       name: 'fullName',
       type: 'text',
-      label: 'Họ và tên',
+      label: { vi: 'Họ và tên', en: 'Full Name' },
       maxLength: 255,
     },
   ],

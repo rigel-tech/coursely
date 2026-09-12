@@ -26,8 +26,6 @@ import { RowLabel as RowLabel_c766fd719d45676b09f513f19a229f6b } from '@/compone
 import { RowLabel as RowLabel_270b7d9937aa2c2d1f368b11b84742be } from '@/components/admin/RowLabel/Footer'
 import { Icon as Icon_872e05b4d0186141f251eacaf629a691 } from '@/components/admin/Graphics/Icon'
 import { Logo as Logo_090c0bf0e6904f8c6248ef2a542779ac } from '@/components/admin/Graphics/Logo'
-import { default as default_915324d4628771dbb8d31cdc4601c33e } from '@/components/admin/BeforeDashboard'
-import { default as default_89344134860f9bc63867ffefbf33f214 } from '@/components/admin/BeforeLogin'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
@@ -78,7 +76,5 @@ export const importMap = {
   '@/components/admin/RowLabel/Footer#RowLabel': RowLabel_270b7d9937aa2c2d1f368b11b84742be,
   '@/components/admin/Graphics/Icon#Icon': Icon_872e05b4d0186141f251eacaf629a691,
   '@/components/admin/Graphics/Logo#Logo': Logo_090c0bf0e6904f8c6248ef2a542779ac,
-  '@/components/admin/BeforeDashboard#default': default_915324d4628771dbb8d31cdc4601c33e,
-  '@/components/admin/BeforeLogin#default': default_89344134860f9bc63867ffefbf33f214,
   '@payloadcms/next/rsc#CollectionCards': CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
 }

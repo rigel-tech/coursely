@@ -13,10 +13,18 @@ import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer/config'
 import { Header } from '@/globals/Header/config'
 import { SiteSettings } from '@/globals/SiteSettings/config'
+import configPromise from '@/payload.config'
 
 const ALLOWED_GROUPS = ['Academic', 'Content', 'Users & Security', 'Configuration']
 
-const collections = [
+const groupName = (group: unknown) =>
+  typeof group === 'string'
+    ? group
+    : group && typeof group === 'object' && 'en' in group && typeof group.en === 'string'
+      ? group.en
+      : undefined
+
+const staticCollections = [
   Courses,
   Classes,
   CoursePhases,
@@ -33,16 +41,30 @@ const collections = [
 const globals = [SiteSettings, Header, Footer]
 
 describe('Admin Sidebar Grouping', () => {
-  it('assigns every collection to a valid functional group', () => {
-    for (const col of collections) {
+  it('assigns every static collection to a valid functional group', () => {
+    for (const col of staticCollections) {
       expect(col.admin?.group).toBeDefined()
-      expect(ALLOWED_GROUPS).toContain(col.admin?.group)
+      expect(ALLOWED_GROUPS).toContain(groupName(col.admin?.group))
     }
   })
 
   it('assigns every global to Configuration group', () => {
     for (const glob of globals) {
-      expect(glob.admin?.group).toBe('Configuration')
+      expect(groupName(glob.admin?.group)).toBe('Configuration')
+    }
+  })
+
+  it('assigns all visible collections (including plugin collections) to valid functional groups', async () => {
+    const config = await configPromise
+    expect(config.collections).toBeDefined()
+    const visibleCollections = (config.collections || []).filter(
+      (col) => !col.slug.startsWith('payload-') && !col.admin?.hidden,
+    )
+    // 11 static collections + 4 plugin collections (redirects, forms, form-submissions, search) = 15 collections
+    expect(visibleCollections.length).toBe(15)
+    for (const col of visibleCollections) {
+      expect(col.admin?.group, `Collection "${col.slug}" must have a group`).toBeDefined()
+      expect(ALLOWED_GROUPS).toContain(groupName(col.admin?.group))
     }
   })
 })

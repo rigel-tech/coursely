@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
 
 /**
@@ -14,6 +15,10 @@ import { authenticated } from '../../access/authenticated'
  */
 export const Classes: CollectionConfig<'classes'> = {
   slug: 'classes',
+  labels: {
+    singular: { vi: 'Lớp học', en: 'Class' },
+    plural: { vi: 'Lớp học', en: 'Classes' },
+  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -21,7 +26,7 @@ export const Classes: CollectionConfig<'classes'> = {
     update: authenticated,
   },
   admin: {
-    group: 'Academic',
+    group: adminGroups.academic,
     defaultColumns: ['code', 'course', 'status', 'startDate', 'maxStudents', 'updatedAt'],
     useAsTitle: 'code',
   },
@@ -29,7 +34,7 @@ export const Classes: CollectionConfig<'classes'> = {
     {
       name: 'code',
       type: 'text',
-      label: 'Mã lớp/Tên phân biệt lớp (code)',
+      label: { vi: 'Mã lớp', en: 'Class Code' },
       required: true,
       unique: true,
       maxLength: 100,
@@ -38,28 +43,33 @@ export const Classes: CollectionConfig<'classes'> = {
       name: 'course',
       type: 'relationship',
       relationTo: 'courses',
-      label: 'Lớp học này mở cho khóa học nào (course_id)',
+      label: { vi: 'Thuộc khóa học', en: 'Course' },
       required: true,
-      admin: {
-        position: 'sidebar',
-      },
+      admin: { position: 'sidebar' },
     },
     {
       name: 'status',
       type: 'select',
-      label: 'Trạng thái hiện tại của lớp (status)',
+      label: { vi: 'Trạng thái lớp', en: 'Class Status' },
       required: true,
       defaultValue: 'DRAFT',
       options: [
-        { label: 'DRAFT — Lớp nháp, chưa mở', value: 'DRAFT' },
-        { label: 'OPEN — Đang mở, có thể xếp học viên vào', value: 'OPEN' },
-        { label: 'CLOSED — Đã đóng (đủ chỗ hoặc dừng nhận)', value: 'CLOSED' },
-        { label: 'COMPLETED — Lớp đã học xong', value: 'COMPLETED' },
-        { label: 'CANCELLED — Lớp bị hủy', value: 'CANCELLED' },
+        { label: { vi: 'DRAFT — Lớp nháp, chưa mở', en: 'DRAFT — Draft' }, value: 'DRAFT' },
+        { label: { vi: 'OPEN — Đang mở nhận học viên', en: 'OPEN — Open' }, value: 'OPEN' },
+        {
+          label: { vi: 'CLOSED — Đã đóng (hết chỗ/dừng nhận)', en: 'CLOSED — Closed' },
+          value: 'CLOSED',
+        },
+        {
+          label: { vi: 'COMPLETED — Đã hoàn thành', en: 'COMPLETED — Completed' },
+          value: 'COMPLETED',
+        },
+        {
+          label: { vi: 'CANCELLED — Lớp bị hủy', en: 'CANCELLED — Cancelled' },
+          value: 'CANCELLED',
+        },
       ],
-      admin: {
-        position: 'sidebar',
-      },
+      admin: { position: 'sidebar' },
     },
     {
       type: 'row',
@@ -67,7 +77,7 @@ export const Classes: CollectionConfig<'classes'> = {
         {
           name: 'startDate',
           type: 'date',
-          label: 'Ngày dự kiến khai giảng lớp (start_date)',
+          label: { vi: 'Ngày khai giảng dự kiến', en: 'Start Date' },
           required: true,
           admin: {
             date: { pickerAppearance: 'dayOnly' },
@@ -77,7 +87,7 @@ export const Classes: CollectionConfig<'classes'> = {
         {
           name: 'endDate',
           type: 'date',
-          label: 'Ngày dự kiến kết thúc lớp (end_date)',
+          label: { vi: 'Ngày kết thúc dự kiến', en: 'End Date' },
           admin: {
             date: { pickerAppearance: 'dayOnly' },
             width: '50%',
@@ -88,7 +98,7 @@ export const Classes: CollectionConfig<'classes'> = {
     {
       name: 'scheduleTime',
       type: 'text',
-      label: 'Lịch học chi tiết hàng tuần (schedule_time)',
+      label: { vi: 'Lịch học chi tiết', en: 'Weekly Schedule' },
       maxLength: 255,
       admin: {
         placeholder: 'Ví dụ: Thứ 2-4-6, 18:00–20:00',
@@ -97,15 +107,14 @@ export const Classes: CollectionConfig<'classes'> = {
     {
       name: 'location',
       type: 'text',
-      label: 'Địa điểm/Phòng học tổ chức (location)',
+      label: { vi: 'Địa điểm / Phòng học', en: 'Location / Room' },
       maxLength: 255,
     },
     {
       name: 'maxStudents',
       type: 'number',
-      label: 'Sức chứa học viên tối đa của lớp học này (max_students)',
+      label: { vi: 'Số lượng học viên tối đa', en: 'Max Students' },
       required: true,
-      // Không có trong lược đồ, nhưng sức chứa ≤ 0 là dữ liệu vô nghĩa.
       min: 1,
       admin: {
         position: 'sidebar',

@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import {
   BlocksFeature,
   FixedToolbarFeature,
@@ -29,6 +30,10 @@ import { slugField } from 'payload'
 
 export const Posts: CollectionConfig<'posts'> = {
   slug: 'posts',
+  labels: {
+    singular: { vi: 'Bài viết', en: 'Post' },
+    plural: { vi: 'Bài viết', en: 'Posts' },
+  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -48,7 +53,7 @@ export const Posts: CollectionConfig<'posts'> = {
     },
   },
   admin: {
-    group: 'Content',
+    group: adminGroups.content,
     defaultColumns: ['title', 'slug', 'updatedAt'],
     livePreview: {
       url: ({ data, req }) =>

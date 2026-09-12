@@ -390,7 +390,7 @@ export interface Course {
   } | null;
   duration?: string | null;
   /**
-   * Chỉ hiển thị khi loại khóa học là MOODLE
+   * Only shown when course type is MOODLE
    */
   moodleUrl?: string | null;
   registrationStartAt?: string | null;
@@ -973,9 +973,6 @@ export interface Notification {
   type: 'ACCOUNT_CREATED';
   title: string;
   content: string;
-  /**
-   * Ngữ cảnh tạo thông báo, ví dụ { ip, userAgent }.
-   */
   metadata?:
     | {
         [k: string]: unknown;
@@ -2052,11 +2049,11 @@ export interface SiteSetting {
   siteName: string;
   tagline: string;
   /**
-   * Logo hiển thị tại Header, Footer và màn hình Admin.
+   * Logo displayed in Header, Footer, and Admin panel.
    */
   logo?: (number | null) | Media;
   /**
-   * Biểu tượng tab trình duyệt (Khuyên dùng PNG, ICO, WEBP).
+   * Browser tab icon (PNG, ICO, WEBP recommended).
    */
   favicon?: (number | null) | Media;
   updatedAt?: string | null;

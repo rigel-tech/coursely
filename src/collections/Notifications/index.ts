@@ -14,6 +14,10 @@ import { authenticated } from '../../access/authenticated'
  */
 export const Notifications: CollectionConfig = {
   slug: 'notifications',
+  labels: {
+    singular: { vi: 'Thông báo', en: 'Notification' },
+    plural: { vi: 'Thông báo', en: 'Notifications' },
+  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -36,30 +40,37 @@ export const Notifications: CollectionConfig = {
     {
       name: 'type',
       type: 'select',
-      options: ['ACCOUNT_CREATED'],
+      label: { vi: 'Loại thông báo', en: 'Type' },
+      options: [
+        {
+          label: { vi: 'Tạo tài khoản thành công', en: 'Account Created' },
+          value: 'ACCOUNT_CREATED',
+        },
+      ],
       required: true,
     },
     {
       name: 'title',
       type: 'text',
+      label: { vi: 'Tiêu đề', en: 'Title' },
       required: true,
       maxLength: 255,
     },
     {
       name: 'content',
       type: 'textarea',
+      label: { vi: 'Nội dung', en: 'Content' },
       required: true,
     },
     {
       name: 'metadata',
       type: 'json',
-      admin: {
-        description: 'Ngữ cảnh tạo thông báo, ví dụ { ip, userAgent }.',
-      },
+      label: { vi: 'Dữ liệu ngữ cảnh', en: 'Metadata' },
     },
     {
       name: 'isRead',
       type: 'checkbox',
+      label: { vi: 'Đã đọc', en: 'Is Read' },
       defaultValue: false,
       index: true,
     },
