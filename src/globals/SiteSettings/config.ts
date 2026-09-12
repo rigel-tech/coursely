@@ -1,4 +1,5 @@
 import type { GlobalConfig } from 'payload'
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { revalidateSiteSettings } from './hooks/revalidateSiteSettings'
 import { authenticated } from '@/access/authenticated'
 export const SiteSettings: GlobalConfig = {
@@ -8,10 +9,7 @@ export const SiteSettings: GlobalConfig = {
     en: 'Site Settings',
   },
   admin: {
-    group: {
-      vi: 'Cấu hình',
-      en: 'Configuration',
-    },
+    group: adminGroups.configuration,
   },
   access: {
     read: () => true,

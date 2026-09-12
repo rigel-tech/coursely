@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import {
   BlocksFeature,
   FixedToolbarFeature,
@@ -52,10 +53,7 @@ export const Posts: CollectionConfig<'posts'> = {
     },
   },
   admin: {
-    group: {
-      vi: 'Nội dung',
-      en: 'Content',
-    },
+    group: adminGroups.content,
     defaultColumns: ['title', 'slug', 'updatedAt'],
     livePreview: {
       url: ({ data, req }) =>

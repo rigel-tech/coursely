@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
 import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
 import { slugField } from 'payload'
@@ -25,10 +26,7 @@ export const Courses: CollectionConfig<'courses'> = {
     update: authenticated,
   },
   admin: {
-    group: {
-      vi: 'Khóa học & Đào tạo',
-      en: 'Academic',
-    },
+    group: adminGroups.academic,
     defaultColumns: ['title', 'category', 'courseType', 'duration', '_status', 'updatedAt'],
     useAsTitle: 'title',
   },
@@ -194,8 +192,8 @@ export const Courses: CollectionConfig<'courses'> = {
         },
         {
           label: {
-            vi: 'OFFLINE (Đăng ký trực tiếp, Admin xếp lớp)',
-            en: 'OFFLINE (In-person, enrolled via website)',
+            vi: 'OFFLINE (Học viên đăng ký trên web, Admin xếp lớp)',
+            en: 'OFFLINE (Students register on the website, admin assigns classes)',
           },
           value: 'OFFLINE',
         },

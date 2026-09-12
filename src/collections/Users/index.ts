@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
 
 /**
@@ -26,10 +27,7 @@ export const Users: CollectionConfig = {
     update: authenticated,
   },
   admin: {
-    group: {
-      vi: 'Người dùng & Bảo mật',
-      en: 'Users & Security',
-    },
+    group: adminGroups.usersSecurity,
     defaultColumns: ['email', 'fullName', 'role', 'status'],
     useAsTitle: 'email',
   },

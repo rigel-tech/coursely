@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
 
 /**
@@ -25,10 +26,7 @@ export const Classes: CollectionConfig<'classes'> = {
     update: authenticated,
   },
   admin: {
-    group: {
-      vi: 'Khóa học & Đào tạo',
-      en: 'Academic',
-    },
+    group: adminGroups.academic,
     defaultColumns: ['code', 'course', 'status', 'startDate', 'maxStudents', 'updatedAt'],
     useAsTitle: 'code',
   },

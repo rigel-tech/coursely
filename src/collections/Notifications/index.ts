@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
 
 /**
@@ -21,10 +22,7 @@ export const Notifications: CollectionConfig = {
     update: authenticated,
   },
   admin: {
-    group: {
-      vi: 'Người dùng & Bảo mật',
-      en: 'Users & Security',
-    },
+    group: adminGroups.usersSecurity,
     defaultColumns: ['title', 'user', 'type', 'isRead', 'createdAt'],
     useAsTitle: 'title',
   },

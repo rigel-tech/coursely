@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import {
   FixedToolbarFeature,
   InlineToolbarFeature,
@@ -21,10 +22,7 @@ export const Media: CollectionConfig = {
     plural: { vi: 'Thư viện media', en: 'Media' },
   },
   admin: {
-    group: {
-      vi: 'Nội dung',
-      en: 'Content',
-    },
+    group: adminGroups.content,
   },
   folders: true,
   access: {

@@ -1,5 +1,6 @@
 import type { GlobalConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { link } from '@/fields/link'
 import { revalidateHeader } from './hooks/revalidateHeader'
 
@@ -10,10 +11,7 @@ export const Header: GlobalConfig = {
     en: 'Header',
   },
   admin: {
-    group: {
-      vi: 'Cấu hình',
-      en: 'Configuration',
-    },
+    group: adminGroups.configuration,
   },
   access: {
     read: () => true,

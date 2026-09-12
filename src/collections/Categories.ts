@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { anyone } from '../access/anyone'
 import { authenticated } from '../access/authenticated'
 import { slugField } from 'payload'
@@ -17,10 +18,7 @@ export const Categories: CollectionConfig = {
     update: authenticated,
   },
   admin: {
-    group: {
-      vi: 'Khóa học & Đào tạo',
-      en: 'Academic',
-    },
+    group: adminGroups.academic,
     useAsTitle: 'title',
   },
   fields: [

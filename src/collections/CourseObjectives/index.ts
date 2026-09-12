@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { anyone } from '../../access/anyone'
 import { authenticated } from '../../access/authenticated'
 
@@ -16,10 +17,7 @@ export const CourseObjectives: CollectionConfig<'course-objectives'> = {
     update: authenticated,
   },
   admin: {
-    group: {
-      vi: 'Khóa học & Đào tạo',
-      en: 'Academic',
-    },
+    group: adminGroups.academic,
     defaultColumns: ['title', 'course', 'sortOrder', 'updatedAt'],
     useAsTitle: 'title',
   },
