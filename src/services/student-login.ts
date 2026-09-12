@@ -25,7 +25,8 @@ import configPromise from '@payload-config'
 
 import type { LoginInput } from '@/lib/validation/login-schema'
 import { EmailNotVerified, LoginRefused } from '@/lib/errors/auth'
-import { sendVerificationOtp } from '@/services/student-verification-otp'
+import { sendVerifyOtpEmail } from '@/email/send'
+import { resendOtp } from '@/services/otp-challenge'
 
 /** Who signed in. Deliberately not `Student` — the caller only mints a token from this. */
 export type AuthenticatedStudent = { id: number; status: string }
@@ -44,7 +45,7 @@ export async function authenticateStudent(
   if (student.status === 'DISABLED') throw new LoginRefused(DISABLED)
 
   if (student.status === 'PENDING_VERIFICATION') {
-    await sendVerificationOtp(payload, email, 'resend')
+    await issueFreshOtp(payload, email)
     throw new EmailNotVerified(email)
   }
 
@@ -84,6 +85,20 @@ const lockedMessage = (unlockAt: Date | null): string =>
   unlockAt
     ? `Tài khoản đang tạm khóa, thử lại sau ${unlockAt.toLocaleString('vi-VN')}.`
     : 'Tài khoản đang tạm khóa, vui lòng thử lại sau.'
+
+/**
+ * A returning unverified user needs a working code waiting for them — the one from
+ * registration may already be stale. Fire-and-forget and cooldown-gated, the same shape
+ * as `registerStudent`'s own send.
+ */
+async function issueFreshOtp(payload: Payload, email: string): Promise<void> {
+  const resend = await resendOtp(payload, email)
+  if (!resend.ok) return
+
+  void sendVerifyOtpEmail(payload, email, resend.otp).catch((err) =>
+    payload.logger.error({ err }, 'EMAIL_VERIFY_OTP send failed'),
+  )
+}
 
 /** The moment Payload's lockout lifts, read from the hidden `lockUntil` field. */
 async function lockUntil(payload: Payload, email: string): Promise<Date | null> {
