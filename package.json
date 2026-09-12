@@ -19,6 +19,7 @@
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "prepare": "husky",
     "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && rm pnpm-lock.yaml && pnpm --ignore-workspace install",
+    "seed:consultation": "cross-env NODE_OPTIONS=--no-deprecation payload run scripts/seed-consultation.ts",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "typecheck": "tsc --noEmit",
     "lint:theme": "node scripts/theme-guard.mjs",
