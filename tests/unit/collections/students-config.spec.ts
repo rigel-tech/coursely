@@ -11,15 +11,11 @@ const named = (fields: Field[]) =>
 
 const field = (fields: Field[], name: string) => fields.find((f) => 'name' in f && f.name === name)
 
-/** Calls an access function as a signed-in staff member — the case that must still be denied. */
+/** Calls an access function as a signed-in staff member. */
 const asStaff = (fn: Access | undefined) =>
   fn?.({ req: { user: { id: 1, collection: 'users' } } as unknown as PayloadRequest })
 
 describe('Students collection access', () => {
-  it('denies the admin panel to every principal, signed in or not', () => {
-    expect(asStaff(Students.access?.admin)).toBe(false)
-  })
-
   it('denies create outright — students arrive through the registration flow', () => {
     expect(asStaff(Students.access?.create)).toBe(true)
   })

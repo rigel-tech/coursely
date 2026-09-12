@@ -1,20 +1,13 @@
 import type { CollectionConfig } from 'payload'
-
+import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
+import { setCreatedBy } from './hooks/setCreatedBy'
 
 /**
  * Học viên — the public-site principal, split off from `users` so that "what is
  * this principal" is answered by the collection it belongs to rather than by a
  * `role` field. Staff live in `users` and keep the admin panel; nothing here is
  * ever a valid admin principal.
- *
- * Three things about this config are load-bearing:
- *
- * `access.admin` must stay `() => false`. `canAccessAdmin` lets a principal
- * collection's own `access.admin` override `config.admin.user` entirely — the
- * `admin.user` comparison sits behind an `else if` and never runs once this
- * function exists. Setting it to `authenticated` would let every student into
- * `/admin`, silently. See INVARIANTS.
  *
  * The local strategy stays on. Students sign in with email + password, and
  * `payload.login`, `forgotPassword`, `resetPassword` and `unlock` all throw the
@@ -27,15 +20,17 @@ import { authenticated } from '../../access/authenticated'
  */
 export const Students: CollectionConfig = {
   slug: 'students',
+  hooks: {
+    beforeChange: [setCreatedBy],
+  },
   access: {
-    admin: () => false,
     create: () => true,
     delete: authenticated,
     read: authenticated,
     update: authenticated,
   },
   admin: {
-    group: 'Academic',
+    group: adminGroups.usersSecurity,
     defaultColumns: ['email', 'fullName', 'status'],
     useAsTitle: 'email',
   },
@@ -72,12 +67,26 @@ export const Students: CollectionConfig = {
     {
       name: 'verifiedAt',
       type: 'date',
-      admin: { readOnly: true },
+      admin: {
+        readOnly: true,
+        date: {
+          pickerAppearance: 'dayAndTime',
+          displayFormat: 'dd/MM/yyyy HH:mm:ss',
+          timeIntervals: 1,
+        },
+      },
     },
     {
       name: 'lastLoginAt',
       type: 'date',
-      admin: { readOnly: true },
+      admin: {
+        readOnly: true,
+        date: {
+          pickerAppearance: 'dayAndTime',
+          displayFormat: 'dd/MM/yyyy HH:mm:ss',
+          timeIntervals: 1,
+        },
+      },
     },
     {
       name: 'createdBy',

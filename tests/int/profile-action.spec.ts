@@ -28,6 +28,7 @@ const ACCESS_COOKIE = 'coursely-access'
 
 let payload: Payload
 const madeIds = new Set<number>()
+const madeMediaIds = new Set<number>()
 
 const uniqueEmail = () => `prof-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`
 
@@ -41,11 +42,24 @@ const seedStudent = async (status: 'ACTIVE' | 'PENDING_VERIFICATION' = 'ACTIVE')
   return student
 }
 
-const form = (fields: Record<string, string>) => {
+const form = (fields: Record<string, string>, avatar?: File) => {
   const fd = new FormData()
   for (const [k, v] of Object.entries(fields)) fd.set(k, v)
+  if (avatar) fd.set('avatar', avatar)
   return fd
 }
+
+const avatar = () =>
+  new File(
+    [
+      Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    ],
+    'avatar.png',
+    { type: 'image/png' },
+  )
 
 beforeAll(async () => {
   payload = await getPayload({ config: await configPromise })
@@ -58,7 +72,11 @@ afterEach(async () => {
   for (const id of madeIds) {
     await payload.delete({ collection: 'students', id }).catch(() => {})
   }
+  for (const id of madeMediaIds) {
+    await payload.delete({ collection: 'media', id }).catch(() => {})
+  }
   madeIds.clear()
+  madeMediaIds.clear()
 })
 
 describe('updateProfileAction — happy path', () => {
@@ -72,6 +90,20 @@ describe('updateProfileAction — happy path', () => {
     expect(after.fullName).toBe('Nguyễn Văn A')
     expect(after.phone).toBe('0912345678')
     expect(ctx.revalidated).toContain('/tai-khoan')
+  })
+
+  it('commits the profile and avatar together', async () => {
+    const student = await seedStudent()
+
+    const res = await updateProfileAction(
+      form({ fullName: 'Nguyễn Văn A', phone: '0912345678' }, avatar()),
+    )
+    expect(res.status).toBe('success')
+
+    const after = await payload.findByID({ collection: 'students', id: student.id, depth: 0 })
+    expect(after.fullName).toBe('Nguyễn Văn A')
+    expect(typeof after.avatar).toBe('number')
+    madeMediaIds.add(after.avatar as number)
   })
 })
 
@@ -118,5 +150,23 @@ describe('updateProfileAction — a genuine failure', () => {
     await expect(
       updateProfileAction(form({ fullName: 'Tên Mới', phone: '0912345678' })),
     ).rejects.toThrow('db unreachable')
+  })
+
+  it('rolls back the avatar when saving the profile fails', async () => {
+    const student = await seedStudent()
+    const fullName = `Tên Rollback ${Date.now()}`
+    vi.spyOn(payload, 'update').mockRejectedValue(new Error('db unreachable'))
+
+    await expect(
+      updateProfileAction(form({ fullName, phone: '0912345678' }, avatar())),
+    ).rejects.toThrow('db unreachable')
+
+    const after = await payload.findByID({ collection: 'students', id: student.id, depth: 0 })
+    expect(after.fullName).toBe('Tên Cũ')
+    const media = await payload.find({
+      collection: 'media',
+      where: { alt: { equals: `Ảnh đại diện của ${fullName}` } },
+    })
+    expect(media.docs).toHaveLength(0)
   })
 })

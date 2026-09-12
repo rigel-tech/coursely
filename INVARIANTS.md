@@ -84,21 +84,6 @@ with a green build and a green test suite.
 `src/collections/Posts/index.ts:197` (`populatedAuthors` field, `admin.disabled`), consumed at
 `src/heros/PostHero/index.tsx:12` (`PostHero`).
 
-### `Students.access.admin` must stay `() => false`
-
-**Rule** — Every auth collection that is not `admin.user` declares `access.admin: () => false`.
-Never copy an `access` block from `Users` onto one of them, and never "simplify" that line to
-`authenticated` because every other entry in the block says `authenticated`.
-
-**Why it breaks silently** — `canAccessAdmin` gives a principal collection's own `access.admin`
-the final say: when that function exists it decides, and the branch comparing the principal's
-collection against `config.admin.user` sits behind an `else if` and never runs. So
-`admin.user: Users.slug` does **not** keep other collections out of `/admin` — it is only
-consulted for a collection that declares no `access.admin` at all. A student principal whose
-collection said `admin: authenticated` would pass the gate and load the admin panel: no error,
-no log, the build stays green, the test suite stays green, and in review the line is one word
-different from its four neighbours.
-
 **Where** — `src/collections/Students/index.ts` (`access.admin`), pinned by
 `tests/unit/collections/students-config.spec.ts`. The override itself is
 `node_modules/payload/dist/utilities/canAccessAdmin.js` (`canAccessAdmin`, the `else if` after

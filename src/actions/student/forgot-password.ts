@@ -50,7 +50,7 @@ export async function forgotPasswordAction(rawEmail: string): Promise<ForgotPass
 
   if (token) {
     const resetUrl = `${getServerSideURL()}/dat-lai-mat-khau?token=${encodeURIComponent(token)}`
-    await sendResetPasswordEmail(payload, email, resetUrl).catch((err) =>
+    sendResetPasswordEmail(payload, email, resetUrl).catch((err) =>
       payload.logger.error({ err }, 'RESET_PASSWORD_EMAIL send failed'),
     )
   }

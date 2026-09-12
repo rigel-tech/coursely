@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import configPromise from '@payload-config'
-import { getPayload } from 'payload'
+import { getPayload, type PayloadRequest } from 'payload'
 
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { profileSchema } from '@/lib/validation/profile-schema'
@@ -45,11 +45,7 @@ export async function updateProfileAction(formData: FormData): Promise<ProfileSt
 
   const fullName = parsed.data.fullName.trim() || undefined
   const phone = parsed.data.phone.trim() || null
-
-  const payload = await getPayload({ config: configPromise })
-
   const avatarFile = formData.get('avatar')
-  let avatarMediaId: number | undefined
 
   if (avatarFile instanceof File && avatarFile.size > 0) {
     if (!ALLOWED_MIME_TYPES.includes(avatarFile.type)) {
@@ -61,27 +57,44 @@ export async function updateProfileAction(formData: FormData): Promise<ProfileSt
     if (avatarFile.size > MAX_AVATAR_SIZE) {
       return { status: 'error', message: 'Kích thước ảnh vượt quá 5MB. Vui lòng chọn tệp nhỏ hơn.' }
     }
-
-    const mediaDoc = await payload.create({
-      collection: 'media',
-      data: { alt: `Ảnh đại diện của ${fullName || 'học viên'}` },
-      file: {
-        data: Buffer.from(await avatarFile.arrayBuffer()),
-        mimetype: avatarFile.type,
-        name: avatarFile.name,
-        size: avatarFile.size,
-      },
-      overrideAccess: true,
-    })
-    avatarMediaId = mediaDoc.id
   }
 
-  await payload.update({
-    collection: 'students',
-    id: student.id,
-    data: { fullName, phone, ...(avatarMediaId ? { avatar: avatarMediaId } : {}) },
-    overrideAccess: true,
-  })
+  const payload = await getPayload({ config: configPromise })
+  const transactionID = (await payload.db.beginTransaction()) ?? undefined
+  const req: Partial<PayloadRequest> = { transactionID }
+
+  try {
+    let avatarMediaId: number | undefined
+
+    if (avatarFile instanceof File && avatarFile.size > 0) {
+      const mediaDoc = await payload.create({
+        collection: 'media',
+        data: { alt: `Ảnh đại diện của ${fullName || 'học viên'}` },
+        file: {
+          data: Buffer.from(await avatarFile.arrayBuffer()),
+          mimetype: avatarFile.type,
+          name: avatarFile.name,
+          size: avatarFile.size,
+        },
+        overrideAccess: true,
+        req,
+      })
+      avatarMediaId = mediaDoc.id
+    }
+
+    await payload.update({
+      collection: 'students',
+      id: student.id,
+      data: { fullName, phone, ...(avatarMediaId ? { avatar: avatarMediaId } : {}) },
+      overrideAccess: true,
+      req,
+    })
+
+    if (transactionID) await payload.db.commitTransaction(transactionID)
+  } catch (error) {
+    if (transactionID) await payload.db.rollbackTransaction(transactionID)
+    throw error
+  }
 
   revalidatePath('/tai-khoan')
 

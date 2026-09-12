@@ -19,10 +19,9 @@ import { z } from 'zod'
 const PASSWORD_MESSAGE = 'Mật khẩu tối thiểu 8 ký tự, gồm cả chữ và số'
 
 const emailRule = z
-  .string()
+  .email('Email không đúng định dạng (ví dụ: ten@example.com)')
   .trim()
   .min(1, 'Vui lòng nhập địa chỉ email')
-  .email('Email không đúng định dạng (ví dụ: ten@example.com)')
 
 const passwordRule = z
   .string()
