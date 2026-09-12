@@ -6,8 +6,7 @@ import configPromise from '@payload-config'
 
 import { PENDING_EMAIL_COOKIE } from '@/lib/constants/auth'
 import type { ResendOtpState } from '@/lib/constants/resend-otp-state'
-import { resendOtp } from '@/services/otp-challenge'
-import { sendVerifyOtpEmail } from '@/email/send'
+import { sendVerificationOtp } from '@/services/student-verification-otp'
 
 const SESSION_EXPIRED = 'Phiên xác minh đã hết hạn. Vui lòng đăng ký lại.'
 const COOLDOWN = 'Vui lòng đợi ít phút rồi thử lại.'
@@ -27,12 +26,9 @@ export async function resendOtpAction(
 
   try {
     const payload = await getPayload({ config: await configPromise })
-    const result = await resendOtp(payload, email)
+    const result = await sendVerificationOtp(payload, email, 'resend')
     if (!result.ok) return { status: 'cooldown', message: COOLDOWN }
 
-    void sendVerifyOtpEmail(payload, email, result.otp).catch((err) =>
-      payload.logger.error({ err }, 'EMAIL_VERIFY_OTP send failed'),
-    )
     return { status: 'sent' }
   } catch (err) {
     console.error('resendOtpAction failed', err)

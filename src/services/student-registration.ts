@@ -18,8 +18,8 @@ import configPromise from '@payload-config'
 
 import type { Student } from '@/payload-types'
 import type { RegisterInput } from '@/lib/validation/register-schema'
-import { sendDuplicateAttemptEmail, sendVerifyOtpEmail } from '@/email/send'
-import { issueOtp } from '@/services/otp-challenge'
+import { sendDuplicateAttemptEmail } from '@/email/send'
+import { sendVerificationOtp, type VerificationOtpMode } from '@/services/student-verification-otp'
 
 /**
  * Runs a self-registration attempt. Returns the normalised email for the caller's
@@ -41,16 +41,9 @@ export async function registerStudent(input: RegisterInput): Promise<string> {
     })
   ).docs[0]
 
-  const sendOtp = await applyRegistration(payload, existing, input)
+  const otpMode = await applyRegistration(payload, existing, input)
 
-  if (sendOtp) {
-    // §5.1 step 6 — issue OTP (after commit)
-    const otp = await issueOtp(payload, email)
-    // §5.1 step 7 — verification email (after commit, fire-and-forget)
-    void sendVerifyOtpEmail(payload, email, otp).catch((err) =>
-      payload.logger.error({ err }, 'EMAIL_VERIFY_OTP send failed'),
-    )
-  }
+  if (otpMode) await sendVerificationOtp(payload, email, otpMode)
 
   return email
 }
@@ -65,10 +58,10 @@ async function applyRegistration(
   payload: Payload,
   existing: Student | undefined,
   data: RegisterInput,
-): Promise<boolean> {
+): Promise<VerificationOtpMode | null> {
   if (!existing) {
     await createStudentWithWelcomeNotification(payload, data)
-    return true
+    return 'initial'
   }
 
   if (existing.status === 'ACTIVE') {
@@ -76,7 +69,7 @@ async function applyRegistration(
     void sendDuplicateAttemptEmail(payload, data.email).catch((err) =>
       payload.logger.error({ err }, 'DUPLICATE_REGISTER_ATTEMPT email failed'),
     )
-    return false
+    return null
   }
 
   if (existing.status === 'PENDING_VERIFICATION') {
@@ -86,12 +79,12 @@ async function applyRegistration(
       id: existing.id,
       data: { password: data.password, fullName: data.fullName, phone: data.phone },
     })
-    return true
+    return 'resend'
   }
 
   // DISABLED — do nothing, just leave a trail
   payload.logger.warn({ email: data.email }, 'registration attempt on a DISABLED account')
-  return false
+  return null
 }
 
 /** §5.1 step 5 — student + welcome notification, atomically. */

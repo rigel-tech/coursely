@@ -85,7 +85,9 @@ describe('getSessionStudent — no session', () => {
   it('returns null for a tampered signature', async () => {
     const student = await seedStudent()
     const token = await signAccessToken({ id: student.id as number, status: 'ACTIVE' })
-    ctx.cookieJar.set(ACCESS_COOKIE, token.slice(0, -1) + (token.at(-1) === 'A' ? 'B' : 'A'))
+    const [header, payload, signature] = token.split('.')
+    const tamperedSignature = (signature[0] === 'A' ? 'B' : 'A') + signature.slice(1)
+    ctx.cookieJar.set(ACCESS_COOKIE, `${header}.${payload}.${tamperedSignature}`)
 
     expect(await getSessionStudent()).toBeNull()
   })

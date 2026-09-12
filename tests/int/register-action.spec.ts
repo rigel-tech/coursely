@@ -169,9 +169,12 @@ describe('registerAction — existing PENDING_VERIFICATION email', () => {
       depth: 0,
     })
     const oldHash = (before.docs[0] as { hash?: string }).hash
-    vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
+    const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
 
     expect(await run(validForm(email))).toEqual({ status: 'success' })
+    expect(
+      await run(validForm(email, { password: 'newpass123', confirmPassword: 'newpass123' })),
+    ).toEqual({ status: 'success' })
 
     const notes = await payload.find({
       collection: 'notifications',
@@ -190,6 +193,7 @@ describe('registerAction — existing PENDING_VERIFICATION email', () => {
     })
     expect((after.docs[0] as { hash?: string }).hash).toBeTruthy()
     expect((after.docs[0] as { hash?: string }).hash).not.toBe(oldHash)
+    expect(sendEmail).toHaveBeenCalledTimes(1)
   })
 })
 

@@ -16,7 +16,8 @@ import { getVerifyOtpErrorMessage, SESSION_EXPIRED } from '@/lib/errors/auth'
  * has no such control), sets the `coursely-access` / `coursely-refresh` cookies,
  * and returns `redirectTo` for `<OtpForm>` to navigate. It never calls
  * `redirect()` (see INVARIANTS). Every other outcome is a message.
- */ export async function verifyOtpAction(
+ */
+export async function verifyOtpAction(
   _prev: VerifyOtpState,
   formData: FormData,
 ): Promise<VerifyOtpState> {
