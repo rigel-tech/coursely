@@ -3,7 +3,9 @@
  * can be unit-tested without constructing a `NextRequest`.
  */
 import { PROTECTED_PREFIXES } from '@/lib/constants/auth'
-import type { AuthUser } from '@/lib/auth/verify-token'
+
+/** All routing needs to know about the signed-in student. */
+export type RoutePrincipal = { id: number; status?: string }
 
 export type RouteDecision = { type: 'next' } | { type: 'redirect'; to: string }
 
@@ -11,15 +13,9 @@ const NEXT: RouteDecision = { type: 'next' }
 
 export function decideRoute(
   pathname: string,
-  user: AuthUser | null,
+  user: RoutePrincipal | null,
   hasPendingEmail: boolean,
 ): RouteDecision {
-  // Admin: bounce a signed-in non-admin. An anonymous visitor is left to
-  // Payload's own `/admin/login`, so it must not be redirected here.
-  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-    return user && user.role !== 'ADMIN' ? { type: 'redirect', to: '/' } : NEXT
-  }
-
   // OTP step needs the cookie `registerAction` / AUTH_022 set.
   if (pathname === '/xac-thuc-otp') {
     return hasPendingEmail ? NEXT : { type: 'redirect', to: '/' }

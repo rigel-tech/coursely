@@ -1,11 +1,14 @@
+// @vitest-environment node
+// jsdom's Uint8Array is a different realm from jose's `instanceof` check, so the session
+// signing this action now does throws there. This spec is pure server code.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { issueOtp } from '@/services/otp-store'
-import { redis } from '@/lib/redis'
-import { PENDING_EMAIL_COOKIE, REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
-import { SessionScope } from './helpers/session-keys'
+import { issueOtp } from '@/services/otp-challenge'
+import { clearOtp, readOtp } from './helpers/otp-record'
+import { PENDING_EMAIL_COOKIE, REFRESH_TTL_SEC } from '@/lib/constants/auth'
+import { verifyAccessToken, verifyRefreshToken } from '@/lib/auth/session-token'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so the
@@ -35,9 +38,8 @@ vi.mock('next/headers', () => ({
 
 const ACCESS_COOKIE = 'coursely-access'
 const REFRESH_COOKIE = 'coursely-refresh'
-const scope = new SessionScope()
 
-const { verifyOtpAction } = await import('@/actions/auth/verify-otp')
+const { verifyOtpAction } = await import('@/actions/student/verify-otp')
 const { initialVerifyOtpState } = await import('@/lib/constants/verify-otp-state')
 
 let payload: Payload
@@ -60,10 +62,9 @@ const run = (fd: FormData) => verifyOtpAction(initialVerifyOtpState, fd)
 const seed = async (status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED', tag?: string) => {
   const email = uniqueEmail(tag)
   const user = await payload.create({
-    collection: 'users',
-    data: { email, password: 'abcd1234', role: 'STUDENT', status },
+    collection: 'students',
+    data: { email, password: 'abcd1234', status },
   })
-  scope.user(user.id as number)
   ctx.cookieJar.set(PENDING_EMAIL_COOKIE, email)
   return { email, user }
 }
@@ -79,18 +80,17 @@ beforeEach(() => {
 
 afterEach(async () => {
   vi.restoreAllMocks()
-  await scope.cleanup()
   for (const email of usedEmails) {
-    await redis.del(`otp:verify:${email}`, `otp:cooldown:${email}`, `otp:quota:${email}`)
+    await clearOtp(payload, email)
     const { docs } = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 10,
       depth: 0,
     })
     for (const u of docs) {
-      await payload.delete({ collection: 'notifications', where: { user: { equals: u.id } } })
-      await payload.delete({ collection: 'users', id: u.id })
+      await payload.delete({ collection: 'notifications', where: { student: { equals: u.id } } })
+      await payload.delete({ collection: 'students', id: u.id })
     }
   }
   usedEmails.clear()
@@ -99,22 +99,39 @@ afterEach(async () => {
 describe('verifyOtpAction — happy path', () => {
   it('flips the account to ACTIVE, signs the user in, clears the cookie, consumes the code', async () => {
     const { email, user } = await seed('PENDING_VERIFICATION')
-    const { otp } = await issueOtp(email)
+    const otp = await issueOtp(payload, email)
 
     expect(await run(form(otp))).toEqual({ status: 'success', redirectTo: '/' })
 
-    const after = await payload.findByID({ collection: 'users', id: user.id, depth: 0 })
+    const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('ACTIVE')
     expect(after.verifiedAt).toBeTruthy()
     expect(ctx.cookieJar.has(PENDING_EMAIL_COOKIE)).toBe(false)
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(0)
+    expect(await readOtp(payload, email)).toBeNull()
 
     // a fresh session, treated as "remember me" (D10)
     expect(ctx.cookieJar.get(ACCESS_COOKIE)).toBeTruthy()
     expect(ctx.cookieJar.get(REFRESH_COOKIE)).toBeTruthy()
     expect((ctx.cookieOptions.get(REFRESH_COOKIE) as Record<string, unknown>).maxAge).toBe(
-      REMEMBER_ME_MAX_AGE_SEC,
+      REFRESH_TTL_SEC,
     )
+  })
+
+  // `toBeTruthy` above cannot tell a token from a pending promise, and signing is async:
+  // a missing `await` anywhere on this path writes "[object Promise]" into the cookie and
+  // signs every visitor out on a build that compiles. Read the cookies back instead.
+  it('writes cookies that verify back to the student who was just verified', async () => {
+    const { email, user } = await seed('PENDING_VERIFICATION')
+    const otp = await issueOtp(payload, email)
+
+    await run(form(otp))
+
+    await expect(verifyAccessToken(ctx.cookieJar.get(ACCESS_COOKIE))).resolves.toMatchObject({
+      id: user.id,
+    })
+    await expect(verifyRefreshToken(ctx.cookieJar.get(REFRESH_COOKIE))).resolves.toMatchObject({
+      id: user.id,
+    })
   })
 
   it('is idempotent for an already-ACTIVE account and still issues a session', async () => {
@@ -136,37 +153,37 @@ describe('verifyOtpAction — rejected input', () => {
 
   it('errors on a code that is not six digits, without touching the account or the code', async () => {
     const { email, user } = await seed('PENDING_VERIFICATION')
-    await issueOtp(email)
+    await issueOtp(payload, email)
 
     const result = await run(form('12ab5'))
     expect(result.status).toBe('error')
     expect(result.message).toMatch(/6 chữ số/i)
 
-    const after = await payload.findByID({ collection: 'users', id: user.id, depth: 0 })
+    const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('PENDING_VERIFICATION')
-    expect(await redis.hget(`otp:verify:${email}`, 'attempts')).toBe('0')
+    expect((await readOtp(payload, email))?.attempts).toBe(0)
   })
 })
 
 describe('verifyOtpAction — wrong code', () => {
   it('reports the remaining tries and leaves the account pending', async () => {
     const { email, user } = await seed('PENDING_VERIFICATION')
-    const { otp } = await issueOtp(email)
+    const otp = await issueOtp(payload, email)
     const wrong = String((Number(otp) + 1) % 1_000_000).padStart(6, '0')
 
     const result = await run(form(wrong))
     expect(result.status).toBe('error')
     expect(result.message).toMatch(/còn 4 lần/i)
 
-    const after = await payload.findByID({ collection: 'users', id: user.id, depth: 0 })
+    const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('PENDING_VERIFICATION')
-    expect(await redis.hget(`otp:verify:${email}`, 'attempts')).toBe('1')
+    expect((await readOtp(payload, email))?.attempts).toBe(1)
   })
 
   it('rejects a superseded code after a resend, then accepts the fresh one', async () => {
     const { email } = await seed('PENDING_VERIFICATION')
-    const first = (await issueOtp(email)).otp
-    const second = (await issueOtp(email)).otp
+    const first = await issueOtp(payload, email)
+    const second = await issueOtp(payload, email)
 
     if (first !== second) {
       const stale = await run(form(first))
@@ -180,14 +197,14 @@ describe('verifyOtpAction — wrong code', () => {
 describe('verifyOtpAction — disabled account', () => {
   it('refuses without consuming the code', async () => {
     const { email, user } = await seed('DISABLED')
-    const { otp } = await issueOtp(email)
+    const otp = await issueOtp(payload, email)
 
     const result = await run(form(otp))
     expect(result.status).toBe('error')
     expect(result.message).toMatch(/khoá/i)
 
-    const after = await payload.findByID({ collection: 'users', id: user.id, depth: 0 })
+    const after = await payload.findByID({ collection: 'students', id: user.id, depth: 0 })
     expect(after.status).toBe('DISABLED')
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(1)
+    expect(await readOtp(payload, email)).toBeTruthy()
   })
 })

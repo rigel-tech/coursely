@@ -5,16 +5,19 @@
 // the Playwright process cannot work: `next` publishes no `exports` map, so the
 // `next/cache` import inside the collection hooks resolves only under a bundler.
 //
-// Usage: payload run scripts/seed-e2e-user.ts <seed|cleanup> <email> <password> [role]
-//   role defaults to ADMIN (the admin panel specs). Pass STUDENT for the public-site
-//   specs; a STUDENT is still created ACTIVE so it can sign in immediately.
+// Usage: payload run scripts/seed-e2e-user.ts <seed|cleanup> <email> <password> [collection]
+//   collection defaults to `users` — staff, for the admin panel specs. Pass `students` for
+//   the public-site specs; a student is created ACTIVE so it can sign in immediately.
+//
+// Which collection an account belongs to is now the whole of what it is, so this script
+// takes a collection rather than the `role` field it used to set.
 
 import { getPayload } from 'payload'
 
 import config from '../src/payload.config.js'
 
-const [command, email, password, roleArg] = process.argv.slice(2)
-const role = roleArg === 'STUDENT' ? 'STUDENT' : 'ADMIN'
+const [command, email, password, collectionArg] = process.argv.slice(2)
+const collection = collectionArg === 'students' ? 'students' : 'users'
 
 if (command !== 'seed' && command !== 'cleanup') {
   console.error(`seed-e2e-user: expected "seed" or "cleanup", got "${command}"`)
@@ -33,13 +36,14 @@ try {
   const payload = await getPayload({ config })
 
   // Delete first: seeding has to be repeatable against a database that already ran.
-  await payload.delete({ collection: 'users', where: { email: { equals: email } } })
+  await payload.delete({ collection, where: { email: { equals: email } } })
 
   if (command === 'seed') {
     await payload.create({
-      collection: 'users',
-      data: { email, password, role, status: 'ACTIVE' },
-    })
+      collection,
+      // `status` exists on students only; staff have no lifecycle field to set.
+      data: { email, password, ...(collection === 'students' && { status: 'ACTIVE' }) },
+    } as Parameters<typeof payload.create>[0])
   }
 } catch (error) {
   console.error(error)

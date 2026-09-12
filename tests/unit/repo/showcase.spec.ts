@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const GALLERY = 'src/app/(frontend)/components/page.client.tsx'
-const SOURCES = ['src/components/design', 'src/components/public/ui']
+const SOURCES = ['src/components/design', 'src/components/public/ui', 'src/components/public/forms']
 
 const walk = (dir: string, acc: string[] = []): string[] => {
   for (const name of readdirSync(dir)) {

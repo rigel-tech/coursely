@@ -3,8 +3,8 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 
-import { FormField } from '@/components/design/forms/field'
-import { email, required } from '@/components/design/forms/validation'
+import { FormField } from '@/components/public/forms/field'
+import { email, required } from '@/components/public/forms/validation'
 import { Button } from '@/components/public/ui/button'
 import { Input } from '@/components/public/ui/input'
 import { cn } from '@/utilities/ui'

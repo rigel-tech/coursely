@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 
 /** The action runs for real in tests/int; here we only drive its result. */
 const logoutAction = vi.fn()
-vi.mock('@/actions/auth/logout', () => ({
+vi.mock('@/actions/student/logout', () => ({
   logoutAction: (...args: unknown[]) => logoutAction(...args),
 }))
 

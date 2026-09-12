@@ -1,32 +1,17 @@
+/**
+ * Zod schema for "forgot password". `emailSchema` is the whole rule — `forgotPasswordAction`
+ * takes the address directly and validates it with this, no wrapper object: there is only
+ * one field, so there is nothing to bundle. `forgotPasswordSchema` wraps it in an object
+ * only because `react-hook-form`'s `register('email')` needs a field name to bind to;
+ * `<ForgotPasswordForm>` is the one caller that needs that shape.
+ */
 import { z } from 'zod'
 
-export const forgotPasswordSchema = z.object({
-  email: z.string().trim().min(1, 'Email không được để trống').email('Email không đúng định dạng'),
-})
+export const emailSchema = z
+  .email('Email không đúng định dạng')
+  .trim()
+  .min(1, 'Email không được để trống')
 
-export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
+export const forgotPasswordSchema = z.object({ email: emailSchema })
 
-export type ForgotPasswordValidationResult =
-  | { success: true; data: ForgotPasswordInput }
-  | { success: false; fieldErrors: Record<string, string> }
-
-export function parseForgotPasswordInput(
-  raw: Record<string, unknown>,
-): ForgotPasswordValidationResult {
-  const parsed = forgotPasswordSchema.safeParse({
-    email: raw.email,
-  })
-
-  if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {}
-    for (const issue of parsed.error.issues) {
-      const field = issue.path[0]
-      if (typeof field === 'string' && !fieldErrors[field]) {
-        fieldErrors[field] = issue.message
-      }
-    }
-    return { success: false, fieldErrors }
-  }
-
-  return { success: true, data: parsed.data }
-}
+export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>

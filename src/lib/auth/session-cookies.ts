@@ -1,14 +1,18 @@
 /**
- * The `coursely-access` / `coursely-refresh` cookie pair, written and cleared
- * through one place so the flags never drift between the login action, the OTP
- * action, the logout actions, and `proxy`'s inline renewal. The setter type is
- * structural: it fits both the `next/headers` `cookies()` jar and
- * `NextResponse.cookies`.
+ * The `coursely-access` / `coursely-refresh` pair, minted and cleared through one
+ * place so the flags never drift between the login action, the OTP action, the
+ * logout action and `proxy`'s inline renewal. The jar type is structural: it fits
+ * both the `next/headers` `cookies()` jar and `NextResponse.cookies`.
+ *
+ * The access cookie is always a browser-session cookie — it is short-lived and
+ * `proxy` mints a replacement whenever it is missing. The refresh cookie is the one
+ * that outlives the browser, and it does so for every session: there is no "remember
+ * me" to opt into, so `REFRESH_TTL_SEC` is the session's length, full stop.
  */
-import type { IssuedSession } from '@/services/session-store'
-import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '@/lib/constants/auth'
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, REFRESH_TTL_SEC } from '@/lib/constants/auth'
+import { signAccessToken, signRefreshToken, type StudentClaims } from '@/lib/auth/session-token'
 
-type CookieSetter = {
+type CookieJar = {
   set(name: string, value: string, options?: Record<string, unknown>): unknown
   delete(name: string): unknown
 }
@@ -20,16 +24,23 @@ const baseFlags = {
   secure: process.env.NODE_ENV === 'production',
 }
 
-/** Access cookie is always a session cookie; the refresh cookie carries `maxAge` only with "remember me". */
-export function setSessionCookies(jar: CookieSetter, issued: IssuedSession): void {
-  jar.set(ACCESS_TOKEN_COOKIE, issued.accessJwt, { ...baseFlags })
-  jar.set(REFRESH_TOKEN_COOKIE, issued.refreshRaw, {
+/** Start a session: both tokens, freshly signed, at the one length every session gets. */
+export async function setSessionCookies(jar: CookieJar, claims: StudentClaims): Promise<void> {
+  jar.set(ACCESS_TOKEN_COOKIE, await signAccessToken(claims), baseFlags)
+  // Cookie and token carry the same lifetime, so a copy taken off the wire does not
+  // outlive the cookie it came from.
+  jar.set(REFRESH_TOKEN_COOKIE, await signRefreshToken(claims, REFRESH_TTL_SEC), {
     ...baseFlags,
-    ...(issued.refreshCookieMaxAge ? { maxAge: issued.refreshCookieMaxAge } : {}),
+    maxAge: REFRESH_TTL_SEC,
   })
 }
 
-export function clearSessionCookies(jar: CookieSetter): void {
+/** Renewal writes the access cookie and nothing else — the refresh token is not rotated. */
+export async function refreshAccessCookie(jar: CookieJar, claims: StudentClaims): Promise<void> {
+  jar.set(ACCESS_TOKEN_COOKIE, await signAccessToken(claims), baseFlags)
+}
+
+export function clearSessionCookies(jar: CookieJar): void {
   jar.delete(ACCESS_TOKEN_COOKIE)
   jar.delete(REFRESH_TOKEN_COOKIE)
 }

@@ -4,11 +4,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 
 /** The action runs for real in tests/int; here we only drive its result. */
 const loginAction = vi.fn()
-vi.mock('@/actions/auth/login', () => ({
+vi.mock('@/actions/student/login', () => ({
   loginAction: (...args: unknown[]) => loginAction(...args),
 }))
 
-const { LoginForm } = await import('@/app/(frontend)/user/login/LoginForm')
+const { LoginForm } = await import('@/components/public/forms/LoginForm')
 
 const assign = vi.fn()
 
@@ -44,7 +44,6 @@ describe('LoginForm', () => {
   it('follows redirectTo on an error state too (AUTH_022 → /xac-thuc-otp)', async () => {
     loginAction.mockResolvedValue({
       status: 'error',
-      code: 'AUTH_022',
       message: 'Tài khoản chưa xác minh email.',
       redirectTo: '/xac-thuc-otp',
     })
@@ -59,7 +58,6 @@ describe('LoginForm', () => {
   it('shows the message and stays put when there is no redirectTo', async () => {
     loginAction.mockResolvedValue({
       status: 'error',
-      code: 'AUTH_021',
       message: 'Email hoặc mật khẩu không đúng.',
     })
     render(React.createElement(LoginForm))
@@ -71,24 +69,40 @@ describe('LoginForm', () => {
     expect(assign).not.toHaveBeenCalled()
   })
 
-  it('marks the offending inputs and carries a rememberMe checkbox', async () => {
-    loginAction.mockResolvedValue({
-      status: 'error',
-      code: 'AUTH_021',
-      message: 'x',
-      fieldErrors: { email: 'Email không hợp lệ', password: 'Bắt buộc' },
-    })
+  it('offers no "remember me" control at all', () => {
+    loginAction.mockResolvedValue({ status: 'idle' })
     render(React.createElement(LoginForm))
 
-    expect(screen.getByLabelText('Ghi nhớ đăng nhập')).toBeTruthy()
+    expect(screen.queryByLabelText('Ghi nhớ đăng nhập')).toBeNull()
+    expect(screen.queryByRole('checkbox')).toBeNull()
+  })
 
-    fill()
+  it('marks a malformed email itself', async () => {
+    loginAction.mockResolvedValue({ status: 'idle' })
+    render(React.createElement(LoginForm))
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'nope' } })
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'secret12' } })
     submit()
 
     await waitFor(() => {
       expect(screen.getByLabelText('Email').getAttribute('aria-invalid')).toBe('true')
-      expect(screen.getByLabelText('Mật khẩu').getAttribute('aria-invalid')).toBe('true')
     })
+    expect(await screen.findByText('Email không đúng định dạng')).toBeTruthy()
+    expect(loginAction).not.toHaveBeenCalled()
+  })
+
+  // The action rethrows anything it cannot translate, so the form is the last place a
+  // system failure can still be shown to a person rather than crashing the page.
+  it('shows a banner when the action rejects, instead of crashing', async () => {
+    loginAction.mockRejectedValue(new Error('database is on fire'))
+    render(React.createElement(LoginForm))
+
+    fill()
+    submit()
+
+    expect(await screen.findByText(/lỗi hệ thống/i)).toBeTruthy()
+    expect(assign).not.toHaveBeenCalled()
   })
 
   it('disables the submit while the action is pending', async () => {
@@ -104,7 +118,7 @@ describe('LoginForm', () => {
     })
   })
 
-  it('folds a callbackUrl from the URL into the submitted form', async () => {
+  it('folds a callbackUrl from the URL into the submitted object', async () => {
     vi.stubGlobal('location', {
       assign,
       href: 'http://localhost/?callbackUrl=/khoa-hoc',
@@ -117,8 +131,24 @@ describe('LoginForm', () => {
     submit()
 
     await waitFor(() => {
-      const fd = loginAction.mock.calls.at(-1)?.[1] as FormData | undefined
-      expect(fd?.get('callbackUrl')).toBe('/khoa-hoc')
+      expect(loginAction.mock.calls.at(-1)?.[0]).toEqual({
+        email: 'a@b.com',
+        password: 'secret12',
+        callbackUrl: '/khoa-hoc',
+      })
     })
+  })
+
+  // RQ2 — the client now owns first-pass validation. The action is a network round
+  // trip and a credential check; a blank email must not buy either.
+  it('validates on the client — a blank email never reaches the action', async () => {
+    loginAction.mockResolvedValue({ status: 'idle' })
+    render(React.createElement(LoginForm))
+
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'secret12' } })
+    submit()
+
+    expect(await screen.findByText('Vui lòng nhập email')).toBeTruthy()
+    expect(loginAction).not.toHaveBeenCalled()
   })
 })

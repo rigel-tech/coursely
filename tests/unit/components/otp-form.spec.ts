@@ -4,16 +4,16 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 
 /** Both actions run for real in tests/int; here we only drive their results. */
 const verifyOtpAction = vi.fn()
-vi.mock('@/actions/auth/verify-otp', () => ({
+vi.mock('@/actions/student/verify-otp', () => ({
   verifyOtpAction: (...args: unknown[]) => verifyOtpAction(...args),
 }))
 
 const resendOtpAction = vi.fn()
-vi.mock('@/actions/auth/resend-otp', () => ({
+vi.mock('@/actions/student/resend-otp', () => ({
   resendOtpAction: (...args: unknown[]) => resendOtpAction(...args),
 }))
 
-const { OtpForm } = await import('@/app/(frontend)/user/verify-otp/OtpForm')
+const { OtpForm } = await import('@/components/public/forms/OtpForm')
 
 beforeEach(() => {
   verifyOtpAction.mockReset()

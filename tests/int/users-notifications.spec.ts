@@ -6,24 +6,26 @@ let payload: Payload
 
 const uniqueEmail = () => `test-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`
 
-describe('users collection defaults', () => {
+// These defaults moved to `students` with the fields themselves. `users` keeps no
+// lifecycle field at all now — staff have an email, a password and a name.
+describe('students collection defaults', () => {
   beforeAll(async () => {
     payload = await getPayload({ config: await config })
   })
 
-  it('applies STUDENT / PENDING_VERIFICATION / isWalkIn=false when unspecified', async () => {
-    // Omitting role/status on purpose — this asserts the collection defaults fill them.
-    // @ts-expect-error role/status are `required` in the input type but carry defaultValues.
-    const user = await payload.create({
-      collection: 'users',
+  it('applies ACTIVE / isWalkIn=false when unspecified', async () => {
+    // Omitting status on purpose — this asserts the collection defaults fill it.
+    // The default serves the account staff create at the counter: usable at once. Self
+    // registration never reaches it — `registerStudent` passes PENDING_VERIFICATION itself.
+    // @ts-expect-error status is `required` in the input type but carries a defaultValue.
+    const student = await payload.create({
+      collection: 'students',
       data: { email: uniqueEmail(), password: 'Passw0rd123' },
     })
 
-    expect(user.role).toBe('STUDENT')
-    expect(user.status).toBe('PENDING_VERIFICATION')
-    expect(user.isWalkIn).toBe(false)
+    expect(student.status).toBe('ACTIVE')
 
-    await payload.delete({ collection: 'users', id: user.id })
+    await payload.delete({ collection: 'students', id: student.id })
   })
 })
 
@@ -32,7 +34,7 @@ describe('notifications collection', () => {
     payload = await getPayload({ config: await config })
   })
 
-  it('rejects a notification with no user/title/content', async () => {
+  it('rejects a notification with no student/title/content', async () => {
     await expect(
       payload.create({ collection: 'notifications', data: {} as never }),
     ).rejects.toThrow()
@@ -40,14 +42,14 @@ describe('notifications collection', () => {
 
   it('stores a notification and defaults isRead to false', async () => {
     const owner = await payload.create({
-      collection: 'users',
-      data: { email: uniqueEmail(), password: 'Passw0rd123', role: 'STUDENT', status: 'ACTIVE' },
+      collection: 'students',
+      data: { email: uniqueEmail(), password: 'Passw0rd123', status: 'ACTIVE' },
     })
 
     const notification = await payload.create({
       collection: 'notifications',
       data: {
-        user: owner.id,
+        student: owner.id,
         type: 'ACCOUNT_CREATED',
         title: 'Chào mừng bạn đến với Coursely',
         content: 'Tài khoản của bạn đã được tạo. Hãy xác minh email để bắt đầu.',
@@ -57,6 +59,6 @@ describe('notifications collection', () => {
     expect(notification.isRead).toBe(false)
 
     await payload.delete({ collection: 'notifications', id: notification.id })
-    await payload.delete({ collection: 'users', id: owner.id })
+    await payload.delete({ collection: 'students', id: owner.id })
   })
 })

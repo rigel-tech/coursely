@@ -13,10 +13,16 @@ import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer/config'
 import { Header } from '@/globals/Header/config'
 import { SiteSettings } from '@/globals/SiteSettings/config'
-import { adminGroups } from '@/lib/constants/adminGroups'
 import configPromise from '@/payload.config'
 
-const ALLOWED_GROUPS = Object.values(adminGroups)
+const ALLOWED_GROUPS = ['Academic', 'Content', 'Users & Security', 'Configuration']
+
+const groupName = (group: unknown) =>
+  typeof group === 'string'
+    ? group
+    : group && typeof group === 'object' && 'en' in group && typeof group.en === 'string'
+      ? group.en
+      : undefined
 
 const staticCollections = [
   Courses,
@@ -38,13 +44,13 @@ describe('Admin Sidebar Grouping', () => {
   it('assigns every static collection to a valid functional group', () => {
     for (const col of staticCollections) {
       expect(col.admin?.group).toBeDefined()
-      expect(ALLOWED_GROUPS).toContainEqual(col.admin?.group)
+      expect(ALLOWED_GROUPS).toContain(groupName(col.admin?.group))
     }
   })
 
   it('assigns every global to Configuration group', () => {
     for (const glob of globals) {
-      expect(glob.admin?.group).toEqual(adminGroups.configuration)
+      expect(groupName(glob.admin?.group)).toBe('Configuration')
     }
   })
 
@@ -58,7 +64,7 @@ describe('Admin Sidebar Grouping', () => {
     expect(visibleCollections.length).toBe(15)
     for (const col of visibleCollections) {
       expect(col.admin?.group, `Collection "${col.slug}" must have a group`).toBeDefined()
-      expect(ALLOWED_GROUPS).toContainEqual(col.admin?.group)
+      expect(ALLOWED_GROUPS).toContain(groupName(col.admin?.group))
     }
   })
 })

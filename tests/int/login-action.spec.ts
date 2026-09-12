@@ -5,9 +5,9 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { redis } from '@/lib/redis'
-import { REMEMBER_ME_MAX_AGE_SEC } from '@/lib/constants/auth'
-import { SessionScope } from './helpers/session-keys'
+import { clearOtp, readOtp } from './helpers/otp-record'
+import { REFRESH_TTL_SEC } from '@/lib/constants/auth'
+import { verifyAccessToken, verifyRefreshToken } from '@/lib/auth/session-token'
 
 /**
  * Server-action context. `next/headers` has no request scope under vitest, so the
@@ -35,18 +35,22 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
-const { loginAction } = await import('@/actions/auth/login')
-const { initialLoginState } = await import('@/lib/constants/login-state')
+const { loginAction } = await import('@/actions/student/login')
+
+type LoginInput = Parameters<typeof loginAction>[0]
+
+/** The action no longer ships an error code, so the copy is what tells the cases apart. */
+const BAD_CREDENTIALS = 'Email hoặc mật khẩu không đúng.'
 
 const ACCESS_COOKIE = 'coursely-access'
 const REFRESH_COOKIE = 'coursely-refresh'
 
 let payload: Payload
 let currentIp: string
-const scope = new SessionScope()
 
 const rnd = () => Math.floor(Math.random() * 255)
 const usedEmails = new Set<string>()
+const staffIds = new Set<number>()
 const usedIps = new Set<string>()
 
 const uniqueEmail = (tag = 'login') => {
@@ -55,30 +59,32 @@ const uniqueEmail = (tag = 'login') => {
   return e
 }
 
-const makeUser = async (
-  over: { tag?: string; role?: 'ADMIN' | 'STUDENT'; status?: string; password?: string } = {},
-) => {
+const makeUser = async (over: { tag?: string; status?: string; password?: string } = {}) => {
   const email = uniqueEmail(over.tag)
   const password = over.password ?? 'Secret123'
   const user = await payload.create({
-    collection: 'users',
-    data: {
-      email,
-      password,
-      role: over.role ?? 'STUDENT',
-      status: (over.status ?? 'ACTIVE') as 'ACTIVE',
-    },
+    collection: 'students',
+    data: { email, password, status: (over.status ?? 'ACTIVE') as 'ACTIVE' },
   })
-  scope.user(user.id as number)
   return { email, password, user }
 }
 
-const form = (fields: Record<string, string>) => {
-  const fd = new FormData()
-  for (const [k, v] of Object.entries(fields)) fd.set(k, v)
-  return fd
+/** A staff account. `/dang-nhap` must treat it as an address it has never seen. */
+const makeStaff = async (tag = 'staff') => {
+  const email = uniqueEmail(tag)
+  const password = 'Secret123'
+  const user = await payload.create({
+    collection: 'users',
+    data: { email, password },
+  })
+  staffIds.add(user.id as number)
+  return { email, password, user }
 }
-const run = (fd: FormData) => loginAction(initialLoginState, fd)
+
+/** The object `<LoginForm>` would send. There is no "remember me" left to vary. */
+const form = (fields: LoginInput): LoginInput => fields
+
+const run = (input: LoginInput) => loginAction(input)
 
 beforeAll(async () => {
   payload = await getPayload({ config: await configPromise })
@@ -96,36 +102,30 @@ beforeEach(() => {
 
 afterEach(async () => {
   vi.restoreAllMocks()
-  await scope.cleanup()
-  for (const ip of usedIps) await redis.del(`rate:login:ip:${ip}`)
   usedIps.clear()
   for (const email of usedEmails) {
-    await redis.del(
-      `rate:login:email:${email}`,
-      `otp:verify:${email}`,
-      `otp:cooldown:${email}`,
-      `otp:quota:${email}`,
-    )
+    await clearOtp(payload, email)
     const { docs } = await payload.find({
-      collection: 'users',
+      collection: 'students',
       where: { email: { equals: email } },
       limit: 10,
       depth: 0,
     })
     for (const u of docs) {
-      await payload.delete({ collection: 'notifications', where: { user: { equals: u.id } } })
-      await payload.delete({ collection: 'audit-logs', where: { user: { equals: u.id } } })
-      await payload.delete({ collection: 'users', id: u.id })
+      await payload.delete({ collection: 'notifications', where: { student: { equals: u.id } } })
+      await payload.delete({ collection: 'students', id: u.id })
     }
   }
   usedEmails.clear()
+  for (const id of staffIds) await payload.delete({ collection: 'users', id }).catch(() => {})
+  staffIds.clear()
 })
 
 describe('loginAction — success', () => {
-  it('ACTIVE user: access+refresh cookies, lastLoginAt stamped, one audit row, no notification, home', async () => {
+  it('ACTIVE user: access+refresh cookies, lastLoginAt stamped, no notification, home', async () => {
     const { email, password, user } = await makeUser()
     expect(
-      (await payload.findByID({ collection: 'users', id: user.id, depth: 0 })).lastLoginAt,
+      (await payload.findByID({ collection: 'students', id: user.id, depth: 0 })).lastLoginAt,
     ).toBeFalsy()
 
     const res = await run(form({ email, password }))
@@ -140,53 +140,49 @@ describe('loginAction — success', () => {
     expect(accessOpts).toMatchObject({ httpOnly: true, sameSite: 'lax', path: '/' })
     expect(accessOpts.maxAge).toBeUndefined()
 
-    // no "remember me" → the refresh cookie is a session cookie too
+    // one session length for everyone now — the refresh cookie always outlives the browser
     const refreshOpts = ctx.cookieOptions.get(REFRESH_COOKIE) as Record<string, unknown>
     expect(refreshOpts).toMatchObject({ httpOnly: true, sameSite: 'lax', path: '/' })
-    expect(refreshOpts.maxAge).toBeUndefined()
+    expect(refreshOpts.maxAge).toBe(REFRESH_TTL_SEC)
 
     expect(
-      (await payload.findByID({ collection: 'users', id: user.id, depth: 0 })).lastLoginAt,
+      (await payload.findByID({ collection: 'students', id: user.id, depth: 0 })).lastLoginAt,
     ).toBeTruthy()
 
     const notes = await payload.find({
       collection: 'notifications',
-      where: { user: { equals: user.id } },
+      where: { student: { equals: user.id } },
       limit: 0,
     })
     expect(notes.totalDocs).toBe(0)
+  })
 
-    const audit = await payload.find({
-      collection: 'audit-logs',
-      where: { user: { equals: user.id } },
-      depth: 0,
+  // `toBeTruthy` above cannot tell a token from a pending promise, and signing is async:
+  // a missing `await` anywhere on this path writes "[object Promise]" into the cookie and
+  // signs every visitor out on a build that compiles. Read the cookies back instead.
+  it('writes cookies that verify back to the student who signed in', async () => {
+    const { email, password, user } = await makeUser()
+
+    await run(form({ email, password }))
+
+    await expect(verifyAccessToken(ctx.cookieJar.get(ACCESS_COOKIE))).resolves.toMatchObject({
+      id: user.id,
     })
-    expect(audit.totalDocs).toBe(1)
-    expect(audit.docs[0]).toMatchObject({
-      action: 'LOGIN_SUCCESS',
-      ip: currentIp,
-      userAgent: 'vitest-login',
+    await expect(verifyRefreshToken(ctx.cookieJar.get(REFRESH_COOKIE))).resolves.toMatchObject({
+      id: user.id,
     })
   })
 
-  it('rememberMe extends the refresh cookie to 30 days; the access cookie stays a session cookie', async () => {
+  it('gives every session the same length; the access cookie stays a session cookie', async () => {
     const { email, password } = await makeUser()
-    await run(form({ email, password, rememberMe: 'on' }))
+    await run(form({ email, password }))
     expect((ctx.cookieOptions.get(REFRESH_COOKIE) as Record<string, unknown>).maxAge).toBe(
-      REMEMBER_ME_MAX_AGE_SEC,
+      REFRESH_TTL_SEC,
     )
     expect((ctx.cookieOptions.get(ACCESS_COOKIE) as Record<string, unknown>).maxAge).toBeUndefined()
   })
 
-  it('sends an ADMIN to /admin and ignores callbackUrl', async () => {
-    const { email, password } = await makeUser({ role: 'ADMIN' })
-    expect(await run(form({ email, password, callbackUrl: '/khoa-hoc' }))).toMatchObject({
-      status: 'success',
-      redirectTo: '/admin',
-    })
-  })
-
-  it('sends a STUDENT to a same-site callbackUrl, else home', async () => {
+  it('sends a student to a same-site callbackUrl, else home', async () => {
     const a = await makeUser()
     expect(
       await run(form({ email: a.email, password: a.password, callbackUrl: '/khoa-hoc/abc' })),
@@ -197,61 +193,52 @@ describe('loginAction — success', () => {
       await run(form({ email: b.email, password: b.password, callbackUrl: '//evil.com' })),
     ).toMatchObject({ redirectTo: '/' })
   })
+})
 
-  it('clears the per-email rate counter on success', async () => {
-    const { email, password } = await makeUser()
-    await redis.set(`rate:login:email:${email}`, '3')
-    await run(form({ email, password }))
-    expect(await redis.exists(`rate:login:email:${email}`)).toBe(0)
+describe('loginAction — a staff account is not a principal here', () => {
+  it('refuses a users row with its own correct password, exactly like an unknown email', async () => {
+    const { email, password } = await makeStaff()
+
+    const res = await run(form({ email, password }))
+    expect(res).toMatchObject({ status: 'error', message: BAD_CREDENTIALS })
+
+    // No student session may ever be minted for a `users` document: the two tables
+    // have colliding serial ids, so one leaking into `session:index:{id}` puts two
+    // different accounts on one session line. See INVARIANTS.
+    expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
+    expect(ctx.cookieJar.has(REFRESH_COOKIE)).toBe(false)
+    expect(res).not.toHaveProperty('redirectTo')
   })
 })
 
 describe('loginAction — bad credentials', () => {
-  it('wrong password: AUTH_021, bumps both counters, no cookie', async () => {
+  it('wrong password: AUTH_021, no cookie', async () => {
     const { email } = await makeUser()
     const res = await run(form({ email, password: 'WrongPass1' }))
-    expect(res).toMatchObject({
-      status: 'error',
-      code: 'AUTH_021',
-      message: 'Email hoặc mật khẩu không đúng.',
-    })
+    expect(res).toMatchObject({ status: 'error', message: BAD_CREDENTIALS })
     expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
-    expect(await redis.get(`rate:login:ip:${currentIp}`)).toBe('1')
-    expect(await redis.get(`rate:login:email:${email}`)).toBe('1')
   })
 
   it('unknown email is indistinguishable from a wrong password', async () => {
-    const missing = uniqueEmail('ghost')
-    const res = await run(form({ email: missing, password: 'Whatever1' }))
-    expect(res).toMatchObject({
-      status: 'error',
-      code: 'AUTH_021',
-      message: 'Email hoặc mật khẩu không đúng.',
-    })
-    expect(await redis.get(`rate:login:email:${missing}`)).toBe('1')
+    const res = await run(form({ email: uniqueEmail('ghost'), password: 'Whatever1' }))
+    expect(res).toMatchObject({ status: 'error', message: BAD_CREDENTIALS })
   })
 })
 
-describe('loginAction — rate limited', () => {
-  it('per-email over the limit: AUTH_020, payload.login never runs', async () => {
-    const { email, password } = await makeUser()
-    await redis.set(`rate:login:email:${email}`, '6')
-    const spy = vi.spyOn(payload, 'login')
-
-    const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_020' })
-    expect(res.message).toMatch(/15 phút/)
-    expect(spy).not.toHaveBeenCalled()
-  })
-
-  it('per-IP over the limit: AUTH_020, payload.login never runs', async () => {
-    const { email, password } = await makeUser()
-    await redis.set(`rate:login:ip:${currentIp}`, '21')
-    const spy = vi.spyOn(payload, 'login')
-
-    const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_020' })
-    expect(spy).not.toHaveBeenCalled()
+describe('loginAction — no per-IP throttle', () => {
+  // The old per-IP axis cut in on the 22nd attempt from one address. Every attempt
+  // here uses a different unknown email, so Payload's own per-account lockout —
+  // which stays — cannot be what answers.
+  // None of these addresses exists, so nothing is created and `usedEmails` — which
+  // costs a query per entry to clean — is deliberately left out of it.
+  it('22 failed attempts from one IP all come back AUTH_021', async () => {
+    const stamp = Date.now()
+    for (let i = 0; i < 22; i++) {
+      const res = await run(
+        form({ email: `burst-${stamp}-${i}@example.com`, password: 'x1234567' }),
+      )
+      expect(res).toMatchObject({ status: 'error', message: BAD_CREDENTIALS })
+    }
   })
 })
 
@@ -259,18 +246,18 @@ describe('loginAction — status gate', () => {
   it('DISABLED: AUTH_024, no cookie, lastLoginAt untouched', async () => {
     const { email, password, user } = await makeUser({ status: 'DISABLED' })
     const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_024' })
+    expect(res).toMatchObject({ status: 'error' })
     expect(res.message).toMatch(/khóa/)
     expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
     expect(
-      (await payload.findByID({ collection: 'users', id: user.id, depth: 0 })).lastLoginAt,
+      (await payload.findByID({ collection: 'students', id: user.id, depth: 0 })).lastLoginAt,
     ).toBeFalsy()
   })
 
   it('PENDING_VERIFICATION: AUTH_022, pending_email set, points at /xac-thuc-otp', async () => {
     const { email, password } = await makeUser({ status: 'PENDING_VERIFICATION' })
     const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_022', redirectTo: '/xac-thuc-otp' })
+    expect(res).toMatchObject({ status: 'error', redirectTo: '/xac-thuc-otp' })
     expect(ctx.cookieJar.get('pending_email')).toBe(email)
     expect(ctx.cookieJar.has(ACCESS_COOKIE)).toBe(false)
   })
@@ -281,7 +268,7 @@ describe('loginAction — status gate', () => {
 
     await run(form({ email, password }))
 
-    expect(await redis.exists(`otp:verify:${email}`)).toBe(1)
+    expect(await readOtp(payload, email)).toBeTruthy()
     expect(sendEmail).toHaveBeenCalledTimes(1)
   })
 
@@ -301,7 +288,7 @@ describe('loginAction — status gate', () => {
 
     const res = await run(form({ email, password: 'WrongPass1' }))
 
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_021' })
+    expect(res).toMatchObject({ status: 'error', message: BAD_CREDENTIALS })
     expect(sendEmail).not.toHaveBeenCalled()
   })
 })
@@ -312,7 +299,9 @@ describe('loginAction — Payload lockout', () => {
     for (let i = 0; i < 5; i++) await run(form({ email, password: 'WrongPass1' }))
 
     const res = await run(form({ email, password }))
-    expect(res).toMatchObject({ status: 'error', code: 'AUTH_023' })
+    // The lockout copy is now the only thing separating this from a wrong password.
+    expect(res).toMatchObject({ status: 'error' })
+    expect(res.message).not.toBe(BAD_CREDENTIALS)
     expect(res.message).toMatch(/\d/)
   })
 })
