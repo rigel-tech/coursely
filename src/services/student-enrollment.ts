@@ -2,12 +2,11 @@
 
 import configPromise from '@payload-config'
 import { getPayload, Payload, ValidationError, type PayloadRequest } from 'payload'
-import { getSessionStudent } from '@/lib/auth/session-student'
 import { sendEnrollmentConfirmationEmail } from '@/email/send'
 import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
 import { createNotification } from '@/notifications/create'
 import { enrollmentCreatedNotification } from '@/notifications/templates/enrollment-created'
-import { Course } from '@/payload-types'
+import { Course, Student } from '@/payload-types'
 
 async function validateCourseForEnrollment(payload: Payload, courseId: number): Promise<Course> {
   const course: Course | null = await payload.findByID({
@@ -43,7 +42,7 @@ async function validateCourseForEnrollment(payload: Payload, courseId: number): 
  * excluded here to match that index's `WHERE` clause — a cancelled enrollment must not
  * block re-registration.
  */
-async function guardAgainstDuplicateEnrollment(
+async function checkExistingEnrollment(
   payload: Payload,
   studentId: number,
   courseId: number,
@@ -75,7 +74,7 @@ async function processEnrollmentTransaction(
   const req: Partial<PayloadRequest> = { transactionID }
 
   try {
-    await guardAgainstDuplicateEnrollment(payload, studentId, course.id)
+    await checkExistingEnrollment(payload, studentId, course.id)
 
     try {
       await payload.create({
@@ -117,27 +116,6 @@ async function processEnrollmentTransaction(
   }
 }
 
-/**
- * Saves the full name and phone submitted alongside a registration
- * (specs/009-enrollment-profile-completeness). A plain `payload.update`, committed on its
- * own — not part of `processEnrollmentTransaction` — so the correction survives even when
- * the registration attempt that follows it is refused for an unrelated reason (FR-005).
- */
-export async function updateStudentProfile(
-  studentId: number,
-  fullName: string,
-  phone: string,
-): Promise<void> {
-  const payload = await getPayload({ config: configPromise })
-
-  await payload.update({
-    collection: 'students',
-    id: studentId,
-    data: { fullName, phone },
-    overrideAccess: true,
-  })
-}
-
 /** The course's public slug, or `null` when no course carries that id. */
 export async function findCourseSlug(courseId: number): Promise<string | null> {
   const payload = await getPayload({ config: configPromise })
@@ -154,12 +132,12 @@ export async function findCourseSlug(courseId: number): Promise<string | null> {
   return course?.slug ?? null
 }
 
-export async function createStudentEnrollment(courseId: number): Promise<void> {
-  const student = await getSessionStudent()
-  if (!student || student.status !== 'ACTIVE') {
-    throw new Error('Vui lòng đăng nhập để đăng ký khóa học.')
-  }
-
+/**
+ * Creates the enrollment for `student`, already resolved and confirmed `ACTIVE` by the
+ * caller (`createEnrollmentAction`) — this does not re-fetch or re-check the session
+ * itself, to avoid doing that work twice on every registration.
+ */
+export async function createStudentEnrollment(courseId: number, student: Student): Promise<void> {
   const payload = await getPayload({ config: configPromise })
   const course = await validateCourseForEnrollment(payload, courseId)
 

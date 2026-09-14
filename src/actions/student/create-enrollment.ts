@@ -1,10 +1,7 @@
 'use server'
 
-import {
-  createStudentEnrollment,
-  findCourseSlug,
-  updateStudentProfile,
-} from '@/services/student-enrollment'
+import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
+import { updateStudentProfile } from '@/services/student-profile'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
 import { enrollmentProfileSchema } from '@/lib/validation/enrollment-profile-schema'
@@ -95,7 +92,7 @@ export async function createEnrollmentAction(
     // Saved before attempting the enrollment, and not part of its transaction, so a
     // correction survives a refusal for an unrelated reason below (FR-005).
     await updateStudentProfile(student.id, profile.data.fullName, profile.data.phone)
-    await createStudentEnrollment(parsed.data.courseId)
+    await createStudentEnrollment(parsed.data.courseId, student)
   } catch (error) {
     // The one refusal with copy of its own so far (specs/008-enrollment-duplicate-guard).
     // Anything else is rethrown — an error nobody wrote a message for is a bug, not a

@@ -11,7 +11,7 @@ The caller (a route or action, see Decision 2) resolves `studentId` via
 `getSessionStudent()` first; the service functions never resolve a session themselves.
 
 **Rationale**: this is the same shape every prior feature in this session already used —
-`findCourseSlug`, `updateStudentProfile`, `guardAgainstDuplicateEnrollment` all take a caller-
+`findCourseSlug`, `updateStudentProfile`, `checkExistingEnrollment` all take a caller-
 resolved id and use `overrideAccess: true` scoped by an explicit `where`. Loosening
 `Notifications.access` to admit any authenticated principal was explicitly ruled out
 during specification: `authenticated` means "staff" in this codebase, and widening it to

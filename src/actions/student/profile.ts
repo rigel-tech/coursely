@@ -7,6 +7,7 @@ import { getPayload, type PayloadRequest } from 'payload'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { profileSchema } from '@/lib/validation/profile-schema'
 import type { ProfileState } from '@/lib/constants/profile-state'
+import { updateStudentProfile } from '@/services/student-profile'
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024 // 5MB
@@ -82,13 +83,7 @@ export async function updateProfileAction(formData: FormData): Promise<ProfileSt
       avatarMediaId = mediaDoc.id
     }
 
-    await payload.update({
-      collection: 'students',
-      id: student.id,
-      data: { fullName, phone, ...(avatarMediaId ? { avatar: avatarMediaId } : {}) },
-      overrideAccess: true,
-      req,
-    })
+    await updateStudentProfile(student.id, fullName, phone, { avatarMediaId, req })
 
     if (transactionID) await payload.db.commitTransaction(transactionID)
   } catch (error) {

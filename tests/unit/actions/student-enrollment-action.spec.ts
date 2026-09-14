@@ -10,8 +10,11 @@ import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
 // enrol and where an unauthenticated visitor is sent.
 vi.mock('@/services/student-enrollment', () => ({
   createStudentEnrollment: vi.fn(),
-  updateStudentProfile: vi.fn(),
   findCourseSlug: vi.fn(),
+}))
+
+vi.mock('@/services/student-profile', () => ({
+  updateStudentProfile: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/session-student', () => ({
@@ -19,11 +22,8 @@ vi.mock('@/lib/auth/session-student', () => ({
 }))
 
 import { getSessionStudent } from '@/lib/auth/session-student'
-import {
-  createStudentEnrollment,
-  updateStudentProfile,
-  findCourseSlug,
-} from '@/services/student-enrollment'
+import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
+import { updateStudentProfile } from '@/services/student-profile'
 
 /** Only the fields the action reads. The rest of `Student` is irrelevant to this decision. */
 const studentWith = (status: Student['status']) => ({ id: 7, status }) as Student
@@ -105,7 +105,7 @@ describe('createEnrollmentAction — the path that enrols', () => {
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    expect(createStudentEnrollment).toHaveBeenCalledWith(12)
+    expect(createStudentEnrollment).toHaveBeenCalledWith(12, studentWith('ACTIVE'))
   })
 
   it('rejects an invalid course id before looking anything up', async () => {

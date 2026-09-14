@@ -1,21 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { getPayload, ValidationError } from 'payload'
-import { getSessionStudent } from '@/lib/auth/session-student'
-import { createStudentEnrollment, updateStudentProfile } from '@/services/student-enrollment'
+import { createStudentEnrollment } from '@/services/student-enrollment'
 import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
+import type { Student } from '@/payload-types'
 
 vi.mock('payload', async (importOriginal) => ({
   ...(await importOriginal<typeof import('payload')>()),
   getPayload: vi.fn(),
 }))
-vi.mock('@/lib/auth/session-student', () => ({ getSessionStudent: vi.fn() }))
+
+const activeStudent = { id: 7, status: 'ACTIVE' } as Student
 
 /** A `payload` stand-in with no existing enrollment and no `db` transaction plumbing. */
 const payloadStub = (overrides: {
   create?: ReturnType<typeof vi.fn>
   find?: ReturnType<typeof vi.fn>
-  update?: ReturnType<typeof vi.fn>
 }) => ({
   create: overrides.create ?? vi.fn().mockResolvedValue({ id: 31 }),
   db: {
@@ -26,16 +26,14 @@ const payloadStub = (overrides: {
   find: overrides.find ?? vi.fn().mockResolvedValue({ docs: [] }),
   findByID: vi.fn().mockResolvedValue({ id: 12, title: 'Frontend cơ bản' }),
   logger: { error: vi.fn() },
-  update: overrides.update ?? vi.fn().mockResolvedValue({ id: 7 }),
 })
 
 describe('createStudentEnrollment', () => {
-  it('creates an enrollment for the current student and selected course', async () => {
+  it('creates an enrollment for the given student and course', async () => {
     const create = vi.fn().mockResolvedValue({ id: 31 })
-    vi.mocked(getSessionStudent).mockResolvedValue({ id: 7, status: 'ACTIVE' } as never)
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ create }) as never)
 
-    await expect(createStudentEnrollment(12)).resolves.toBeUndefined()
+    await expect(createStudentEnrollment(12, activeStudent)).resolves.toBeUndefined()
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: 'enrollments',
@@ -49,33 +47,25 @@ describe('createStudentEnrollment', () => {
       }),
     )
   })
-
-  it('rejects enrollment creation without an active student session', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(null)
-
-    await expect(createStudentEnrollment(12)).rejects.toThrow(
-      'Vui lòng đăng nhập để đăng ký khóa học.',
-    )
-  })
 })
 
 describe('createStudentEnrollment — the duplicate guard', () => {
   it('refuses when an active enrollment for this student and course already exists', async () => {
     const create = vi.fn()
     const find = vi.fn().mockResolvedValue({ docs: [{ id: 99, enrollmentStatus: 'NEW' }] })
-    vi.mocked(getSessionStudent).mockResolvedValue({ id: 7, status: 'ACTIVE' } as never)
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ create, find }) as never)
 
-    await expect(createStudentEnrollment(12)).rejects.toBeInstanceOf(EnrollmentAlreadyExists)
+    await expect(createStudentEnrollment(12, activeStudent)).rejects.toBeInstanceOf(
+      EnrollmentAlreadyExists,
+    )
     expect(create).not.toHaveBeenCalled()
   })
 
   it('scopes the pre-check to exclude CANCELLED enrollments (FR-008)', async () => {
     const find = vi.fn().mockResolvedValue({ docs: [] })
-    vi.mocked(getSessionStudent).mockResolvedValue({ id: 7, status: 'ACTIVE' } as never)
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ find }) as never)
 
-    await createStudentEnrollment(12)
+    await createStudentEnrollment(12, activeStudent)
 
     expect(find).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -97,28 +87,10 @@ describe('createStudentEnrollment — the duplicate guard', () => {
     const create = vi
       .fn()
       .mockRejectedValue(new ValidationError({ collection: 'enrollments', errors: [] }))
-    vi.mocked(getSessionStudent).mockResolvedValue({ id: 7, status: 'ACTIVE' } as never)
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ create }) as never)
 
-    await expect(createStudentEnrollment(12)).rejects.toBeInstanceOf(EnrollmentAlreadyExists)
-  })
-})
-
-// specs/009-enrollment-profile-completeness
-describe('updateStudentProfile', () => {
-  it('saves the submitted full name and phone on the student record', async () => {
-    const update = vi.fn().mockResolvedValue({ id: 7 })
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ update }) as never)
-
-    await updateStudentProfile(7, 'Nguyễn Văn A', '0987654321')
-
-    expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collection: 'students',
-        id: 7,
-        data: { fullName: 'Nguyễn Văn A', phone: '0987654321' },
-        overrideAccess: true,
-      }),
+    await expect(createStudentEnrollment(12, activeStudent)).rejects.toBeInstanceOf(
+      EnrollmentAlreadyExists,
     )
   })
 })
