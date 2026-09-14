@@ -3,7 +3,7 @@
 ## Decision 1 — Ordering: sign-in and standing gates run before the profile-completeness gate
 
 **Decision**: Inside `createEnrollmentAction`, the profile-completeness check runs _after_
-the existing sign-in check (`signInFirst`) and account-standing check (`STANDING_REFUSAL`),
+the existing sign-in check (`requireLogin`) and account-standing check (`STANDING_REFUSAL`),
 and _before_ the course/duplicate checks already in `createStudentEnrollment`. It is not a
 top-level Zod shape check like `courseId`'s.
 

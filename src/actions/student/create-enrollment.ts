@@ -71,7 +71,7 @@ export async function createEnrollmentAction(
   }
 
   const student = await getSessionStudent()
-  if (!student) return signInFirst(parsed.data.courseId)
+  if (!student) return requireLogin(parsed.data.courseId)
 
   // Default-deny: anything that is not ACTIVE is refused, and told why. Sending these
   // accounts to sign-in would loop — signing in again changes no account's standing.
@@ -86,6 +86,7 @@ export async function createEnrollmentAction(
     fullName: input.fullName,
     phone: input.phone,
   })
+
   if (!profile.success) {
     return { status: 'error', message: PROFILE_INCOMPLETE_MESSAGE }
   }
@@ -112,7 +113,7 @@ export async function createEnrollmentAction(
 // caller-supplied destination is the open redirect this avoids. `/khoa-hoc/<slug>` is the
 // course page's public URL; the `/courses/<slug>` folder path reaches the same page but is
 // not a URL to hand anyone.
-async function signInFirst(courseId: number): Promise<CreateEnrollmentState> {
+async function requireLogin(courseId: number): Promise<CreateEnrollmentState> {
   const slug = await findCourseSlug(courseId)
   const callbackUrl = slug ? `/khoa-hoc/${slug}` : '/khoa-hoc'
 
