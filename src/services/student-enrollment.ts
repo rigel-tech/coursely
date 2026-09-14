@@ -1,42 +1,51 @@
 'use server'
 
 import configPromise from '@payload-config'
-import { getPayload, type PayloadRequest } from 'payload'
+import { getPayload, Payload, type PayloadRequest } from 'payload'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { sendEnrollmentConfirmationEmail } from '@/email/send'
-import type { Enrollment } from '@/payload-types'
+import { Course } from '@/payload-types'
 
-/** Creates a self-registration for the currently authenticated student. */
-export async function createStudentEnrollment(courseId: number): Promise<Enrollment> {
-  const student = await getSessionStudent()
-  if (!student || student.status !== 'ACTIVE') {
-    throw new Error('Vui lòng đăng nhập để đăng ký khóa học.')
+async function validateCourseForEnrollment(payload: Payload, courseId: number): Promise<Course> {
+  const course: Course | null = await payload.findByID({
+    collection: 'courses',
+    id: courseId,
+    depth: 0,
+    draft: false,
+    overrideAccess: true,
+  })
+
+  if (!course) {
+    throw new Error('Khóa học không tồn tại.')
   }
 
-  const payload = await getPayload({ config: configPromise })
+  const now = new Date()
+
+  if (course.registrationStartAt && new Date(course.registrationStartAt) > now) {
+    throw new Error('Khóa học chưa đến thời gian mở đăng ký.')
+  }
+
+  if (course.registrationEndAt && new Date(course.registrationEndAt) < now) {
+    throw new Error('Thời hạn đăng ký khóa học này đã kết thúc.')
+  }
+
+  return course
+}
+
+async function processEnrollmentTransaction(
+  payload: Payload,
+  studentId: number,
+  course: Course,
+): Promise<void> {
   const transactionID = (await payload.db.beginTransaction()) ?? undefined
   const req: Partial<PayloadRequest> = { transactionID }
 
-  let enrollment: Enrollment
-  let courseTitle: string
-
   try {
-    const course = await payload.findByID({
-      collection: 'courses',
-      id: courseId,
-      depth: 0,
-      draft: false,
-      overrideAccess: true,
-      req,
-    })
-
-    courseTitle = course.title
-
-    enrollment = await payload.create({
+    await payload.create({
       collection: 'enrollments',
       data: {
-        student: student.id,
-        course: courseId,
+        student: studentId,
+        course: course.id,
         registrationSource: 'SELF_REGISTRATION',
         enrollmentStatus: 'NEW',
         paymentStatus: 'UNPAID',
@@ -50,11 +59,11 @@ export async function createStudentEnrollment(courseId: number): Promise<Enrollm
     await payload.create({
       collection: 'notifications',
       data: {
-        student: student.id,
+        student: studentId,
         type: 'ENROLLMENT_CREATED',
         title: 'Đăng ký khóa học thành công',
         content: `Bạn đã đăng ký khóa học "${course.title}" thành công. Đơn đăng ký đang chờ trung tâm xác nhận.`,
-        metadata: { course: courseId },
+        metadata: { course: course.id },
         isRead: false,
       },
       draft: false,
@@ -67,11 +76,36 @@ export async function createStudentEnrollment(courseId: number): Promise<Enrollm
     if (transactionID) await payload.db.rollbackTransaction(transactionID)
     throw error
   }
+}
 
-  // Tác vụ gửi email nằm ngoài transaction (chạy sau khi commit thành công)
-  void sendEnrollmentConfirmationEmail(payload, student.email, courseTitle).catch((error) =>
+/** The course's public slug, or `null` when no course carries that id. */
+export async function findCourseSlug(courseId: number): Promise<string | null> {
+  const payload = await getPayload({ config: configPromise })
+
+  const course = await payload.findByID({
+    collection: 'courses',
+    id: courseId,
+    depth: 0,
+    disableErrors: true,
+    draft: false,
+    overrideAccess: true,
+  })
+
+  return course?.slug ?? null
+}
+
+export async function createStudentEnrollment(courseId: number): Promise<void> {
+  const student = await getSessionStudent()
+  if (!student || student.status !== 'ACTIVE') {
+    throw new Error('Vui lòng đăng nhập để đăng ký khóa học.')
+  }
+
+  const payload = await getPayload({ config: configPromise })
+  const course = await validateCourseForEnrollment(payload, courseId)
+
+  await processEnrollmentTransaction(payload, student.id, course)
+
+  void sendEnrollmentConfirmationEmail(payload, student.email, course.title).catch((error) =>
     payload.logger.error({ error }, 'ENROLLMENT_CONFIRMATION email failed'),
   )
-
-  return enrollment
 }
