@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { profileSchema } from '@/lib/validation/profile-schema'
+import { makeProfileSchema, profileSchema } from '@/lib/validation/profile-schema'
 
 describe('profileSchema', () => {
   it('accepts a valid full name and phone number', () => {
@@ -32,5 +32,38 @@ describe('profileSchema', () => {
       expect(res.data.fullName).toBe('  Nguyễn Văn A  ')
       expect(res.data.phone).toBe('')
     }
+  })
+
+  // specs/009-enrollment-profile-completeness: `profileSchema` is `makeProfileSchema()`
+  // with no options, so `/tai-khoan` keeps accepting a blank name/phone exactly as above —
+  // this pins that default explicitly, on the factory itself, not just on the alias.
+  it('makeProfileSchema() with no options is exactly as lenient as profileSchema', () => {
+    expect(makeProfileSchema().safeParse({ fullName: '', phone: '' }).success).toBe(true)
+  })
+})
+
+describe('makeProfileSchema({ required: true })', () => {
+  const strict = makeProfileSchema({ required: true })
+
+  it('accepts a valid full name and phone number', () => {
+    expect(strict.safeParse({ fullName: 'Nguyễn Văn A', phone: '0987654321' }).success).toBe(true)
+  })
+
+  it('rejects a blank full name', () => {
+    expect(strict.safeParse({ fullName: '', phone: '0987654321' }).success).toBe(false)
+  })
+
+  it('rejects a blank phone', () => {
+    expect(strict.safeParse({ fullName: 'Nguyễn Văn A', phone: '' }).success).toBe(false)
+  })
+
+  it('rejects a malformed phone the same way the lenient schema does', () => {
+    expect(strict.safeParse({ fullName: 'Nguyễn Văn A', phone: '123456' }).success).toBe(false)
+  })
+
+  it('trims the full name — unlike the lenient schema', () => {
+    const res = strict.safeParse({ fullName: '  Nguyễn Văn A  ', phone: '0987654321' })
+    expect(res.success).toBe(true)
+    if (res.success) expect(res.data.fullName).toBe('Nguyễn Văn A')
   })
 })

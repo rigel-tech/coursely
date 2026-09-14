@@ -43,11 +43,34 @@ describe('CourseRegistrationCTA', () => {
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    render(<CourseRegistrationCTA courseId={12} courseTitle="Frontend" />)
+    render(
+      <CourseRegistrationCTA
+        courseId={12}
+        courseTitle="Frontend"
+        fullName="Nguyễn Văn A"
+        phone="0987654321"
+      />,
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
 
     await waitFor(() => expect(screen.getByText('Mới đăng ký')).toBeTruthy())
     expect(screen.queryByRole('button', { name: 'Gửi đăng ký' })).toBeNull()
+  })
+
+  it('passes the student profile fields through to the registration form (specs/009)', () => {
+    render(
+      <CourseRegistrationCTA
+        courseId={12}
+        courseTitle="Frontend"
+        email="a@b.com"
+        fullName="Nguyễn Văn A"
+        phone="0987654321"
+      />,
+    )
+
+    expect(screen.getByText('Nguyễn Văn A')).toBeTruthy()
+    expect(screen.getByText('0987654321')).toBeTruthy()
+    expect(screen.getByText('a@b.com')).toBeTruthy()
   })
 })

@@ -18,7 +18,10 @@ type EnrollmentStatus = keyof typeof ENROLLMENT_STATUS_LABELS
 type CourseRegistrationCTAProps = {
   courseId: number
   courseTitle: string
+  email?: string
   enrollmentStatus?: EnrollmentStatus
+  fullName?: string | null
+  phone?: string | null
 }
 
 /**
@@ -31,7 +34,10 @@ type CourseRegistrationCTAProps = {
 export function CourseRegistrationCTA({
   courseId,
   courseTitle,
+  email,
   enrollmentStatus,
+  fullName,
+  phone,
 }: CourseRegistrationCTAProps) {
   const [status, setStatus] = useState(enrollmentStatus)
 
@@ -46,6 +52,9 @@ export function CourseRegistrationCTA({
         <CourseRegistrationForm
           courseId={courseId}
           courseTitle={courseTitle}
+          email={email}
+          fullName={fullName}
+          phone={phone}
           onSuccess={() => setStatus('NEW')}
         />
       )}

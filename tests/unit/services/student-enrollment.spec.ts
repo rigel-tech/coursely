@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { getPayload, ValidationError } from 'payload'
 import { getSessionStudent } from '@/lib/auth/session-student'
-import { createStudentEnrollment } from '@/services/student-enrollment'
+import { createStudentEnrollment, ensureCompleteProfile } from '@/services/student-enrollment'
 import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
 
 vi.mock('payload', async (importOriginal) => ({
@@ -15,6 +15,7 @@ vi.mock('@/lib/auth/session-student', () => ({ getSessionStudent: vi.fn() }))
 const payloadStub = (overrides: {
   create?: ReturnType<typeof vi.fn>
   find?: ReturnType<typeof vi.fn>
+  update?: ReturnType<typeof vi.fn>
 }) => ({
   create: overrides.create ?? vi.fn().mockResolvedValue({ id: 31 }),
   db: {
@@ -25,6 +26,7 @@ const payloadStub = (overrides: {
   find: overrides.find ?? vi.fn().mockResolvedValue({ docs: [] }),
   findByID: vi.fn().mockResolvedValue({ id: 12, title: 'Frontend cơ bản' }),
   logger: { error: vi.fn() },
+  update: overrides.update ?? vi.fn().mockResolvedValue({ id: 7 }),
 })
 
 describe('createStudentEnrollment', () => {
@@ -99,5 +101,24 @@ describe('createStudentEnrollment — the duplicate guard', () => {
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ create }) as never)
 
     await expect(createStudentEnrollment(12)).rejects.toBeInstanceOf(EnrollmentAlreadyExists)
+  })
+})
+
+// specs/009-enrollment-profile-completeness
+describe('ensureCompleteProfile', () => {
+  it('saves the submitted full name and phone on the student record', async () => {
+    const update = vi.fn().mockResolvedValue({ id: 7 })
+    vi.mocked(getPayload).mockResolvedValue(payloadStub({ update }) as never)
+
+    await ensureCompleteProfile(7, 'Nguyễn Văn A', '0987654321')
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'students',
+        id: 7,
+        data: { fullName: 'Nguyễn Văn A', phone: '0987654321' },
+        overrideAccess: true,
+      }),
+    )
   })
 })

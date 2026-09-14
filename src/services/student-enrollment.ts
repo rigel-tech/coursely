@@ -117,6 +117,27 @@ async function processEnrollmentTransaction(
   }
 }
 
+/**
+ * Saves the full name and phone submitted alongside a registration
+ * (specs/009-enrollment-profile-completeness). A plain `payload.update`, committed on its
+ * own — not part of `processEnrollmentTransaction` — so the correction survives even when
+ * the registration attempt that follows it is refused for an unrelated reason (FR-005).
+ */
+export async function ensureCompleteProfile(
+  studentId: number,
+  fullName: string,
+  phone: string,
+): Promise<void> {
+  const payload = await getPayload({ config: configPromise })
+
+  await payload.update({
+    collection: 'students',
+    id: studentId,
+    data: { fullName, phone },
+    overrideAccess: true,
+  })
+}
+
 /** The course's public slug, or `null` when no course carries that id. */
 export async function findCourseSlug(courseId: number): Promise<string | null> {
   const payload = await getPayload({ config: configPromise })

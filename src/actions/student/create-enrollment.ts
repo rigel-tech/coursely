@@ -1,8 +1,13 @@
 'use server'
 
-import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
+import {
+  createStudentEnrollment,
+  ensureCompleteProfile,
+  findCourseSlug,
+} from '@/services/student-enrollment'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
+import { enrollmentProfileSchema } from '@/lib/validation/enrollment-profile-schema'
 import type { Student } from '@/payload-types'
 import { z } from 'zod'
 
@@ -16,9 +21,25 @@ export type CreateEnrollmentState = {
   redirectTo?: string
 }
 
+/**
+ * `fullName`/`phone` are optional here — a signed-out visitor's form has no profile to
+ * send, and must still reach the sign-in redirect rather than a "profile incomplete"
+ * refusal (specs/009-enrollment-profile-completeness, research.md Decision 1). They
+ * become required only once a signed-in, `ACTIVE` student is confirmed, via
+ * `enrollmentProfileSchema`.
+ */
+export type CreateEnrollmentInput = {
+  courseId: number
+  fullName?: string
+  phone?: string
+}
+
 const createEnrollmentSchema = z.object({
   courseId: z.number().int().positive(),
 })
+
+const PROFILE_INCOMPLETE_MESSAGE =
+  'Vui lòng bổ sung đầy đủ họ và tên, số điện thoại trước khi đăng ký khóa học.'
 
 // Copy for every standing that cannot enrol. Typed as `Student['status']` minus `ACTIVE`
 // so adding a status to the collection stops compiling here until someone writes its
@@ -41,8 +62,10 @@ const STANDING_REFUSAL: Record<Exclude<Student['status'], 'ACTIVE'>, string> = {
  * outranks anything about the course itself, so a visitor is never told a deadline passed
  * on a course they have not proven they may see.
  */
-export async function createEnrollmentAction(courseId: number): Promise<CreateEnrollmentState> {
-  const parsed = createEnrollmentSchema.safeParse({ courseId })
+export async function createEnrollmentAction(
+  input: CreateEnrollmentInput,
+): Promise<CreateEnrollmentState> {
+  const parsed = createEnrollmentSchema.safeParse({ courseId: input.courseId })
   if (!parsed.success) {
     return { status: 'error', message: 'Khóa học không hợp lệ.' }
   }
@@ -56,7 +79,21 @@ export async function createEnrollmentAction(courseId: number): Promise<CreateEn
     return { status: 'error', message: STANDING_REFUSAL[student.status] }
   }
 
+  // Checked only once a signed-in, ACTIVE student is confirmed — never ahead of the two
+  // checks above, or a signed-out visitor's empty fields would be misread as an
+  // incomplete profile instead of sending them to sign in (research.md Decision 1).
+  const profile = enrollmentProfileSchema.safeParse({
+    fullName: input.fullName,
+    phone: input.phone,
+  })
+  if (!profile.success) {
+    return { status: 'error', message: PROFILE_INCOMPLETE_MESSAGE }
+  }
+
   try {
+    // Saved before attempting the enrollment, and not part of its transaction, so a
+    // correction survives a refusal for an unrelated reason below (FR-005).
+    await ensureCompleteProfile(student.id, profile.data.fullName, profile.data.phone)
     await createStudentEnrollment(parsed.data.courseId)
   } catch (error) {
     // The one refusal with copy of its own so far (specs/008-enrollment-duplicate-guard).
