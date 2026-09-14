@@ -123,7 +123,7 @@ const queryHomePage = cache(async () => {
     overrideAccess: draft,
     where: {
       slug: {
-        equals: '/',
+        equals: 'home',
       },
     },
   })
