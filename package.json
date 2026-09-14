@@ -20,6 +20,7 @@
     "prepare": "husky",
     "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && rm pnpm-lock.yaml && pnpm --ignore-workspace install",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
+    "seed": "cross-env NODE_OPTIONS=--no-deprecation payload run scripts/seed.ts",
     "typecheck": "tsc --noEmit",
     "lint:theme": "node scripts/theme-guard.mjs",
     "test": "pnpm run test:unit && pnpm run test:int && pnpm run test:e2e",

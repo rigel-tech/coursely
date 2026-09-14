@@ -25,7 +25,7 @@ import { getServerSideURL } from './utilities/getURL'
 import { en } from 'payload/i18n/en'
 import { vi } from 'payload/i18n/vi'
 import { migrations } from './migrations'
-import { autoSeed } from './seed'
+import { autoSeed } from './seed/index'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -143,7 +143,7 @@ export default buildConfig({
     if (
       process.env.NODE_ENV !== 'test' &&
       !process.env.VITEST &&
-      !process.env.NEXT_PHASE &&
+      process.env.NEXT_PHASE !== 'phase-production-build' &&
       process.env.AUTO_SEED !== 'false'
     ) {
       await autoSeed(payload)

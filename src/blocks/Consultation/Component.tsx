@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useCallback, useState } from 'react'
-import type { FormFieldBlock, Form as FormType } from '@payloadcms/plugin-form-builder/types'
-import { useForm, FormProvider } from 'react-hook-form'
+import type { Form as FormType } from '@payloadcms/plugin-form-builder/types'
+import { useForm, FormProvider, type FieldValues } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import RichText from '@/components/public/RichText'
 import { Button } from '@/components/public/ui/button'
@@ -14,13 +14,13 @@ import {
   CardTitle,
 } from '@/components/public/ui/card'
 import { fields } from '@/blocks/Form/fields'
-import { getClientSideURL } from '@/utilities/getURL'
+import { submitFormAction } from '@/actions/forms/submit-form'
 
 export type ConsultationBlockProps = {
-  badge?: string | null
-  title?: string | null
+  badge: string
+  title: string
   description?: string | null
-  steps?: { text?: string; id?: string }[] | null
+  steps?: { text?: string; id?: string }[]
   note?: string | null
   form?: FormType | null
   hotline?: string | null
@@ -28,19 +28,15 @@ export type ConsultationBlockProps = {
 }
 
 export const ConsultationBlock: React.FC<ConsultationBlockProps> = ({
-  badge = 'ĐĂNG KÝ TƯ VẤN',
-  title = 'Nhận lộ trình học riêng trong 24 giờ',
-  description = 'Để lại thông tin, chuyên viên học vụ sẽ gọi lại, kiểm tra trình độ nói miễn phí 15 phút và đề xuất khóa học phù hợp.',
-  steps = [
-    { text: 'Kiểm tra trình độ nói miễn phí với giảng viên' },
-    { text: 'Nhận lộ trình & lịch lớp phù hợp giờ làm của bạn' },
-    { text: 'Học thử 1 buổi trước khi quyết định đăng ký' },
-  ],
-  note = 'Trung tâm không thu học phí trực tuyến. Học phí được xác nhận và thanh toán tại quầy học vụ sau khi bạn chốt lớp.',
-  form: formFromProps,
-  hotline = '1900 6789',
+  badge,
+  title,
+  description,
+  steps,
+  note,
+  form,
+  hotline,
 }) => {
-  const formObj = typeof formFromProps === 'object' && formFromProps !== null ? formFromProps : null
+  const isFormObject = form !== null
   const {
     id: formID,
     confirmationMessage,
@@ -48,10 +44,11 @@ export const ConsultationBlock: React.FC<ConsultationBlockProps> = ({
     redirect,
     submitButtonLabel,
     title: formTitle,
-  } = formObj || {}
+    fields: formFields,
+  } = form || {}
 
   const formMethods = useForm({
-    defaultValues: formObj?.fields,
+    defaultValues: formFields,
   })
   const {
     control,
@@ -66,62 +63,31 @@ export const ConsultationBlock: React.FC<ConsultationBlockProps> = ({
   const router = useRouter()
 
   const onSubmit = useCallback(
-    (data: FormFieldBlock[]) => {
+    (data: FieldValues) => {
       if (!formID) return
-
-      let loadingTimerID: ReturnType<typeof setTimeout>
       const submitForm = async () => {
         setError(undefined)
-
-        const dataToSend = Object.entries(data).map(([name, value]) => ({
-          field: name,
-          value,
-        }))
-
-        loadingTimerID = setTimeout(() => {
-          setIsLoading(true)
-        }, 1000)
-
+        setIsLoading(true)
         try {
-          const req = await fetch(`${getClientSideURL()}/api/form-submissions`, {
-            body: JSON.stringify({
-              form: formID,
-              submissionData: dataToSend,
-            }),
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            method: 'POST',
+          const res = await submitFormAction({
+            formID: Number(formID),
+            formData: data,
           })
-
-          const res = await req.json()
-
-          clearTimeout(loadingTimerID)
-
-          if (req.status >= 400) {
-            setIsLoading(false)
-            setError({
-              message: res.errors?.[0]?.message || 'Internal Server Error',
-              status: res.status,
-            })
+          setIsLoading(false)
+          if (!res.success) {
+            setError({ message: res.message })
             return
           }
-
-          setIsLoading(false)
           setHasSubmitted(true)
-
           if (confirmationType === 'redirect' && redirect?.url) {
             router.push(redirect.url)
           }
         } catch (err) {
           console.warn(err)
           setIsLoading(false)
-          setError({
-            message: 'Đã có lỗi xảy ra, vui lòng thử lại sau.',
-          })
+          setError({ message: 'Đã có lỗi xảy ra, vui lòng thử lại sau.' })
         }
       }
-
       void submitForm()
     },
     [router, formID, redirect, confirmationType],
@@ -168,12 +134,9 @@ export const ConsultationBlock: React.FC<ConsultationBlockProps> = ({
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-xl">{formTitle || 'Đăng ký tư vấn miễn phí'}</CardTitle>
-            <CardDescription>
-              Chúng tôi liên hệ trong giờ hành chính, thứ 2 – thứ 7.
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            {formObj ? (
+            {isFormObject ? (
               <FormProvider {...formMethods}>
                 {!isLoading && hasSubmitted && confirmationType === 'message' && (
                   <div className="py-6 text-center">
@@ -193,12 +156,11 @@ export const ConsultationBlock: React.FC<ConsultationBlockProps> = ({
                 {!hasSubmitted && (
                   <form
                     className="flex flex-col gap-4"
-                    id={formID}
+                    id={String(formID)}
                     onSubmit={handleSubmit(onSubmit)}
                   >
                     <div className="flex flex-wrap -mx-2 gap-y-4">
-                      {formObj.fields?.map((field, index) => {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      {formFields?.map((field, index) => {
                         const Field: React.FC<any> =
                           fields?.[field.blockType as keyof typeof fields]
                         if (Field) {
@@ -207,7 +169,7 @@ export const ConsultationBlock: React.FC<ConsultationBlockProps> = ({
                           return (
                             <div key={index} className="px-2 w-full" style={{ width: `${width}%` }}>
                               <Field
-                                form={formObj}
+                                form={form}
                                 {...field}
                                 {...formMethods}
                                 control={control}
@@ -221,7 +183,7 @@ export const ConsultationBlock: React.FC<ConsultationBlockProps> = ({
                       })}
                     </div>
 
-                    <Button className="w-full mt-2" form={formID} type="submit">
+                    <Button className="w-full mt-2" form={String(formID)} type="submit">
                       {submitButtonLabel || 'Gửi thông tin đăng ký'}
                     </Button>
                   </form>
@@ -230,8 +192,6 @@ export const ConsultationBlock: React.FC<ConsultationBlockProps> = ({
             ) : (
               <div className="py-8 text-center text-muted-foreground text-sm border border-dashed rounded-lg">
                 Chưa chọn Form nào trong cài đặt Block.
-                <br />
-                Vui lòng vào trang Admin để liên kết một Biểu mẫu.
               </div>
             )}
 
