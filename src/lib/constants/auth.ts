@@ -1,62 +1,37 @@
 /** Tunables for the self-registration + OTP flow (§3.2, §5.1). */
 
-/** `registerAction` attempts allowed per IP per window. */
-export const REGISTER_RATE_LIMIT = 10
-export const REGISTER_RATE_WINDOW_SEC = 60 * 60
-
 /** Cookie that carries the address being verified from `/register` to `/xac-thuc-otp`. */
 export const PENDING_EMAIL_COOKIE = 'pending_email'
 export const PENDING_EMAIL_TTL_SEC = 15 * 60
 
-/** §7 login rate limits. Two axes, one 15-minute fixed window. */
-export const LOGIN_RATE_WINDOW_SEC = 15 * 60
-export const LOGIN_IP_LIMIT = 20
-export const LOGIN_EMAIL_LIMIT = 5
-
-/** `rememberMe` cookie lifetime; without it the refresh cookie is a session cookie. */
-export const REMEMBER_ME_MAX_AGE_SEC = 30 * 24 * 60 * 60
-
 /**
- * Payload's JWT cookie. The config sets no `cookiePrefix`, so it is the default
- * `payload`. Since the custom access/refresh scheme shipped, `proxy` reads this
- * **only for `/admin`** (Payload's own native sign-in); the student flow uses
- * `ACCESS_TOKEN_COOKIE` / `REFRESH_TOKEN_COOKIE` below. Must still track the
- * config `cookiePrefix` — see INVARIANTS.
- */
-export const AUTH_TOKEN_COOKIE = 'payload-token'
-
-/**
- * Custom student-session tokens (§ access+refresh sessions). `ACCESS` is a
- * stateless ~15-minute HS256 JWT verified in `proxy` with no datastore hit;
- * `REFRESH` is an opaque value whose SHA-256 hash keys a Redis session record.
- * Distinct from `AUTH_TOKEN_COOKIE` so a signed-in admin and a signed-in student
- * can coexist in one browser.
+ * The student-session cookies. Both carry a self-contained HS256 JWT — `ACCESS` a
+ * ~15-minute one, `REFRESH` one that lasts the session — so `proxy` can verify
+ * and renew with no datastore hit. Distinct from Payload's own `payload-token` so a
+ * signed-in admin and a signed-in student can coexist in one browser.
  */
 export const ACCESS_TOKEN_COOKIE = 'coursely-access'
 export const REFRESH_TOKEN_COOKIE = 'coursely-refresh'
 
-/** Access-token lifetime. Bounds how long a revoked session's access token stays usable. */
+/** How long an access token stays usable — and so how stale its `status` claim can be. */
 export const ACCESS_TTL_SEC = 15 * 60
 
 /**
- * Refresh-token lifetimes. With `rememberMe` the session is a rolling
- * `REFRESH_IDLE_TTL_SEC` window from the last renewal, capped by
- * `REFRESH_ABSOLUTE_TTL_SEC` from the session-line's creation. Without it the
- * refresh cookie is a browser-session cookie and the server record self-expires
- * after `REFRESH_NO_REMEMBER_TTL_SEC` of inactivity.
+ * How long a session lasts. One value for everyone: there is no "remember me" to opt
+ * into, so nothing varies it. It is both the refresh token's own lifetime and the
+ * refresh cookie's `maxAge` — the token has to outlive nothing the cookie does not, or
+ * a browser would keep presenting a cookie that can no longer buy an access token.
  */
-export const REFRESH_IDLE_TTL_SEC = 30 * 24 * 60 * 60
-export const REFRESH_ABSOLUTE_TTL_SEC = 90 * 24 * 60 * 60
-export const REFRESH_NO_REMEMBER_TTL_SEC = 12 * 60 * 60
+export const REFRESH_TTL_SEC = 30 * 24 * 60 * 60
 
 /**
- * Renewal concurrency. `REFRESH_LOCK_MS` is the single-flight lock hold on
- * `lock:sess:{sid}`; `RENEWAL_GRACE_SEC` is how long the winner's freshly-minted
- * tokens are cached at `race:{sid}` for a concurrent double-submit to pick up
- * instead of being mistaken for token reuse.
+ * Route prefixes `proxy` gates behind a signed-in `ACTIVE` account.
+ *
+ * A page that `rewrites.ts` gives a public Vietnamese URL to appears here **twice** —
+ * once under that URL and once under the folder it lives in. A rewrite adds a name, it
+ * does not retire the old one, and `proxy` runs before the rewrite, so it sees whichever
+ * of the two the browser asked for and nothing translates between them. Listing only the
+ * public name leaves the folder name ungated, and nothing anywhere errors;
+ * `tests/unit/repo/protected-prefixes.spec.ts` is what notices.
  */
-export const REFRESH_LOCK_MS = 5000
-export const RENEWAL_GRACE_SEC = 10
-
-/** Route prefixes `proxy` gates behind a signed-in `ACTIVE` account. */
-export const PROTECTED_PREFIXES = ['/tai-khoan', '/khoa-hoc-cua-toi'] as const
+export const PROTECTED_PREFIXES = ['/tai-khoan', '/student/account', '/khoa-hoc-cua-toi'] as const

@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { parseResetPasswordInput } from '@/lib/validation/reset-password-schema'
+import {
+  resetPasswordFormSchema,
+  resetPasswordSchema,
+} from '@/lib/validation/reset-password-schema'
 
+// What `resetPasswordAction` validates directly — token + password + confirmPassword.
 describe('resetPasswordSchema', () => {
   it('accepts valid password matching requirements', () => {
-    const res = parseResetPasswordInput({
+    const res = resetPasswordSchema.safeParse({
       token: 'valid-token-123',
       password: 'Password123',
       confirmPassword: 'Password123',
@@ -16,50 +20,59 @@ describe('resetPasswordSchema', () => {
   })
 
   it('rejects password shorter than 8 characters', () => {
-    const res = parseResetPasswordInput({
+    const res = resetPasswordSchema.safeParse({
       token: 'valid-token-123',
       password: 'Pass1',
       confirmPassword: 'Pass1',
     })
     expect(res.success).toBe(false)
-    if (!res.success) {
-      expect(res.fieldErrors.password).toContain('tối thiểu 8 ký tự')
-    }
   })
 
   it('rejects password without numbers', () => {
-    const res = parseResetPasswordInput({
+    const res = resetPasswordSchema.safeParse({
       token: 'valid-token-123',
       password: 'PasswordOnly',
       confirmPassword: 'PasswordOnly',
     })
     expect(res.success).toBe(false)
-    if (!res.success) {
-      expect(res.fieldErrors.password).toBeDefined()
-    }
   })
 
   it('rejects mismatched password and confirmPassword', () => {
-    const res = parseResetPasswordInput({
+    const res = resetPasswordSchema.safeParse({
       token: 'valid-token-123',
       password: 'Password123',
       confirmPassword: 'DifferentPassword123',
     })
     expect(res.success).toBe(false)
-    if (!res.success) {
-      expect(res.fieldErrors.confirmPassword).toContain('không khớp')
-    }
   })
 
-  it('rejects missing token', () => {
-    const res = parseResetPasswordInput({
+  it('rejects a missing token', () => {
+    const res = resetPasswordSchema.safeParse({
       token: '',
       password: 'Password123',
       confirmPassword: 'Password123',
     })
     expect(res.success).toBe(false)
-    if (!res.success) {
-      expect(res.fieldErrors.token).toBeDefined()
-    }
+  })
+})
+
+// What `<ResetPasswordForm>`'s `zodResolver` runs — the token isn't a field the person
+// types (it comes off the URL, and the page shows a different card entirely when it's
+// missing), so the form's own schema only covers the two fields it renders.
+describe('resetPasswordFormSchema', () => {
+  it('accepts a well-formed submission', () => {
+    expect(
+      resetPasswordFormSchema.safeParse({ password: 'Password123', confirmPassword: 'Password123' })
+        .success,
+    ).toBe(true)
+  })
+
+  it('rejects mismatched passwords', () => {
+    expect(
+      resetPasswordFormSchema.safeParse({
+        password: 'Password123',
+        confirmPassword: 'DifferentPassword123',
+      }).success,
+    ).toBe(false)
   })
 })

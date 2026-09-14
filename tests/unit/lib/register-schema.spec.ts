@@ -1,63 +1,64 @@
 import { describe, it, expect } from 'vitest'
 
-import { parseRegisterInput } from '@/lib/validation/register-schema'
+import { registerInputSchema } from '@/lib/validation/register-schema'
 
 const valid = {
   email: 'alice@example.com',
   password: 'abcd1234',
   confirmPassword: 'abcd1234',
   fullName: 'Alice',
-  phone: '',
-  terms: 'on',
 }
 
-describe('parseRegisterInput', () => {
+const parse = (raw: unknown) => registerInputSchema.safeParse(raw)
+
+describe('registerInputSchema', () => {
   it('accepts a well-formed submission', () => {
-    const result = parseRegisterInput(valid)
-    expect(result.success).toBe(true)
+    expect(parse(valid).success).toBe(true)
   })
 
   it('rejects a malformed email', () => {
-    const result = parseRegisterInput({ ...valid, email: 'not-an-email' })
-    expect(result.success).toBe(false)
-    if (!result.success) expect(result.fieldErrors.email).toBeTruthy()
+    expect(parse({ ...valid, email: 'not-an-email' }).success).toBe(false)
   })
 
   it('rejects a password under 8 characters', () => {
-    const result = parseRegisterInput({ ...valid, password: 'ab12', confirmPassword: 'ab12' })
-    expect(result.success).toBe(false)
-    if (!result.success) expect(result.fieldErrors.password).toBeTruthy()
+    expect(parse({ ...valid, password: 'ab12', confirmPassword: 'ab12' }).success).toBe(false)
   })
 
   it('rejects a password with no digit', () => {
-    const result = parseRegisterInput({
-      ...valid,
-      password: 'abcdefgh',
-      confirmPassword: 'abcdefgh',
-    })
-    expect(result.success).toBe(false)
-    if (!result.success) expect(result.fieldErrors.password).toBeTruthy()
+    expect(parse({ ...valid, password: 'abcdefgh', confirmPassword: 'abcdefgh' }).success).toBe(
+      false,
+    )
   })
 
   it('rejects a password with no letter', () => {
-    const result = parseRegisterInput({
-      ...valid,
-      password: '12345678',
-      confirmPassword: '12345678',
-    })
-    expect(result.success).toBe(false)
-    if (!result.success) expect(result.fieldErrors.password).toBeTruthy()
+    expect(parse({ ...valid, password: '12345678', confirmPassword: '12345678' }).success).toBe(
+      false,
+    )
   })
 
   it('flags confirmPassword when the two do not match', () => {
-    const result = parseRegisterInput({ ...valid, confirmPassword: 'abcd9999' })
-    expect(result.success).toBe(false)
-    if (!result.success) expect(result.fieldErrors.confirmPassword).toBeTruthy()
+    expect(parse({ ...valid, confirmPassword: 'abcd9999' }).success).toBe(false)
   })
 
-  it('requires the terms checkbox', () => {
-    const result = parseRegisterInput({ ...valid, terms: undefined })
-    expect(result.success).toBe(false)
-    if (!result.success) expect(result.fieldErrors.terms).toBeTruthy()
+  // Consent was dropped from registration, so a submission carrying no `terms` at all is the
+  // normal one. Left as its own case because the field used to be required: a schema that
+  // still demanded it would fail nothing else here, since every other case sends a full form.
+  it('asks for no terms consent', () => {
+    expect(parse({ ...valid, terms: undefined }).success).toBe(true)
+  })
+
+  it('trims a blank fullName and phone down to undefined, not an empty string', () => {
+    const result = parse({ ...valid, fullName: '   ', phone: '   ' })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.fullName).toBeUndefined()
+      expect(result.data.phone).toBeUndefined()
+    }
+  })
+
+  it('accepts an optional phone a non-form caller sends', () => {
+    const result = parse({ ...valid, phone: '0900000000' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.phone).toBe('0900000000')
   })
 })

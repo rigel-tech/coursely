@@ -57,7 +57,9 @@ valid; it just contains posts nobody published yet. Nothing in the response says
 ### The front end reads `post.populatedAuthors`, never `post.authors`
 
 **Rule** — Render bylines from `populatedAuthors`. Do not read `post.authors` in any front-end
-component, and do not "simplify" it to `authors` with a depth bump.
+component, and do not "simplify" it to `authors` with a depth bump. `users.fullName` is part
+of this rule, not a profile field that happens to sit there: it must not be renamed **or
+removed**, however staff-only `users` becomes.
 
 **Why it breaks silently** — `users` has `read: authenticated`, so for an anonymous request
 Payload's relationship population is filtered by access control and `authors` comes back as
@@ -68,11 +70,48 @@ copy `{ id, name }` past that boundary — its `name` is read from the user's `f
 so renaming that field silently blanks every byline. GraphQL also refuses to return mutated
 user data that differs from the schema, which is why the copy lives in its own field instead.
 
+The removal case is the live one. `users` shed every student field when students moved to
+their own collection, and `fullName` reads like one more of them — it is the single field
+left on a collection that is otherwise pure auth. `Posts.authors` still points at `users`,
+so the byline still comes from here; delete the field and the site renders authorless posts
+with a green build and a green test suite.
+
 **Where** — `src/collections/Users/index.ts` (`read: authenticated` in `access`; the
-`fullName` field the byline is copied from), `src/collections/Posts/hooks/populateAuthors.ts`
+`fullName` field the byline is copied from, pinned by
+`tests/unit/collections/users-notifications-config.spec.ts`),
+`src/collections/Posts/hooks/populateAuthors.ts`
 (`populateAuthors`, `name: authorDoc.fullName`, and the comment explaining the boundary),
 `src/collections/Posts/index.ts:197` (`populatedAuthors` field, `admin.disabled`), consumed at
 `src/heros/PostHero/index.tsx:12` (`PostHero`).
+
+**Where** — `src/collections/Students/index.ts` (`access.admin`), pinned by
+`tests/unit/collections/students-config.spec.ts`. The override itself is
+`node_modules/payload/dist/utilities/canAccessAdmin.js` (`canAccessAdmin`, the `else if` after
+`adminAccessFn`); `src/payload.config.ts` (`admin.user`) is what it overrides.
+
+### An access predicate for a staff-only collection must check `user.collection`, not `Boolean(user)`
+
+**Rule** — Any `access` function guarding a collection that only staff may touch tests
+`user?.collection === 'users'`. Never gate it on `Boolean(user)` alone. `authenticated`
+(`src/access/authenticated.ts`) already does this and is the predicate to reach for; a new one
+copies that check, never the truthiness shortcut.
+
+**Why it breaks silently** — every Payload auth collection has its own `POST /api/{slug}/login`
+that signs a `payload-token`, and `proxy`'s matcher excludes `/api/`, so `proxy` never sees
+those requests. Once a second auth collection exists (`students`), a signed-in student holds a
+valid `payload-token`. A `Boolean(user)` predicate cannot tell it apart from a staff token, so
+it grants the student every collection it guards over REST — reading the whole `users` table,
+minting staff accounts, resetting an admin password. Nothing throws, the build and tests stay
+green, and `Students.access.admin: () => false` does not help because that only gates the
+`/admin` UI, not the REST API. The `AccessArgs<User>` type actively hides it: it says the
+principal is a `User`, but at runtime it is whichever collection signed the token.
+
+**Where** — `src/access/authenticated.ts` (the `user?.collection === 'users'` check), used by
+every admin-content collection (`Users`, `Students`, `Media`, `Posts`, `Pages`, `Categories`,
+`Courses`, `CoursePhases`, `CourseObjectives`, `Classes`, `Notifications`). Pinned by
+`tests/unit/access/authenticated.spec.ts` and `tests/int/rest-access-isolation.spec.ts`.
+`src/access/authenticatedOrPublished.ts` has the same `Boolean(user)` shape for `pages`/`posts`
+reads and leaks drafts to a student token — narrower (no PII), still open, not yet fixed.
 
 ## Cache invalidation
 
@@ -187,60 +226,194 @@ the cookie. Nothing errors — the action's DB writes all commit, the return val
 but `/verify-otp` finds no `pending_email` and bounces to `/`, or `/admin` sees no session.
 There is no console warning.
 
-**Where** — `src/actions/auth/register.ts`, `src/actions/auth/login.ts`,
-`src/actions/auth/verify-otp.ts` (now sets `coursely-*` + returns `redirectTo`),
-`src/actions/auth/logout.ts` and `src/actions/auth/logout-all.ts` (clear `coursely-*` +
-return `redirectTo`) — all return `redirectTo`, never `redirect()`. Client navigation lives
-in the form: `src/components/public/RegisterCta/RegisterForm.tsx`,
-`src/components/public/LoginCta/LoginForm.tsx` and `src/app/(frontend)/verify-otp/OtpForm.tsx`
-navigate from a `useEffect` on `state.status`.
+**Where** — `src/actions/student/register.ts`, `src/actions/student/login.ts`,
+`src/actions/student/verify-otp.ts` (sets `coursely-*` + returns `redirectTo`) and
+`src/actions/student/logout.ts` (clears `coursely-*` + returns `redirectTo`) — all return,
+never `redirect()`.
 
-### `AUTH_TOKEN_COOKIE` is the admin cookie and must equal `${payloadConfig.cookiePrefix}-token`
+Client navigation lives in the form, in one of two shapes. A `react-hook-form` form awaits
+the action in its submit handler and navigates on the resolved value:
+`src/components/public/forms/RegisterForm.tsx` (`router.push`),
+`src/components/public/forms/LoginForm.tsx` and
+`src/components/public/LogoutCta/index.tsx` (`window.location.assign`). A `useActionState`
+form navigates from a `useEffect` on `state.status` instead:
+`src/components/public/forms/OtpForm.tsx`.
 
-**Rule** — `AUTH_TOKEN_COOKIE` in `src/lib/constants/auth.ts` is hard-coded to `'payload-token'`
-because `payload.config.ts` sets no `cookiePrefix` (so the prefix is the default `payload`). If
-a `cookiePrefix` is ever added to the config, update this constant in the same commit. Since
-the custom access/refresh scheme shipped, `proxy` reads this cookie **only on `/admin*`**
-(Payload's native sign-in); every other route reads `ACCESS_TOKEN_COOKIE` and, when it is
-absent/expired, renews from `REFRESH_TOKEN_COOKIE`. The two flows must never write each
-other's cookie — a signed-in admin and a signed-in student coexist in one browser.
+Both are safe for the same reason — the browser applies the action response's `Set-Cookie`
+before the promise resolves or the new state arrives, so either way the navigation happens
+after the cookie exists. What is **not** safe is navigating from inside the action.
 
-**Why it breaks silently** — `proxy` cannot ask Payload for the real cookie name (no
-`getPayload` on that path), so it reads `AUTH_TOKEN_COOKIE`. If the config prefix and the
-constant drift apart, Payload's own auth still works (it uses the config) but `proxy` reads
-an admin cookie that is never set: `/admin` silently 302s every admin to `/` and no
-`x-user-*` header is forwarded there. If a login/logout path were changed to write
-`AUTH_TOKEN_COOKIE` for a _student_, `decideRoute`'s `/admin` branch would start bouncing or
-admitting the wrong people. Nothing errors.
+### `proxy` must never redirect a Server Action request — it sends `NEXT` and lets the action answer
 
-**Where** — `src/lib/constants/auth.ts` (`AUTH_TOKEN_COOKIE`, `ACCESS_TOKEN_COOKIE`,
-`REFRESH_TOKEN_COOKIE`), read by `src/proxy.ts` (`resolveIdentity` — admin branch vs. the
-access/refresh branch). The student cookies are written by `src/lib/auth/session-cookies.ts`
-(`setSessionCookies` / `clearSessionCookies`), used from the login/OTP/logout actions and
-`proxy`. The Payload prefix default lives in `payload/dist/index.js` (`cookiePrefix`).
+**Rule** — A Server Action invocation is a POST carrying Next's own `next-action` header, to
+the same URL as the page it was called from. `proxy` must treat that header as an
+unconditional pass: whatever `decideRoute` would have returned for the pathname, a Server
+Action request always gets `NextResponse.next()`, never a redirect.
+
+**Why it breaks silently** — `proxy`'s matcher covers ordinary pages and Server Action POSTs
+alike, since both hit the same URL. Before this rule, a stale session hitting a protected
+page's action (`/tai-khoan`'s `updateProfileAction`, say) got an HTTP redirect back in place
+of the action's own response. The browser followed it exactly as it would for any redirect —
+a full navigation to `/dang-nhap`, with no action response ever reaching the calling
+component. Nothing throws, no console warning: the person who clicked "Lưu thay đổi" is just
+signed out, with no error banner ever rendered, because the component that would have shown
+one never got a response to render from. The action's own `getSessionStudent()` check — which
+already turns "no session" into a proper in-app message — never even ran.
+
+**Where** — `src/proxy.ts` (`isServerAction`, checked before `decideRoute` runs), pinned by
+`tests/int/proxy-session.spec.ts` § "a Server Action reaches its own handler even with no
+session". Any action reachable from a page under `PROTECTED_PREFIXES`
+(`src/lib/constants/auth.ts`) depends on this — today that's
+`src/actions/student/profile.ts`'s `updateProfileAction`, called from `/tai-khoan`.
+
+## Routing
+
+### A rewritten page has two live paths — link the public one, gate both
+
+**Rule** — `rewrites.ts` gives the pages under `src/app/(frontend)/student/` public
+Vietnamese URLs (`/dang-nhap`, `/tai-khoan`, `/xac-thuc-otp`, `/quen-mat-khau`,
+`/dat-lai-mat-khau`), and `/courses` the URL `/khoa-hoc`. A rewrite **adds** a name; it
+does not retire the folder path, so both reach the app. Two rules follow. Every
+`redirect()`, `Link href`, `revalidatePath` and e-mail link uses the **public** path on the
+left of that table, never the folder name on the right. And anything that decides by
+pathname — `PROTECTED_PREFIXES` is the only one today — must list **both** names, because
+`proxy` runs before the rewrite and sees whichever one the browser asked for.
+
+**Why it breaks silently** — the two paths render the identical page, so every manual
+check of the public URL passes while the folder path stays wide open; no request errors,
+no log line, and the page still looks guarded. It ran that way here: `/tai-khoan` was
+gated and `/student/account` was not, and only the page's own `getSessionStudent()` check
+kept it from being a hole. Linking the folder name fails the other way round and just as
+quietly — the page loads, so nothing looks wrong, but the URL the user now has bookmarked
+is one the guard does not cover and one no redirect will ever send them back to.
+
+**Where** — `rewrites.ts` (the table, and its header states the same rule),
+`src/lib/constants/auth.ts` (`PROTECTED_PREFIXES` — each guarded page listed under both
+names), `src/lib/auth/route-guard.ts` (`decideRoute` matches on the raw pathname) and
+`src/proxy.ts` (runs before the rewrite). `tests/unit/repo/protected-prefixes.spec.ts`
+reads the rewrite table and fails if a guarded source has an unguarded destination.
 
 ## Sessions
 
-### One active session record per session line — rotation is in place
+### The `coursely-*` cookies carry `students` ids and nothing else
 
-**Rule** — `renewSession` in `src/services/session-store.ts` rotates a session by `HSET`-ing
-the new refresh-token hash onto the **existing** `session:{sid}` record — same `sid`, same
-`lineId`. It must never `create` a fresh record on renewal. The old token's hash moves to a
-`spent:{hash}` marker; `refresh:{newHash}` points back at the same `sid`.
+**Rule** — Every `setSessionCookies` call passes claims taken from a `students` document.
+No sign-in path may mint a `coursely-access` / `coursely-refresh` pair for a `users` row.
+Staff sessions are Payload's own `payload-token` and never enter this scheme.
 
-**Why it breaks silently** — a renewal that writes a _new_ record instead still returns a
-working token pair, so every happy-path test and manual check passes. But the account's
-`session:index:{userId}` set now carries two sids for one browser: `revokeAllForUser`
-(sign-out-everywhere) walks the set and can miss the orphan if it was added after the walk
-started, and the "session line" that reuse-detection revokes as a unit (`spent:` → one
-`sid`) no longer covers every record descended from that sign-in. Nothing throws; a user
-who "signed out everywhere" stays signed in on one device, and a stolen refresh token whose
-line was "revoked" still renews against the orphan.
+**Why it breaks silently** — `users` and `students` are separate Postgres tables with
+independent `serial` primary keys, so their ids collide: `users.id = 7` and
+`students.id = 7` both exist and are different people. The claims carry that number and
+nothing else that would tell the tables apart, and `getSessionStudent` looks the id up in
+`students` without question. A staff id in that cookie therefore signs a visitor in as
+whichever student happens to hold the same number — a real account, a real profile page, a
+real name in the header. Nothing throws, nothing logs, and every test that exercises one
+account at a time stays green. This is not hypothetical: before the split, `loginAction`
+issued the student cookie pair to anyone who authenticated at `/dang-nhap`, admins included.
 
-**Where** — `src/services/session-store.ts` (`rotate`, the single `HSET` on
-`session:{sid}`; `renewSession`'s single-flight lock that keeps two concurrent renewals from
-both creating state). `session:index:{userId}` is the set `revokeAllForUser` walks;
-`spent:{hash}` carries the `sid` that is the line identifier.
+**Where** — the only two call sites are `src/actions/student/login.ts` (`loginAction`) and
+`src/actions/student/verify-otp.ts` (`verifyOtpAction`); both take their user from
+`src/services/student-login.ts` / `src/services/student-verification.ts`, which query `students`.
+`src/lib/auth/session-cookies.ts` and `src/lib/auth/session-token.ts` (`StudentClaims`) are
+what this protects. Pinned by `tests/int/login-action.spec.ts` § "a staff account is not a
+principal here".
+
+### Signing and verifying a session token is `async` — every caller must `await`
+
+**Rule** — `signAccessToken`, `signRefreshToken`, `verifyAccessToken` and
+`verifyRefreshToken` all return Promises, and so does everything built on them
+(`setSessionCookies`, `refreshAccessCookie`, `resolveIdentity`, `proxy`). Await them.
+Never interpolate one into a string, and never call one for its side effect alone.
+
+**Why it breaks silently** — a Promise is truthy and stringifies to `"[object Promise]"`,
+so the two failure shapes both read as success. Writing one into a cookie signs every
+visitor out; checking one as an identity lets every visitor in as a student with an
+`undefined` id. TypeScript closes most of this door but not all of it: `Promise<string>`
+interpolated into a template literal is a perfectly valid string expression, and a call
+whose result is discarded is a floating promise no signature can object to. Both were
+real — `tests/int/proxy-session.spec.ts` built its cookie header as
+`` `${ACCESS_COOKIE}=${signAccessToken(claims)}` `` and `tests/int/current-student.spec.ts`
+called an un-awaited `signIn()`, while `tsc --noEmit` reported zero errors on both.
+
+**Where** — `src/lib/auth/session-token.ts` (the module banner states it),
+`src/lib/auth/session-cookies.ts`, `src/lib/auth/session-student.ts`, `src/proxy.ts`,
+and the two cookie-minting actions in `src/actions/student/`. Pinned by
+`tests/unit/lib/session-cookies.spec.ts`, which reads each cookie back and verifies it
+rather than asserting it is merely truthy — the one assertion that tells a token from a
+pending promise. Note jose rejects a Node `Buffer` under jsdom's realm, so any spec that
+touches this module needs `// @vitest-environment node`.
+
+### A session cannot be revoked — it can only expire
+
+**Rule** — There is no session record anywhere: the refresh token _is_ the session, and
+`proxy` renews by checking a signature, reading nothing. So no feature may promise to end a
+session from the server — not "sign out everywhere", not "end other devices after a
+password change", not disabling an account mid-session. Anything of that sort needs a
+server-side check added back first (a `sessionVersion` on `students`, read on renewal);
+adding the button alone ships a lie.
+
+**Why it breaks silently** — every such feature has an obvious-looking implementation that
+returns success. Clearing the cookies signs _this_ browser out and looks exactly like it
+worked; setting `status: 'DISABLED'` writes a row and returns 200. Meanwhile the other
+device holds a token that verifies on its own for `REFRESH_TTL_SEC` — 30 days, now for
+_every_ session, since there is no "remember me" left to leave unticked for a shorter one
+— and `status` inside a live access token is whatever it was at signing time, so even the
+account gate reads stale for up to `ACCESS_TTL_SEC`. Nothing errors. The person who clicked
+"sign out everywhere" believes the stolen session is dead.
+
+**Where** — `src/lib/auth/session-token.ts` (the module banner states the trade),
+`src/proxy.ts` (`resolveIdentity`, which touches no datastore),
+`src/actions/student/logout.ts` (this device only) and `src/actions/student/reset-password.ts`
+(the comment where the revocation used to be).
+
+### `x-user-*` request headers are client input — `proxy` sets none
+
+**Rule** — `proxy` returns a bare `NextResponse.next()`; it does not rewrite the request
+headers. An `x-user-id`, `x-user-status` or `x-user-role` arriving on a request is
+therefore whatever the caller typed, and no file in `src/` may read one. Server code that
+needs the signed-in student calls `getSessionStudent()`; public UI asks
+`GET /next/auth-status` from the browser.
+
+**Why it breaks silently** — `proxy` used to forward the verified identity in these
+headers, deleting the inbound copies first so a client could not forge them. Nothing ever
+read them and the forwarding was removed as dead code — but the old shape survives in
+`specs/001-access-refresh-sessions/contracts/proxy-guard.md` §2, so the next person to
+follow that document writes a Server Component that reads `x-user-id`. It compiles, it
+renders, and it trusts an account id the visitor chose, on every route the matcher covers.
+Nothing in the type system or the build says a word.
+
+**Where** — `src/proxy.ts` (`proxy`, the `NextResponse.next()` branch). Guarded by
+`tests/unit/repo/student-header-readers.spec.ts`, which fails the moment any file under
+`src/` mentions one of these names; the proxy behaviour is pinned in
+`tests/int/proxy-session.spec.ts` § "identity is never forwarded as a request header".
+
+## Key–value storage
+
+### Anything written to `payload.kv` carries its own expiry and deletes itself on read
+
+**Rule** — `payload.kv` has `get` / `set` / `delete` / `has` / `keys` / `clear` and **no TTL
+argument anywhere**. A value that is supposed to stop being valid must therefore carry the
+moment it does — an `expiresAt` field — and every read goes through one helper that checks
+it and deletes the record before answering `null`. Never assume a KV entry disappears on
+its own, and never add a "temporary" KV write without that field.
+
+**Why it breaks silently** — the shape of the API invites the mistake: it is the same
+`get`/`set`/`delete` surface as Redis minus the one argument that mattered, so a Redis
+keyspace ported over key by key looks complete and compiles. Nothing throws; the value is
+simply immortal. For the OTP challenge that means a six-digit code that stays valid forever
+and a five-try lockout that never lifts, and the tests pass either way because a test issues
+a code and verifies it seconds later — exactly the window in which an expiry that never
+fires is indistinguishable from one that works. The rows are also invisible: the generated
+`payload-kv` collection is `admin.hidden` with all four access rules `() => false`, so
+nobody browsing the admin panel will ever notice them piling up.
+
+**Where** — `src/services/otp-challenge.ts` (`readLive` is the only reader; `expiresAt` is set
+in `issueOtp`), pinned by `tests/int/otp-challenge.spec.ts` § "reports expired past `expiresAt`
+and drops the record on the way out". The adapter is
+`node_modules/payload/dist/kv/adapters/DatabaseKVAdapter.js`, wired in by
+`node_modules/payload/dist/config/defaults.js` (`config.kv = config.kv ?? databaseKVAdapter()`)
+— this project declares no `kv` in `payload.config.ts`, so the records are Postgres rows in
+`payload_kv`.
 
 ## Client-side state
 
@@ -268,8 +441,9 @@ imported by the **readers** `src/providers/Theme/InitTheme/index.tsx:4` (`InitTh
 **Rule** — Whether the public site treats the visitor as signed in must be decided in the
 browser — `HeaderAuthControls` fetches `GET /next/auth-status`, which reads the
 `coursely-access` cookie and returns `{ authenticated }`. A Server Component on a public
-page must not branch its render on the proxy-forwarded `x-user-*` request headers (or on
-`cookies()`), and must not gate UI on them.
+page must not branch its render on `cookies()`, and must not gate UI on it. Nor on an
+`x-user-*` request header — `proxy` sets none, so that header is client input; see
+"`x-user-*` request headers are client input" under Sessions.
 
 **Why it breaks silently** — `src/app/(frontend)/page.tsx`, `courses/page.tsx`, and
 `posts/page.tsx` set `export const dynamic = 'force-static'`. Under `force-static` Next 16
@@ -280,7 +454,7 @@ signed-in visitor, on exactly the pages that host the header. No warning, no bui
 
 **Where** — `src/components/public/HeaderAuthControls/index.tsx` (client check) →
 `src/app/(frontend)/next/auth-status/route.ts` (`GET`, signature-only, no I/O) →
-`verifyAccessToken` in `src/lib/auth/access-token.ts`. Rendered by
+`verifyAccessToken` in `src/lib/auth/session-token.ts`. Rendered by
 `src/Header/Component.client.tsx`. The `force-static` declarations are in the three
 `src/app/(frontend)/**/page.tsx` files above. Design rationale:
 `specs/002-header-logout-ui/research.md` D1/D4.

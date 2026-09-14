@@ -63,10 +63,12 @@ export type SupportedTimezones =
 
 export interface Config {
   auth: {
+    students: StudentAuthOperations;
     users: UserAuthOperations;
   };
   blocks: {};
   collections: {
+    students: Student;
     courses: Course;
     classes: Class;
     'course-phases': CoursePhase;
@@ -77,7 +79,6 @@ export interface Config {
     media: Media;
     users: User;
     notifications: Notification;
-    'audit-logs': AuditLog;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -99,6 +100,7 @@ export interface Config {
     };
   };
   collectionsSelect: {
+    students: StudentsSelect<false> | StudentsSelect<true>;
     courses: CoursesSelect<false> | CoursesSelect<true>;
     classes: ClassesSelect<false> | ClassesSelect<true>;
     'course-phases': CoursePhasesSelect<false> | CoursePhasesSelect<true>;
@@ -109,7 +111,6 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
-    'audit-logs': AuditLogsSelect<false> | AuditLogsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -139,7 +140,7 @@ export interface Config {
   widgets: {
     collections: CollectionsWidget;
   };
-  user: User;
+  user: Student | User;
   jobs: {
     tasks: {
       schedulePublish: TaskSchedulePublish;
@@ -149,6 +150,24 @@ export interface Config {
       };
     };
     workflows: unknown;
+  };
+}
+export interface StudentAuthOperations {
+  forgotPassword: {
+    email: string;
+    password: string;
+  };
+  login: {
+    email: string;
+    password: string;
+  };
+  registerFirstUser: {
+    email: string;
+    password: string;
+  };
+  unlock: {
+    email: string;
+    password: string;
   };
 }
 export interface UserAuthOperations {
@@ -171,69 +190,34 @@ export interface UserAuthOperations {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "courses".
+ * via the `definition` "students".
  */
-export interface Course {
+export interface Student {
   id: number;
-  title: string;
-  image?: (number | null) | Media;
-  shortDescription?: string | null;
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  duration?: string | null;
+  fullName?: string | null;
+  phone?: string | null;
+  avatar?: (number | null) | Media;
   /**
-   * Only shown when course type is MOODLE
+   * Trạng thái tài khoản học viên
    */
-  moodleUrl?: string | null;
-  registrationStartAt?: string | null;
-  registrationEndAt?: string | null;
-  objectives?: {
-    docs?: (number | CourseObjective)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
-  phases?: {
-    docs?: (number | CoursePhase)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
-  meta?: {
-    title?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (number | null) | Media;
-    description?: string | null;
-  };
-  category?: (number | null) | Category;
-  tags?:
-    | {
-        tag: string;
-        id?: string | null;
-      }[]
-    | null;
-  courseType: 'MOODLE' | 'OFFLINE';
+  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
+  verifiedAt?: string | null;
+  lastLoginAt?: string | null;
   /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   * Nhân sự đã tạo tài khoản này. Trống với tài khoản tự đăng ký.
    */
-  generateSlug?: boolean | null;
-  slug: string;
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
-  _status?: ('draft' | 'published') | null;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  password?: string | null;
+  collection: 'students';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -353,6 +337,98 @@ export interface FolderInterface {
   folderType?: 'media'[] | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  fullName?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "courses".
+ */
+export interface Course {
+  id: number;
+  title: string;
+  image?: (number | null) | Media;
+  shortDescription?: string | null;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  duration?: string | null;
+  /**
+   * Only shown when course type is MOODLE
+   */
+  moodleUrl?: string | null;
+  registrationStartAt?: string | null;
+  registrationEndAt?: string | null;
+  objectives?: {
+    docs?: (number | CourseObjective)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  phases?: {
+    docs?: (number | CoursePhase)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  category?: (number | null) | Category;
+  tags?:
+    | {
+        tag: string;
+        id?: string | null;
+      }[]
+    | null;
+  courseType: 'MOODLE' | 'OFFLINE';
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -553,46 +629,6 @@ export interface Post {
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
- */
-export interface User {
-  id: number;
-  fullName?: string | null;
-  phone?: string | null;
-  avatar?: (number | null) | Media;
-  role: 'ADMIN' | 'STUDENT';
-  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
-  /**
-   * Account created directly at the counter by Admin, not via self-registration.
-   */
-  isWalkIn?: boolean | null;
-  verifiedAt?: string | null;
-  lastLoginAt?: string | null;
-  /**
-   * Admin who created this account. Blank for self-registered users.
-   */
-  createdBy?: (number | null) | User;
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -957,7 +993,7 @@ export interface ConsultationBlock {
  */
 export interface Notification {
   id: number;
-  user: number | User;
+  student: number | Student;
   type: 'ACCOUNT_CREATED';
   title: string;
   content: string;
@@ -971,19 +1007,6 @@ export interface Notification {
     | boolean
     | null;
   isRead?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "audit-logs".
- */
-export interface AuditLog {
-  id: number;
-  action: 'LOGIN_SUCCESS' | 'LOGOUT' | 'LOGOUT_ALL' | 'REFRESH_REUSE';
-  user?: (number | null) | User;
-  ip: string;
-  userAgent: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -1178,6 +1201,10 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
+        relationTo: 'students';
+        value: number | Student;
+      } | null)
+    | ({
         relationTo: 'courses';
         value: number | Course;
       } | null)
@@ -1218,10 +1245,6 @@ export interface PayloadLockedDocument {
         value: number | Notification;
       } | null)
     | ({
-        relationTo: 'audit-logs';
-        value: number | AuditLog;
-      } | null)
-    | ({
         relationTo: 'redirects';
         value: number | Redirect;
       } | null)
@@ -1242,10 +1265,15 @@ export interface PayloadLockedDocument {
         value: number | FolderInterface;
       } | null);
   globalSlug?: string | null;
-  user: {
-    relationTo: 'users';
-    value: number | User;
-  };
+  user:
+    | {
+        relationTo: 'students';
+        value: number | Student;
+      }
+    | {
+        relationTo: 'users';
+        value: number | User;
+      };
   updatedAt: string;
   createdAt: string;
 }
@@ -1255,10 +1283,15 @@ export interface PayloadLockedDocument {
  */
 export interface PayloadPreference {
   id: number;
-  user: {
-    relationTo: 'users';
-    value: number | User;
-  };
+  user:
+    | {
+        relationTo: 'students';
+        value: number | Student;
+      }
+    | {
+        relationTo: 'users';
+        value: number | User;
+      };
   key?: string | null;
   value?:
     | {
@@ -1282,6 +1315,28 @@ export interface PayloadMigration {
   batch?: number | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "students_select".
+ */
+export interface StudentsSelect<T extends boolean = true> {
+  fullName?: T;
+  phone?: T;
+  avatar?: T;
+  status?: T;
+  verifiedAt?: T;
+  lastLoginAt?: T;
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1669,14 +1724,6 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface UsersSelect<T extends boolean = true> {
   fullName?: T;
-  phone?: T;
-  avatar?: T;
-  role?: T;
-  status?: T;
-  isWalkIn?: T;
-  verifiedAt?: T;
-  lastLoginAt?: T;
-  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1699,24 +1746,12 @@ export interface UsersSelect<T extends boolean = true> {
  * via the `definition` "notifications_select".
  */
 export interface NotificationsSelect<T extends boolean = true> {
-  user?: T;
+  student?: T;
   type?: T;
   title?: T;
   content?: T;
   metadata?: T;
   isRead?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "audit-logs_select".
- */
-export interface AuditLogsSelect<T extends boolean = true> {
-  action?: T;
-  user?: T;
-  ip?: T;
-  userAgent?: T;
   updatedAt?: T;
   createdAt?: T;
 }

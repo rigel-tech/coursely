@@ -1,47 +1,44 @@
+/**
+ * Zod schema for "reset password" (the link from the forgot-password email), the same
+ * shape `register-schema.ts` uses: a shared base plus one refine reused by both the field
+ * rules the form owns and the fuller set `resetPasswordAction` re-checks.
+ *
+ * `resetPasswordFormSchema` covers the two fields `<ResetPasswordForm>` renders. The token
+ * is not one of them — it comes off the URL, not something the person types, and the page
+ * shows a different card entirely when it is missing — so it is absent from the form's own
+ * `zodResolver` and only appears in `resetPasswordSchema`, which is what the action
+ * validates directly.
+ */
 import { z } from 'zod'
 
 const PASSWORD_MESSAGE = 'Mật khẩu tối thiểu 8 ký tự, gồm cả chữ và số'
 
+const passwordRule = z
+  .string()
+  .min(8, PASSWORD_MESSAGE)
+  .regex(/[A-Za-z]/, PASSWORD_MESSAGE)
+  .regex(/\d/, PASSWORD_MESSAGE)
+
+const passwordsMatch = (d: { password: string; confirmPassword: string }) =>
+  d.password === d.confirmPassword
+
+const PASSWORDS_MATCH_ISSUE = { path: ['confirmPassword'], error: 'Mật khẩu xác nhận không khớp' }
+
+/** Drives `<ResetPasswordForm>`'s `zodResolver`. */
+export const resetPasswordFormSchema = z
+  .object({ password: passwordRule, confirmPassword: z.string() })
+  .refine(passwordsMatch, PASSWORDS_MATCH_ISSUE)
+
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordFormSchema>
+
+/** What `resetPasswordAction` re-checks — the only check that counts, since the form can
+ * be bypassed. `safeParse` runs directly against this; there is no wrapper function. */
 export const resetPasswordSchema = z
   .object({
     token: z.string().min(1, 'Mã xác thực không hợp lệ hoặc bị thiếu'),
-    password: z
-      .string()
-      .min(8, PASSWORD_MESSAGE)
-      .regex(/[A-Za-z]/, PASSWORD_MESSAGE)
-      .regex(/\d/, PASSWORD_MESSAGE),
+    password: passwordRule,
     confirmPassword: z.string(),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    path: ['confirmPassword'],
-    message: 'Mật khẩu xác nhận không khớp',
-  })
+  .refine(passwordsMatch, PASSWORDS_MATCH_ISSUE)
 
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
-
-export type ResetPasswordValidationResult =
-  | { success: true; data: ResetPasswordInput }
-  | { success: false; fieldErrors: Record<string, string> }
-
-export function parseResetPasswordInput(
-  raw: Record<string, unknown>,
-): ResetPasswordValidationResult {
-  const parsed = resetPasswordSchema.safeParse({
-    token: raw.token,
-    password: raw.password,
-    confirmPassword: raw.confirmPassword,
-  })
-
-  if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {}
-    for (const issue of parsed.error.issues) {
-      const field = issue.path[0]
-      if (typeof field === 'string' && !fieldErrors[field]) {
-        fieldErrors[field] = issue.message
-      }
-    }
-    return { success: false, fieldErrors }
-  }
-
-  return { success: true, data: parsed.data }
-}
+export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>

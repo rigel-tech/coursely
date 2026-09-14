@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 
 // The nested CTAs pull in server actions and the app router; stub what they touch.
-vi.mock('@/actions/auth/login', () => ({ loginAction: vi.fn() }))
-vi.mock('@/actions/auth/logout', () => ({ logoutAction: vi.fn() }))
+vi.mock('@/actions/student/login', () => ({ loginAction: vi.fn() }))
+vi.mock('@/actions/student/logout', () => ({ logoutAction: vi.fn() }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 
 const { HeaderAuthControls } = await import('@/components/public/HeaderAuthControls')
@@ -25,7 +25,7 @@ const jsonOnce = (value: unknown) =>
   fetchMock.mockResolvedValueOnce({ ok: true, json: async () => value })
 
 const signIn = () => screen.queryByRole('link', { name: /đăng nhập/i })
-const register = () => screen.queryByRole('button', { name: /đăng ký/i })
+const register = () => screen.queryByRole('link', { name: /đăng ký/i })
 const account = () => screen.queryByRole('link', { name: /minh anh|tài khoản/i })
 
 describe('HeaderAuthControls', () => {

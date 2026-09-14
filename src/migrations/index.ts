@@ -2,7 +2,10 @@ import * as migration_20260830_161642_initial from './20260830_161642_initial'
 import * as migration_20260903_083223_add_courses_collection from './20260903_083223_add_courses_collection'
 import * as migration_20260903_084929_add_course_objectives_and_phases from './20260903_084929_add_course_objectives_and_phases'
 import * as migration_20260904_084119_add_course_categories_and_tags from './20260904_084119_add_course_categories_and_tags'
+import * as migration_20260909_140000_split_students_from_users from './20260909_140000_split_students_from_users'
+import * as migration_20260910_131500_rename_notifications_user_to_student from './20260910_131500_rename_notifications_user_to_student'
 import * as migration_20260910_062709_add_site_settings_global from './20260910_062709_add_site_settings_global'
+import * as migration_20260912_000000_drop_students_is_walk_in from './20260912_000000_drop_students_is_walk_in'
 
 export const migrations = [
   {
@@ -26,8 +29,23 @@ export const migrations = [
     name: '20260904_084119_add_course_categories_and_tags',
   },
   {
+    up: migration_20260909_140000_split_students_from_users.up,
+    down: migration_20260909_140000_split_students_from_users.down,
+    name: '20260909_140000_split_students_from_users',
+  },
+  {
+    up: migration_20260910_131500_rename_notifications_user_to_student.up,
+    down: migration_20260910_131500_rename_notifications_user_to_student.down,
+    name: '20260910_131500_rename_notifications_user_to_student',
+  },
+  {
     up: migration_20260910_062709_add_site_settings_global.up,
     down: migration_20260910_062709_add_site_settings_global.down,
     name: '20260910_062709_add_site_settings_global',
+  },
+  {
+    up: migration_20260912_000000_drop_students_is_walk_in.up,
+    down: migration_20260912_000000_drop_students_is_walk_in.down,
+    name: '20260912_000000_drop_students_is_walk_in',
   },
 ]

@@ -5,7 +5,6 @@ import path from 'path'
 import { buildConfig, PayloadRequest } from 'payload'
 import { fileURLToPath } from 'url'
 
-import { AuditLogs } from './collections/AuditLogs'
 import { Categories } from './collections/Categories'
 import { Classes } from './collections/Classes'
 import { CourseObjectives } from './collections/CourseObjectives'
@@ -15,6 +14,7 @@ import { Media } from './collections/Media'
 import { Notifications } from './collections/Notifications'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
+import { Students } from './collections/Students'
 import { Users } from './collections/Users'
 import { Footer } from './globals/Footer/config'
 import { Header } from './globals/Header/config'
@@ -98,6 +98,7 @@ export default buildConfig({
   }),
   collections: [
     // --- 1. Academic (Khóa học & Đào tạo) ---
+    Students,
     Courses,
     Classes,
     CoursePhases,
@@ -110,7 +111,6 @@ export default buildConfig({
     // --- 3. Users & Security (Người dùng & Bảo mật) ---
     Users,
     Notifications,
-    AuditLogs,
   ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, SiteSettings],

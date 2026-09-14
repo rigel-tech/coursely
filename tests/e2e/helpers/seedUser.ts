@@ -24,11 +24,19 @@ const SCRIPT = 'scripts/seed-e2e-user.ts'
 const run = (
   command: 'seed' | 'cleanup',
   user: { email: string; password: string },
-  role?: 'STUDENT',
+  collection?: 'students',
 ): void => {
   execFileSync(
     'pnpm',
-    ['payload', 'run', SCRIPT, command, user.email, user.password, ...(role ? [role] : [])],
+    [
+      'payload',
+      'run',
+      SCRIPT,
+      command,
+      user.email,
+      user.password,
+      ...(collection ? [collection] : []),
+    ],
     // shell: true because `pnpm` is a .cmd shim on Windows and execFile will not find it.
     { shell: true, stdio: 'inherit' },
   )
@@ -44,9 +52,9 @@ export async function cleanupTestUser(): Promise<void> {
   run('cleanup', testUser)
 }
 
-/** Creates the e2e student user (role STUDENT, ACTIVE), replacing any earlier one. */
+/** Creates the e2e student user in `students` (ACTIVE), replacing any earlier one. */
 export async function seedStudentUser(): Promise<void> {
-  run('seed', testStudent, 'STUDENT')
+  run('seed', testStudent, 'students')
 }
 
 /** Removes the e2e student user. */

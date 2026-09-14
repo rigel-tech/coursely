@@ -3,7 +3,9 @@ import nextTypescript from 'eslint-config-next/typescript'
 
 const eslintConfig = [
   {
-    ignores: ['.next/', 'src/payload-types.ts', 'src/payload-generated-schema.ts'],
+    // `**/` because a git worktree under `.claude/worktrees/` builds its own `.next/`,
+    // and a bare `.next/` only matches the one at the repo root.
+    ignores: ['**/.next/', 'src/payload-types.ts', 'src/payload-generated-schema.ts'],
   },
   ...nextCoreWebVitals,
   ...nextTypescript,

@@ -1,26 +1,30 @@
 import { describe, it, expect } from 'vitest'
 
 import { decideRoute } from '@/lib/auth/route-guard'
-import type { AuthUser } from '@/lib/auth/verify-token'
+import type { RoutePrincipal } from '@/lib/auth/route-guard'
 
-const admin: AuthUser = { id: 1, role: 'ADMIN', status: 'ACTIVE' }
-const student: AuthUser = { id: 2, role: 'STUDENT', status: 'ACTIVE' }
-const pending: AuthUser = { id: 3, role: 'STUDENT', status: 'PENDING_VERIFICATION' }
+const staff: RoutePrincipal = { id: 1, status: 'ACTIVE' }
+const student: RoutePrincipal = { id: 2, status: 'ACTIVE' }
+const pending: RoutePrincipal = { id: 3, status: 'PENDING_VERIFICATION' }
 
-describe('decideRoute — /admin', () => {
-  it('bounces a signed-in non-admin to /', () => {
-    expect(decideRoute('/admin/collections/users', student, false)).toEqual({
-      type: 'redirect',
-      to: '/',
-    })
+// The admin branch is gone: Payload's own `canAccessAdmin` — backed by
+// `Students.access.admin` — guards the panel on every request to it, and nothing in this
+// module is asked. Routing never was authorisation; this asserts it has stopped pretending
+// to be.
+describe('decideRoute — /admin is no longer routed here', () => {
+  it('passes through for a signed-in principal', () => {
+    expect(decideRoute('/admin', staff, false)).toEqual({ type: 'next' })
+    expect(decideRoute('/admin/collections/users', staff, false)).toEqual({ type: 'next' })
   })
 
-  it('lets an admin through', () => {
-    expect(decideRoute('/admin', admin, false)).toEqual({ type: 'next' })
-  })
-
-  it("leaves an anonymous visitor to Payload's own login", () => {
+  it("passes through for an anonymous visitor, leaving Payload's own login to answer", () => {
     expect(decideRoute('/admin/login', null, false)).toEqual({ type: 'next' })
+  })
+
+  it('never redirects an /admin path, whoever is asking', () => {
+    for (const user of [null, staff, student, pending]) {
+      expect(decideRoute('/admin/collections/posts', user, false)).toEqual({ type: 'next' })
+    }
   })
 })
 
@@ -55,6 +59,19 @@ describe('decideRoute — protected student area', () => {
 
   it('does not match a look-alike prefix', () => {
     expect(decideRoute('/tai-khoan-cong-khai', null, false)).toEqual({ type: 'next' })
+  })
+
+  // `rewrites.ts` aliases `/tai-khoan` onto the folder it actually lives in, and a rewrite
+  // adds a name without removing the old one — so the folder path stays reachable and
+  // arrives here on its own. Proxy runs before the rewrite, so it only ever sees whichever
+  // of the two the browser asked for.
+  it('guards the folder path the rewrite points at, not just the public one', () => {
+    expect(decideRoute('/student/account', null, false)).toEqual({
+      type: 'redirect',
+      to: '/dang-nhap?callbackUrl=%2Fstudent%2Faccount',
+    })
+    expect(decideRoute('/student/account', pending, false)).toMatchObject({ type: 'redirect' })
+    expect(decideRoute('/student/account', student, false)).toEqual({ type: 'next' })
   })
 })
 
