@@ -4,9 +4,8 @@ import { seedHome } from './seedHome'
 import { seedAbout } from './seedAbout'
 import { seedHeader } from './seedHeader'
 import { seedCourses } from './seedCourses'
-import { seedConsultation } from './seedConsultation'
 
-export { seedSiteSettings, seedHome, seedAbout, seedHeader, seedCourses, seedConsultation }
+export { seedSiteSettings, seedHome, seedAbout, seedHeader, seedCourses }
 
 export async function autoSeed(payload: Payload): Promise<void> {
   try {
@@ -19,7 +18,7 @@ export async function autoSeed(payload: Payload): Promise<void> {
       seedCourses(payload),
     ])
 
-    await Promise.all([seedHeader(payload, { homePageId, aboutPageId }), seedConsultation(payload)])
+    await seedHeader(payload, { homePageId, aboutPageId })
 
     payload.logger.info('Auto-Seed hoàn tất!')
   } catch (error) {

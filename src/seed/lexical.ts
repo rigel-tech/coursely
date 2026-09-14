@@ -1,4 +1,6 @@
-/** Lexical RichText Helpers — dùng chung cho tất cả file seed */
+import type { Payload } from 'payload'
+import fs from 'fs'
+import path from 'path'
 
 const text = (t: string, format = 0) =>
   ({ mode: 'normal', text: t, type: 'text', style: '', detail: 0, format, version: 1 }) as const
@@ -23,3 +25,35 @@ export const list = (items: string[], listType: 'bullet' | 'number' = 'bullet') 
       tag: listType === 'bullet' ? 'ul' : 'ol',
     },
   )
+
+export async function getOrCreateMedia(
+  payload: Payload,
+  relativePath: string,
+  alt: string,
+): Promise<number | undefined> {
+  const filename = path.basename(relativePath)
+  const existing = await payload.find({
+    collection: 'media',
+    where: { filename: { equals: filename } },
+    limit: 1,
+  })
+
+  if (existing.docs.length > 0) {
+    return existing.docs[0].id
+  }
+
+  const filePath = path.resolve(process.cwd(), relativePath)
+  if (fs.existsSync(filePath)) {
+    try {
+      const created = await payload.create({
+        collection: 'media',
+        filePath,
+        data: { alt },
+      })
+      return created.id
+    } catch {
+      return undefined
+    }
+  }
+  return undefined
+}
