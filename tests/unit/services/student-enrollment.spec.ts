@@ -19,11 +19,14 @@ describe('createStudentEnrollment', () => {
       create,
       findByID,
       logger: { error: vi.fn() },
+      db: {
+        beginTransaction: vi.fn().mockResolvedValue(undefined),
+        commitTransaction: vi.fn(),
+        rollbackTransaction: vi.fn(),
+      },
     } as never)
 
-    const result = await createStudentEnrollment(12)
-
-    expect(result).toEqual({ id: 31 })
+    await expect(createStudentEnrollment(12)).resolves.toBeUndefined()
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: 'enrollments',

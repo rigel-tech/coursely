@@ -27,6 +27,11 @@ describe('student enrollment notifications', () => {
       create,
       findByID,
       logger: { error: vi.fn() },
+      db: {
+        beginTransaction: vi.fn().mockResolvedValue(undefined),
+        commitTransaction: vi.fn(),
+        rollbackTransaction: vi.fn(),
+      },
     } as never)
 
     await createStudentEnrollment(12)
