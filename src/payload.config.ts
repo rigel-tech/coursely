@@ -46,6 +46,7 @@ export default buildConfig({
         Logo: '@/components/admin/Graphics/Logo#Logo',
         Icon: '@/components/admin/Graphics/Icon#Icon',
       },
+      actions: ['@/components/admin/NotificationBell#NotificationBell'],
     },
     importMap: {
       baseDir: path.resolve(dirname),

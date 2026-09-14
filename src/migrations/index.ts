@@ -8,6 +8,7 @@ import * as migration_20260910_062709_add_site_settings_global from './20260910_
 import * as migration_20260912_000000_drop_students_is_walk_in from './20260912_000000_drop_students_is_walk_in'
 import * as migration_20260914_120000_add_enrollments_collection from './20260914_120000_add_enrollments_collection'
 import * as migration_20260914_130000_add_enrollment_active_guard from './20260914_130000_add_enrollment_active_guard'
+import * as migration_20260914_140000_make_notification_student_optional from './20260914_140000_make_notification_student_optional'
 
 export const migrations = [
   {
@@ -59,5 +60,10 @@ export const migrations = [
     up: migration_20260914_130000_add_enrollment_active_guard.up,
     down: migration_20260914_130000_add_enrollment_active_guard.down,
     name: '20260914_130000_add_enrollment_active_guard',
+  },
+  {
+    up: migration_20260914_140000_make_notification_student_optional.up,
+    down: migration_20260914_140000_make_notification_student_optional.down,
+    name: '20260914_140000_make_notification_student_optional',
   },
 ]

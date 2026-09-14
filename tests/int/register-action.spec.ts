@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getPayload, type Payload } from 'payload'
+import { getPayload, type Payload, type Where } from 'payload'
 import configPromise from '@payload-config'
 
 import { clearOtp, readOtp } from './helpers/otp-record'
@@ -69,8 +69,20 @@ beforeEach(() => {
   ctx.cookieOptions.clear()
 })
 
+// `ACCOUNT_CREATED` is staff-facing (specs/011) — it has no `student`, so it cannot be
+// cleaned up by student id the way every other test debris here is. Each test that
+// creates one pushes its id here for `afterEach` to remove.
+const createdBroadcastNotificationIds: number[] = []
+
 afterEach(async () => {
   vi.restoreAllMocks()
+  if (createdBroadcastNotificationIds.length > 0) {
+    await payload.delete({
+      collection: 'notifications',
+      where: { id: { in: createdBroadcastNotificationIds } },
+    })
+    createdBroadcastNotificationIds.length = 0
+  }
   for (const email of usedEmails) {
     await clearOtp(payload, email)
     const { docs } = await payload.find({
@@ -92,6 +104,15 @@ describe('registerAction — new email', () => {
     const email = uniqueEmail()
     const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
 
+    const broadcastWhere: Where = {
+      and: [{ type: { equals: 'ACCOUNT_CREATED' } }, { student: { exists: false } }],
+    }
+    const before = await payload.find({
+      collection: 'notifications',
+      where: broadcastWhere,
+      limit: 0,
+    })
+
     expect(await run(validForm(email))).toEqual({ status: 'success' })
 
     const { docs } = await payload.find({
@@ -111,19 +132,30 @@ describe('registerAction — new email', () => {
     })
     expect(staff.totalDocs).toBe(0)
 
-    const notes = await payload.find({
+    // ACCOUNT_CREATED is staff-facing (specs/011): a broadcast every signed-in staff
+    // member sees, never attached to the registering student's own record.
+    const staffNotes = await payload.find({
+      collection: 'notifications',
+      where: broadcastWhere,
+      sort: '-createdAt',
+      limit: 1,
+      depth: 0,
+    })
+    expect(staffNotes.totalDocs).toBe(before.totalDocs + 1)
+    createdBroadcastNotificationIds.push(staffNotes.docs[0].id)
+
+    const ownNotes = await payload.find({
       collection: 'notifications',
       where: { student: { equals: docs[0].id } },
       depth: 0,
     })
-    expect(notes.docs).toHaveLength(1)
-    expect(notes.docs[0].type).toBe('ACCOUNT_CREATED')
+    expect(ownNotes.docs).toHaveLength(0)
 
     // The action stopped reading `headers()`, so there is no IP and no user agent to
     // record. The `metadata` column is still on the collection and still writable by
     // anything else that raises a notification — what must not come back is this shape.
-    expect(notes.docs[0].metadata ?? {}).not.toHaveProperty('ip')
-    expect(notes.docs[0].metadata ?? {}).not.toHaveProperty('userAgent')
+    expect(staffNotes.docs[0].metadata ?? {}).not.toHaveProperty('ip')
+    expect(staffNotes.docs[0].metadata ?? {}).not.toHaveProperty('userAgent')
 
     expect(await readOtp(payload, email)).toBeTruthy()
     expect(ctx.cookieJar.get('pending_email')).toBe(email)

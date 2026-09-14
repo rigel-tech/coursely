@@ -109,11 +109,7 @@ async function createStudentWithWelcomeNotification(
       req,
     })
     const { title, content } = accountCreatedNotification(student.fullName, student.email)
-    await createNotification(
-      payload,
-      { studentId: student.id, type: 'ACCOUNT_CREATED', title, content },
-      req,
-    )
+    await createNotification(payload, { type: 'ACCOUNT_CREATED', title, content }, req)
     if (transactionID) await payload.db.commitTransaction(transactionID)
   } catch (err) {
     if (transactionID) await payload.db.rollbackTransaction(transactionID)

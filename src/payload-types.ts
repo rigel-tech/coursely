@@ -991,7 +991,7 @@ export interface Form {
  */
 export interface Notification {
   id: number;
-  student: number | Student;
+  student?: (number | null) | Student;
   type: 'ACCOUNT_CREATED' | 'ENROLLMENT_CREATED';
   title: string;
   content: string;

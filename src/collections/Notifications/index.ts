@@ -3,14 +3,12 @@ import type { CollectionConfig } from 'payload'
 import { authenticated } from '../../access/authenticated'
 
 /**
- * In-app notifications shown to a student. The registration flow writes an
- * `ACCOUNT_CREATED` row inside the same transaction as the new account — a
- * student must never exist without its welcome notification — so `student` is
- * required. More `type` values are added as other features raise notifications.
- *
- * The field is `student`, not `user`: this repo has both a `users` collection
- * (staff) and a `students` one, and notifications are addressed to the public
- * site. Staff never receive them.
+ * In-app notifications for both audiences this app has: students (public site) and
+ * staff (`/admin`). `student` set means that one student's own notification; `student`
+ * absent means staff-facing, broadcast to every signed-in staff member — there is no
+ * separate field for audience, its presence/absence *is* the audience
+ * (specs/011-admin-notification-bell). More `type` values are added as other features
+ * raise notifications.
  */
 export const Notifications: CollectionConfig = {
   slug: 'notifications',
@@ -34,7 +32,6 @@ export const Notifications: CollectionConfig = {
       name: 'student',
       type: 'relationship',
       relationTo: 'students',
-      required: true,
       index: true,
     },
     {

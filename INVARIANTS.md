@@ -623,6 +623,34 @@ catch at the same time — e.g. by checking `error.errors[0]?.path` for the new 
 before assuming it is this guard. Design rationale:
 `specs/008-enrollment-duplicate-guard/research.md` Decision 2.
 
+### `find`'s `limit: 0` is not a cheap count — it disables pagination and returns every row
+
+**Rule** — To get just a number of matching documents, call the collection's own `/count`
+REST endpoint or the Local API's `payload.count()`. Never reach for `find({ ..., limit: 0
+})` (Local API or REST `?limit=0`) as a "count-only" shortcut.
+
+**Why it breaks silently** — `findOperation` computes `usePagination = pagination && limit
+!== 0`; `limit: 0` takes the `!usePagination` branch and returns **every** matching
+document with full field data, not an empty page with just a total. `totalDocs` in the
+response is still correct, so a caller that only reads `totalDocs` gets the right number
+back and everything appears to work — while the query silently fetches, populates and
+serializes the entire matching set on every call. Nothing throws, nothing warns, and a
+small collection hides the cost completely; it only surfaces as a real problem once the
+collection is large enough for that full fetch to matter, at which point the number was
+always right and nothing in review would have caught it.
+
+**Where** — confirmed by reading
+`node_modules/payload/dist/collections/operations/find.js` (`usePagination`, the
+`sanitizedLimit` fallback) and `node_modules/payload/dist/collections/endpoints/count.js` /
+`endpoints/index.js` (`defaultCollectionEndpoints`, the `/count` route backed by
+`countOperation`, a real `SELECT count(*)`). Used correctly by
+`src/services/student-notifications.ts`'s `countUnreadNotifications` (Local API
+`payload.count()`) and `src/components/admin/NotificationBell/index.tsx` (REST
+`GET /notifications/count`). Existing test code (`tests/int/register-action.spec.ts`,
+`tests/int/registerAction — existing ACTIVE email` and others) uses `find({ limit: 0 })`
+to read `totalDocs` in a handful of one-off assertions against tiny test tables — tolerable
+there, not a pattern to carry into application code.
+
 ## Identifiers
 
 ### Document IDs are numbers here — never test a relationship value with `typeof x === 'string'`

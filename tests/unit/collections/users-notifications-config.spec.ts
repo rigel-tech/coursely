@@ -49,7 +49,7 @@ describe('Notifications collection config', () => {
     )
   })
 
-  it('belongs to a student — notifications are addressed to the public site, not to staff', () => {
+  it('relates to a student when present — absent means staff-facing, never a user relation', () => {
     const student = field(Notifications.fields, 'student') as Extract<
       Field,
       { type: 'relationship' }
@@ -59,11 +59,13 @@ describe('Notifications collection config', () => {
     expect(names).not.toContain('user')
   })
 
-  it('requires student, title and content', () => {
-    for (const name of ['student', 'title', 'content']) {
+  it('requires title and content, but not student — its absence is what makes a notification staff-facing', () => {
+    for (const name of ['title', 'content']) {
       const f = field(Notifications.fields, name) as Extract<Field, { required?: boolean }>
       expect(f.required).toBe(true)
     }
+    const student = field(Notifications.fields, 'student') as Extract<Field, { required?: boolean }>
+    expect(student.required).not.toBe(true)
   })
 
   it('defaults isRead to false', () => {
