@@ -112,7 +112,7 @@ async function createStudentWithWelcomeNotification(
         student: student.id,
         type: 'ACCOUNT_CREATED',
         title: 'Có người dùng đăng ký tài khoản mới',
-        content: 'Tài khoản của bạn đã được tạo. Hãy xác minh email để bắt đầu.',
+        content: `Học viên ${student.fullName || student.email} vừa đăng ký tài khoản mới trên hệ thống.`,
         isRead: false,
       },
       req,

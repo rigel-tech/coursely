@@ -5,6 +5,7 @@ import { Classes } from '@/collections/Classes'
 import { CourseObjectives } from '@/collections/CourseObjectives'
 import { CoursePhases } from '@/collections/CoursePhases'
 import { Courses } from '@/collections/Courses'
+import { Enrollments } from '@/collections/Enrollments'
 import { Media } from '@/collections/Media'
 import { Notifications } from '@/collections/Notifications'
 import { Pages } from '@/collections/Pages'
@@ -27,6 +28,7 @@ const groupName = (group: unknown) =>
 const staticCollections = [
   Courses,
   Classes,
+  Enrollments,
   CoursePhases,
   CourseObjectives,
   Categories,
@@ -60,8 +62,8 @@ describe('Admin Sidebar Grouping', () => {
     const visibleCollections = (config.collections || []).filter(
       (col) => !col.slug.startsWith('payload-') && !col.admin?.hidden,
     )
-    // 11 static collections + 4 plugin collections (redirects, forms, form-submissions, search) = 15 collections
-    expect(visibleCollections.length).toBe(15)
+    // 12 static collections + 4 plugin collections (redirects, forms, form-submissions, search) = 16 collections
+    expect(visibleCollections.length).toBe(16)
     for (const col of visibleCollections) {
       expect(col.admin?.group, `Collection "${col.slug}" must have a group`).toBeDefined()
       expect(ALLOWED_GROUPS).toContain(groupName(col.admin?.group))

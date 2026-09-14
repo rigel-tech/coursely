@@ -10,6 +10,7 @@ import { Classes } from './collections/Classes'
 import { CourseObjectives } from './collections/CourseObjectives'
 import { CoursePhases } from './collections/CoursePhases'
 import { Courses } from './collections/Courses'
+import { Enrollments } from './collections/Enrollments'
 import { Media } from './collections/Media'
 import { Notifications } from './collections/Notifications'
 import { Pages } from './collections/Pages'
@@ -101,6 +102,7 @@ export default buildConfig({
     Students,
     Courses,
     Classes,
+    Enrollments,
     CoursePhases,
     CourseObjectives,
     Categories,

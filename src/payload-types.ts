@@ -71,6 +71,7 @@ export interface Config {
     students: Student;
     courses: Course;
     classes: Class;
+    enrollments: Enrollment;
     'course-phases': CoursePhase;
     'course-objectives': CourseObjective;
     categories: Category;
@@ -103,6 +104,7 @@ export interface Config {
     students: StudentsSelect<false> | StudentsSelect<true>;
     courses: CoursesSelect<false> | CoursesSelect<true>;
     classes: ClassesSelect<false> | ClassesSelect<true>;
+    enrollments: EnrollmentsSelect<false> | EnrollmentsSelect<true>;
     'course-phases': CoursePhasesSelect<false> | CoursePhasesSelect<true>;
     'course-objectives': CourseObjectivesSelect<false> | CourseObjectivesSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
@@ -508,6 +510,26 @@ export interface Class {
   scheduleTime?: string | null;
   location?: string | null;
   maxStudents: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "enrollments".
+ */
+export interface Enrollment {
+  id: number;
+  student: number | Student;
+  course: number | Course;
+  class?: (number | null) | Class;
+  enrollmentStatus: 'NEW' | 'CONFIRMED' | 'ATTENDED' | 'COMPLETED' | 'CANCELLED';
+  paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
+  registrationSource: 'SELF_REGISTRATION' | 'ADMIN_CREATED';
+  registeredAt: string;
+  confirmedAt?: string | null;
+  classAssignedAt?: string | null;
+  cancelledAt?: string | null;
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -1189,6 +1211,10 @@ export interface PayloadLockedDocument {
         value: number | Class;
       } | null)
     | ({
+        relationTo: 'enrollments';
+        value: number | Enrollment;
+      } | null)
+    | ({
         relationTo: 'course-phases';
         value: number | CoursePhase;
       } | null)
@@ -1363,6 +1389,25 @@ export interface ClassesSelect<T extends boolean = true> {
   scheduleTime?: T;
   location?: T;
   maxStudents?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "enrollments_select".
+ */
+export interface EnrollmentsSelect<T extends boolean = true> {
+  student?: T;
+  course?: T;
+  class?: T;
+  enrollmentStatus?: T;
+  paymentStatus?: T;
+  registrationSource?: T;
+  registeredAt?: T;
+  confirmedAt?: T;
+  classAssignedAt?: T;
+  cancelledAt?: T;
+  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
