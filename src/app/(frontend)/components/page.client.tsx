@@ -16,6 +16,7 @@ import { ClassAssignForm } from '@/components/design/forms/class-assign-form'
 import { CourseForm } from '@/components/design/forms/course-form'
 import { LoginForm as StagedLoginForm } from '@/components/design/forms/login-form'
 import { FormField } from '@/components/public/forms/field'
+import { CourseRegistrationForm } from '@/components/public/forms/CourseRegistrationForm'
 import { ForgotPasswordForm } from '@/components/public/forms/ForgotPasswordForm'
 import { LoginForm } from '@/components/public/forms/LoginForm'
 import { OtpForm } from '@/components/public/forms/OtpForm'
@@ -514,6 +515,21 @@ const READY_FORMS: Entry[] = [
     preview: (
       <div className="max-w-sm">
         <RegisterForm />
+      </div>
+    ),
+  },
+  {
+    name: 'CourseRegistrationForm',
+    path: '@/components/public/forms/CourseRegistrationForm',
+    origin: 'public',
+    note: 'Form đăng ký khóa học, nhận dữ liệu khóa học động qua react-hook-form.',
+    preview: (
+      <div className="max-w-sm">
+        <CourseRegistrationForm
+          courseId={1}
+          courseTitle="Giao tiếp cho người đi làm"
+          onSubmit={noop}
+        />
       </div>
     ),
   },

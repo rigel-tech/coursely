@@ -19,6 +19,7 @@ import {
   Layers,
 } from 'lucide-react'
 import PageClient from './page.client'
+import { CourseRegistrationCTA } from '@/components/public/CourseRegistrationCTA'
 import { LivePreviewListener } from '@/components/public/LivePreviewListener'
 import type { Course, CourseObjective, CoursePhase } from '@/payload-types'
 
@@ -293,9 +294,11 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                     </a>
                   </Button>
                 ) : (
-                  <Button asChild className="w-full text-base py-6 font-semibold" size="lg">
-                    <Link href="/register">Đăng ký tham gia ngay</Link>
-                  </Button>
+                  <CourseRegistrationCTA
+                    courseId={course.id}
+                    courseSlug={decodedSlug}
+                    courseTitle={course.title}
+                  />
                 )}
               </div>
             </div>
