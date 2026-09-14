@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Student } from '@/payload-types'
 
 import { createEnrollmentAction } from '@/actions/student/create-enrollment'
+import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
 
 // Both dependencies reach for the Payload config, which a unit test has no business
 // booting. Mocking them leaves exactly what this action is: the decision about who may
@@ -94,5 +95,20 @@ describe('createEnrollmentAction — the path that enrols', () => {
     })
     expect(getSessionStudent).not.toHaveBeenCalled()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
+  })
+})
+
+describe('createEnrollmentAction — already enrolled', () => {
+  it('shows its own message, not the generic fallback or another refusal', async () => {
+    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(createStudentEnrollment).mockRejectedValue(new EnrollmentAlreadyExists())
+
+    const result = await createEnrollmentAction(12)
+
+    expect(result).toEqual({
+      status: 'error',
+      message: 'Bạn đã đăng ký khóa học này rồi.',
+    })
+    expect(result.redirectTo).toBeUndefined()
   })
 })

@@ -2,6 +2,7 @@
 
 import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
 import { getSessionStudent } from '@/lib/auth/session-student'
+import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
 import type { Student } from '@/payload-types'
 import { z } from 'zod'
 
@@ -55,7 +56,18 @@ export async function createEnrollmentAction(courseId: number): Promise<CreateEn
     return { status: 'error', message: STANDING_REFUSAL[student.status] }
   }
 
-  await createStudentEnrollment(parsed.data.courseId)
+  try {
+    await createStudentEnrollment(parsed.data.courseId)
+  } catch (error) {
+    // The one refusal with copy of its own so far (specs/008-enrollment-duplicate-guard).
+    // Anything else is rethrown — an error nobody wrote a message for is a bug, not a
+    // "please try again" to hide it behind (mirrors loginAction's instanceof chain).
+    if (error instanceof EnrollmentAlreadyExists) {
+      return { status: 'error', message: error.message }
+    }
+    throw error
+  }
+
   return { status: 'success', message: 'Đăng ký khóa học thành công.' }
 }
 

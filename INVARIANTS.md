@@ -564,6 +564,38 @@ invisible to it, because there is nothing to dangle.
 [`DESIGN.md`](DESIGN.md), `src/components/public/RichText/index.tsx:74` (`enableProse`,
 `dark:prose-invert`), and the blind-spot note in the header of `scripts/theme-guard.mjs`.
 
+## Data integrity
+
+### A `ValidationError` from creating an `Enrollment` is read as "already enrolled"
+
+**Rule** — `processEnrollmentTransaction` in `src/services/student-enrollment.ts` wraps
+only the `payload.create({ collection: 'enrollments', ... })` call in a narrow `try/catch`
+that turns any `ValidationError` it throws into `EnrollmentAlreadyExists`. That catch exists
+because the `Enrollments` collection has no `unique: true` field of its own today — the
+partial unique index added via `afterSchemaInit` in `src/payload.config.ts`
+(`enrollments_active_student_course_idx`, `WHERE enrollment_status <> 'CANCELLED'`) is the
+only thing that can make this specific `payload.create` call throw a `ValidationError`, so
+the catch has nothing else to mean.
+
+**Why it breaks silently** — Payload's Postgres adapter intercepts a raw `23505`
+(unique_violation) inside `payload.create`/upsert and converts it to `ValidationError`
+_before_ application code ever sees it (`@payloadcms/drizzle`'s `handleUpsertError`); the
+original driver error, with its constraint name, is not preserved on what gets thrown. If a
+future change adds `unique: true` to any other field on `Enrollments`, a violation of _that_
+constraint throws the exact same `ValidationError` shape and this catch will misreport it as
+"you are already enrolled in this course" — wrong message, and the real problem (a broken
+unique field) hidden behind copy that describes something else entirely. Nothing here would
+error, warn, or fail a type check; the tests that pass today would keep passing, because
+none of them add such a field.
+
+**Where** — `src/services/student-enrollment.ts` (`processEnrollmentTransaction`'s inner
+`try/catch`), `src/payload.config.ts` (`afterSchemaInit`, the index this catch assumes is
+the only source of the error), `src/lib/errors/enrollment.ts`
+(`EnrollmentAlreadyExists`). Adding a `unique: true` field to `Enrollments` must narrow this
+catch at the same time — e.g. by checking `error.errors[0]?.path` for the new field's name
+before assuming it is this guard. Design rationale:
+`specs/008-enrollment-duplicate-guard/research.md` Decision 2.
+
 ## Identifiers
 
 ### Document IDs are numbers here — never test a relationship value with `typeof x === 'string'`

@@ -1,5 +1,7 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
+import { sql } from 'drizzle-orm'
+import { uniqueIndex } from 'drizzle-orm/pg-core'
 import sharp from 'sharp'
 import path from 'path'
 import { buildConfig, PayloadRequest } from 'payload'
@@ -79,6 +81,24 @@ export default buildConfig({
       connectionString: process.env.DATABASE_URL || '',
     },
     prodMigrations: migrations,
+    // A student may hold at most one *active* enrollment per course — CANCELLED does not
+    // count (specs/008-enrollment-duplicate-guard). A plain compound-unique index can't
+    // express that exception; a partial index can. This is the single source of truth for
+    // the guard — read there is the src/services/student-enrollment.ts pre-check.
+    afterSchemaInit: [
+      ({ extendTable, schema }) => {
+        extendTable({
+          table: schema.tables.enrollments,
+          extraConfig: (table) => ({
+            enrollmentsActiveStudentCourseIdx: uniqueIndex('enrollments_active_student_course_idx')
+              .on(table.student, table.course)
+              .where(sql`${table.enrollmentStatus} <> 'CANCELLED'`),
+          }),
+        })
+
+        return schema
+      },
+    ],
   }),
   email: nodemailerAdapter({
     defaultFromAddress: process.env.SMTP_FROM_ADDRESS,

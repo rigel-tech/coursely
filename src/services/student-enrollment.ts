@@ -1,9 +1,10 @@
 'use server'
 
 import configPromise from '@payload-config'
-import { getPayload, Payload, type PayloadRequest } from 'payload'
+import { getPayload, Payload, ValidationError, type PayloadRequest } from 'payload'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { sendEnrollmentConfirmationEmail } from '@/email/send'
+import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
 import { Course } from '@/payload-types'
 
 async function validateCourseForEnrollment(payload: Payload, courseId: number): Promise<Course> {
@@ -32,6 +33,37 @@ async function validateCourseForEnrollment(payload: Payload, courseId: number): 
   return course
 }
 
+/**
+ * Fast, specific path for the ordinary (non-racing) case — FR-002/FR-008. This check is
+ * not itself the guard: two of these can both pass before either write lands, which is
+ * exactly why the partial unique index in `payload.config.ts`'s `afterSchemaInit` exists
+ * as the actual backstop (caught below, in `processEnrollmentTransaction`). CANCELLED is
+ * excluded here to match that index's `WHERE` clause — a cancelled enrollment must not
+ * block re-registration.
+ */
+async function assertNoActiveEnrollment(
+  payload: Payload,
+  studentId: number,
+  courseId: number,
+): Promise<void> {
+  const existing = await payload.find({
+    collection: 'enrollments',
+    where: {
+      and: [
+        { student: { equals: studentId } },
+        { course: { equals: courseId } },
+        { enrollmentStatus: { not_equals: 'CANCELLED' } },
+      ],
+    },
+    limit: 1,
+    overrideAccess: true,
+  })
+
+  if (existing.docs.length > 0) {
+    throw new EnrollmentAlreadyExists()
+  }
+}
+
 async function processEnrollmentTransaction(
   payload: Payload,
   studentId: number,
@@ -41,20 +73,27 @@ async function processEnrollmentTransaction(
   const req: Partial<PayloadRequest> = { transactionID }
 
   try {
-    await payload.create({
-      collection: 'enrollments',
-      data: {
-        student: studentId,
-        course: course.id,
-        registrationSource: 'SELF_REGISTRATION',
-        enrollmentStatus: 'NEW',
-        paymentStatus: 'UNPAID',
-        registeredAt: new Date().toISOString(),
-      },
-      draft: false,
-      overrideAccess: true,
-      req,
-    })
+    await assertNoActiveEnrollment(payload, studentId, course.id)
+
+    try {
+      await payload.create({
+        collection: 'enrollments',
+        data: {
+          student: studentId,
+          course: course.id,
+          registrationSource: 'SELF_REGISTRATION',
+          enrollmentStatus: 'NEW',
+          paymentStatus: 'UNPAID',
+          registeredAt: new Date().toISOString(),
+        },
+        draft: false,
+        overrideAccess: true,
+        req,
+      })
+    } catch (error) {
+      if (error instanceof ValidationError) throw new EnrollmentAlreadyExists()
+      throw error
+    }
 
     await payload.create({
       collection: 'notifications',

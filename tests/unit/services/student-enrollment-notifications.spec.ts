@@ -25,13 +25,14 @@ describe('student enrollment notifications', () => {
     } as never)
     vi.mocked(getPayload).mockResolvedValue({
       create,
-      findByID,
-      logger: { error: vi.fn() },
       db: {
         beginTransaction: vi.fn().mockResolvedValue(undefined),
         commitTransaction: vi.fn(),
         rollbackTransaction: vi.fn(),
       },
+      find: vi.fn().mockResolvedValue({ docs: [] }),
+      findByID,
+      logger: { error: vi.fn() },
     } as never)
 
     await createStudentEnrollment(12)
