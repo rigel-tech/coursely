@@ -311,7 +311,6 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                 ) : (
                   <CourseRegistrationCTA
                     courseId={course.id}
-                    courseSlug={decodedSlug}
                     courseTitle={course.title}
                     enrollmentStatus={enrollmentStatus}
                   />

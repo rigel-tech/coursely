@@ -1,11 +1,9 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { CourseRegistrationForm } from '@/components/public/forms/CourseRegistrationForm'
 import { Badge } from '@/components/public/ui/badge'
-import { Button } from '@/components/public/ui/button'
 
 const ENROLLMENT_STATUS_LABELS = {
   NEW: 'Mới đăng ký',
@@ -13,76 +11,44 @@ const ENROLLMENT_STATUS_LABELS = {
   ATTENDED: 'Đã vào học',
   COMPLETED: 'Đã hoàn thành',
   CANCELLED: 'Đã hủy',
-} as const
+}
+
+type EnrollmentStatus = keyof typeof ENROLLMENT_STATUS_LABELS
 
 type CourseRegistrationCTAProps = {
   courseId: number
-  courseSlug: string
   courseTitle: string
-  enrollmentStatus?: keyof typeof ENROLLMENT_STATUS_LABELS
+  enrollmentStatus?: EnrollmentStatus
 }
 
+/**
+ * Whether this visitor may enrol is decided by `createEnrollmentAction` when the form is
+ * submitted, not here — this component renders the form unconditionally and only reacts
+ * to what the server answers. `enrollmentStatus` seeds the badge from the page's own
+ * server-side lookup; `onSuccess` moves it into local state so a successful submit shows
+ * the badge immediately, without a reload.
+ */
 export function CourseRegistrationCTA({
   courseId,
-  courseSlug,
   courseTitle,
   enrollmentStatus,
 }: CourseRegistrationCTAProps) {
-  const router = useRouter()
-  const [isCheckingAuth, setIsCheckingAuth] = useState(false)
-  const [showForm, setShowForm] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
-
-  const handleRegistrationClick = async () => {
-    setIsCheckingAuth(true)
-    setToast(null)
-
-    try {
-      const response = await fetch('/next/auth-status')
-      const data = (await response.json()) as { authenticated?: boolean }
-
-      if (data.authenticated !== true) {
-        router.push(`/dang-nhap?callbackUrl=${encodeURIComponent(`/courses/${courseSlug}`)}`)
-        return
-      }
-
-      setShowForm(true)
-    } catch {
-      setToast('Không thể kiểm tra trạng thái đăng nhập. Vui lòng thử lại.')
-    } finally {
-      setIsCheckingAuth(false)
-    }
-  }
+  const [status, setStatus] = useState(enrollmentStatus)
 
   return (
     <div>
-      {enrollmentStatus ? (
+      {status ? (
         <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted px-3 py-3">
           <span className="text-muted-foreground text-sm">Trạng thái đăng ký</span>
-          <Badge variant="success">{ENROLLMENT_STATUS_LABELS[enrollmentStatus]}</Badge>
+          <Badge variant="success">{ENROLLMENT_STATUS_LABELS[status]}</Badge>
         </div>
-      ) : null}
-      {toast ? (
-        <p
-          aria-live="polite"
-          className="mb-4 rounded-md border border-border bg-muted px-3 py-2 text-sm"
-          role="status"
-        >
-          {toast}
-        </p>
-      ) : null}
-      {!enrollmentStatus && !showForm ? (
-        <Button
-          className="w-full py-6 text-base font-semibold"
-          disabled={isCheckingAuth}
-          onClick={handleRegistrationClick}
-          size="lg"
-        >
-          {isCheckingAuth ? 'Đang kiểm tra...' : 'Đăng ký khóa học'}
-        </Button>
-      ) : !enrollmentStatus && showForm ? (
-        <CourseRegistrationForm courseId={courseId} courseTitle={courseTitle} />
-      ) : null}
+      ) : (
+        <CourseRegistrationForm
+          courseId={courseId}
+          courseTitle={courseTitle}
+          onSuccess={() => setStatus('NEW')}
+        />
+      )}
     </div>
   )
 }

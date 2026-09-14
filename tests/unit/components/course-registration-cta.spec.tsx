@@ -3,63 +3,51 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { CourseRegistrationCTA } from '@/components/public/CourseRegistrationCTA'
 
-const push = vi.fn()
-
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push }),
+vi.mock('@/actions/student/create-enrollment', () => ({
+  createEnrollmentAction: vi.fn(),
 }))
 
-vi.mock('@/components/public/forms/CourseRegistrationForm', () => ({
-  CourseRegistrationForm: () => <div data-testid="course-registration-form" />,
-}))
+import { createEnrollmentAction } from '@/actions/student/create-enrollment'
+
+const fetchSpy = vi.spyOn(global, 'fetch')
+
+beforeEach(() => {
+  vi.mocked(createEnrollmentAction).mockReset()
+  fetchSpy.mockClear()
+})
+
+afterEach(() => {
+  cleanup()
+})
 
 describe('CourseRegistrationCTA', () => {
-  beforeEach(() => {
-    push.mockReset()
-    vi.restoreAllMocks()
+  it('renders the registration form directly — the gate is the server action, not a client check', () => {
+    render(<CourseRegistrationCTA courseId={12} courseTitle="Frontend" />)
+
+    expect(screen.getByRole('button', { name: 'Gửi đăng ký' })).toBeTruthy()
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
-  afterEach(() => {
-    cleanup()
-  })
-
-  it('redirects unauthenticated visitors to login with the course return path', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ authenticated: false }), { status: 200 }),
-    )
-
-    render(<CourseRegistrationCTA courseId={12} courseSlug="frontend" courseTitle="Frontend" />)
-    fireEvent.click(screen.getByRole('button', { name: 'Đăng ký khóa học' }))
-
-    await waitFor(() =>
-      expect(push).toHaveBeenCalledWith('/dang-nhap?callbackUrl=%2Fcourses%2Ffrontend'),
-    )
-  })
-
-  it('shows a toast and the dynamic form for authenticated visitors', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ authenticated: true }), { status: 200 }),
-    )
-
-    render(<CourseRegistrationCTA courseId={12} courseSlug="frontend" courseTitle="Frontend" />)
-    fireEvent.click(screen.getByRole('button', { name: 'Đăng ký khóa học' }))
-
-    expect(await screen.findByTestId('course-registration-form')).toBeTruthy()
-    expect(push).not.toHaveBeenCalled()
-  })
-
-  it('shows the existing enrollment status instead of the registration button', () => {
+  it('shows the existing enrollment status instead of the registration form', () => {
     render(
-      <CourseRegistrationCTA
-        courseId={12}
-        courseSlug="frontend"
-        courseTitle="Frontend"
-        enrollmentStatus="CONFIRMED"
-      />,
+      <CourseRegistrationCTA courseId={12} courseTitle="Frontend" enrollmentStatus="CONFIRMED" />,
     )
 
     expect(screen.getByText('Trạng thái đăng ký')).toBeTruthy()
     expect(screen.getByText('Đã xác nhận')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Đăng ký khóa học' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Gửi đăng ký' })).toBeNull()
+  })
+
+  it('switches to the status badge right after a successful registration, no reload needed', async () => {
+    vi.mocked(createEnrollmentAction).mockResolvedValue({
+      status: 'success',
+      message: 'Đăng ký khóa học thành công.',
+    })
+    render(<CourseRegistrationCTA courseId={12} courseTitle="Frontend" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
+
+    await waitFor(() => expect(screen.getByText('Mới đăng ký')).toBeTruthy())
+    expect(screen.queryByRole('button', { name: 'Gửi đăng ký' })).toBeNull()
   })
 })

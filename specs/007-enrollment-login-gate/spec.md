@@ -135,6 +135,9 @@ the other and from the generic retry message.
 - **FR-011**: A submitter who holds a session but whose account is not in good standing
   MUST NOT be sent to the sign-in screen. Each standing MUST state its own reason on the
   course page: awaiting e-mail verification, and disabled.
+- **FR-012**: On a successful registration, the registration control MUST switch to
+  showing the enrollment's status immediately, without the student reloading or
+  navigating the page.
 
 ### Key Entities
 

@@ -3,43 +3,58 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
-import { createEnrollmentAction } from '@/actions/student/create-enrollment'
+import {
+  createEnrollmentAction,
+  type CreateEnrollmentState,
+} from '@/actions/student/create-enrollment'
 import { Button } from '@/components/public/ui/button'
 
 export type CourseRegistrationValues = {
   courseId: number
-  note: string
 }
 
 type CourseRegistrationFormProps = {
   courseId: number
   courseTitle: string
+  /** Fires once, after the server confirms the enrollment was created. */
+  onSuccess?: () => void
 }
 
-export function CourseRegistrationForm({ courseId, courseTitle }: CourseRegistrationFormProps) {
+export function CourseRegistrationForm({ courseId, onSuccess }: CourseRegistrationFormProps) {
   const [message, setMessage] = useState<string | null>(null)
+
   const {
     formState: { isSubmitting },
     handleSubmit,
     register,
   } = useForm<CourseRegistrationValues>({
-    defaultValues: { courseId, note: '' },
+    defaultValues: { courseId },
   })
 
   const onSubmit = async (values: CourseRegistrationValues) => {
-    const result = await createEnrollmentAction(values.courseId).catch(() => ({
-      status: 'error' as const,
-      message: 'Không thể đăng ký khóa học. Vui lòng thử lại.',
-    }))
+    const result: CreateEnrollmentState = await createEnrollmentAction(values.courseId).catch(
+      () => ({
+        status: 'error',
+        message: 'Không thể đăng ký khóa học. Vui lòng thử lại.',
+      }),
+    )
+
     setMessage(result.message)
+
+    // A redirectTo means the server refused for a reason only signing in can fix — follow
+    // it with a full navigation so the fresh session cookie is read there.
+    if (result.redirectTo) {
+      window.location.assign(result.redirectTo)
+      return
+    }
+
+    if (result.status === 'success') onSuccess?.()
   }
 
   return (
     <form className="mt-6 flex flex-col gap-4" noValidate onSubmit={handleSubmit(onSubmit)}>
       <input type="hidden" {...register('courseId', { valueAsNumber: true })} />
-      <p className="text-muted-foreground text-sm">
-        Bạn đang đăng ký khóa học <strong className="text-foreground">{courseTitle}</strong>.
-      </p>
+
       {message ? (
         <p
           aria-live="polite"
@@ -49,6 +64,7 @@ export function CourseRegistrationForm({ courseId, courseTitle }: CourseRegistra
           {message}
         </p>
       ) : null}
+
       <Button disabled={isSubmitting} type="submit">
         {isSubmitting ? 'Đang gửi...' : 'Gửi đăng ký'}
       </Button>
