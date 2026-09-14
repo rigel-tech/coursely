@@ -97,7 +97,7 @@ src/
 │   └── enrollment-profile-schema.ts   # new — enrollmentProfileSchema, imports
 │                                         VIETNAM_PHONE_REGEX from profile-schema.ts
 ├── services/
-│   └── student-enrollment.ts          # + ensureCompleteProfile(studentId, fullName, phone)
+│   └── student-enrollment.ts          # + updateStudentProfile(studentId, fullName, phone)
 ├── actions/student/
 │   └── create-enrollment.ts           # signature: courseId -> CreateEnrollmentInput;
 │                                         + profile-completeness gate after standing check
@@ -111,7 +111,7 @@ src/
                                           when a student is signed in
 
 tests/unit/
-├── services/student-enrollment.spec.ts        # + ensureCompleteProfile cases
+├── services/student-enrollment.spec.ts        # + updateStudentProfile cases
 ├── actions/student-enrollment-action.spec.ts  # update ALL existing calls to the new
 │                                                 CreateEnrollmentInput shape (breaking
 │                                                 change from specs/007/008's calls);

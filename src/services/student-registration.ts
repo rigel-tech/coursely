@@ -19,6 +19,8 @@ import configPromise from '@payload-config'
 import type { Student } from '@/payload-types'
 import type { RegisterInput } from '@/lib/validation/register-schema'
 import { sendDuplicateAttemptEmail } from '@/email/send'
+import { createNotification } from '@/notifications/create'
+import { accountCreatedNotification } from '@/notifications/templates/account-created'
 import { sendVerificationOtp, type VerificationOtpMode } from '@/services/student-verification-otp'
 
 /**
@@ -106,17 +108,12 @@ async function createStudentWithWelcomeNotification(
       },
       req,
     })
-    await payload.create({
-      collection: 'notifications',
-      data: {
-        student: student.id,
-        type: 'ACCOUNT_CREATED',
-        title: 'Có người dùng đăng ký tài khoản mới',
-        content: `Học viên ${student.fullName || student.email} vừa đăng ký tài khoản mới trên hệ thống.`,
-        isRead: false,
-      },
+    const { title, content } = accountCreatedNotification(student.fullName, student.email)
+    await createNotification(
+      payload,
+      { studentId: student.id, type: 'ACCOUNT_CREATED', title, content },
       req,
-    })
+    )
     if (transactionID) await payload.db.commitTransaction(transactionID)
   } catch (err) {
     if (transactionID) await payload.db.rollbackTransaction(transactionID)

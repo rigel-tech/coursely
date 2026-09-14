@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { getPayload, ValidationError } from 'payload'
 import { getSessionStudent } from '@/lib/auth/session-student'
-import { createStudentEnrollment, ensureCompleteProfile } from '@/services/student-enrollment'
+import { createStudentEnrollment, updateStudentProfile } from '@/services/student-enrollment'
 import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
 
 vi.mock('payload', async (importOriginal) => ({
@@ -105,12 +105,12 @@ describe('createStudentEnrollment — the duplicate guard', () => {
 })
 
 // specs/009-enrollment-profile-completeness
-describe('ensureCompleteProfile', () => {
+describe('updateStudentProfile', () => {
   it('saves the submitted full name and phone on the student record', async () => {
     const update = vi.fn().mockResolvedValue({ id: 7 })
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ update }) as never)
 
-    await ensureCompleteProfile(7, 'Nguyễn Văn A', '0987654321')
+    await updateStudentProfile(7, 'Nguyễn Văn A', '0987654321')
 
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({

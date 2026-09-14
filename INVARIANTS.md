@@ -113,6 +113,33 @@ every admin-content collection (`Users`, `Students`, `Media`, `Posts`, `Pages`, 
 `src/access/authenticatedOrPublished.ts` has the same `Boolean(user)` shape for `pages`/`posts`
 reads and leaks drafts to a student token — narrower (no PII), still open, not yet fixed.
 
+### A student reads their own notifications only through `student-notifications.ts` — never by widening `Notifications.access`
+
+**Rule** — `Notifications.access` stays `authenticated` (staff-only, per the entry above) —
+that does not change to let a student in. A student's own notification count and list are
+read by `src/services/student-notifications.ts`'s `countUnreadNotifications(studentId)` /
+`listAndMarkRecentNotifications(studentId)`, each an `overrideAccess: true` Local API call
+explicitly scoped by `where: { student: { equals: studentId } }`, with `studentId` resolved
+by the caller from `getSessionStudent()` — never taken from the request. If a student
+needs a new way to read their own notifications, add a scoped function here; do not add a
+student-admitting branch to the collection's own `access`.
+
+**Why it breaks silently** — the obvious-looking fix for "students can't read their own
+notifications" is to loosen `Notifications.access.read` to admit any authenticated
+principal, or to add a `req.user?.collection === 'students'` branch that returns
+`{ student: { equals: req.user.id } }`. Either compiles, passes a quick manual check (the
+signed-in student who tested it only ever queries their own id), and ships — but it opens
+the collection's REST/GraphQL/admin-adjacent surface to every student token, and a student
+who edits their own query (or calls the API directly) can ask for `student: { equals:
+<anyone else's id> }` and read it. Nothing in the collection config stops them once
+`access` itself admits students; the only thing that was ever stopping this was
+`authenticated`'s staff-only check, and that is exactly what got widened.
+
+**Where** — `src/services/student-notifications.ts`, called from
+`src/app/(frontend)/next/notifications-count/route.ts` and
+`src/actions/student/notifications.ts`. `src/collections/Notifications/index.ts`'s
+`access` block is the thing this entry says never to touch for this purpose.
+
 ## Cache invalidation
 
 ### Every `revalidateTag(X)` must match an `unstable_cache` tag `X` character for character

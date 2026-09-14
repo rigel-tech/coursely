@@ -26,7 +26,7 @@ applied to ordering "not signed in" ahead of course-specific refusals.
 ## Decision 2 — The profile save commits independently of the enrollment attempt
 
 **Decision**: `createEnrollmentAction` saves the submitted `fullName`/`phone` (via a new
-service function, `ensureCompleteProfile`) as its own `payload.update`, _before_ calling
+service function, `updateStudentProfile`) as its own `payload.update`, _before_ calling
 the existing `createStudentEnrollment`. It is not part of `createStudentEnrollment`'s own
 transaction.
 
@@ -47,7 +47,7 @@ coordination is needed — the two operations were never going to share one.
 
 ## Decision 3 — `createStudentEnrollment`'s existing signature is untouched
 
-**Decision**: `ensureCompleteProfile(studentId, fullName, phone)` is called directly by
+**Decision**: `updateStudentProfile(studentId, fullName, phone)` is called directly by
 `createEnrollmentAction`, using the `student` and `payload` it already has in scope from
 the sign-in/standing checks — not threaded through `createStudentEnrollment(courseId)`,
 whose signature stays exactly as specs/007/008 left it.

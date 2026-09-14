@@ -44,7 +44,7 @@ the action has confirmed a signed-in, `ACTIVE` student.
 
 ## State: nothing persists beyond the two existing writes
 
-- A `students` row's `fullName`/`phone` may be updated (via the new `ensureCompleteProfile`
+- A `students` row's `fullName`/`phone` may be updated (via the new `updateStudentProfile`
   service call) — same fields, same collection, same access pattern
   (`overrideAccess: true`, scoped to the signed-in student's own id) already used
   elsewhere in this service.

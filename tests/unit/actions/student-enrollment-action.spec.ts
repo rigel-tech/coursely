@@ -10,7 +10,7 @@ import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
 // enrol and where an unauthenticated visitor is sent.
 vi.mock('@/services/student-enrollment', () => ({
   createStudentEnrollment: vi.fn(),
-  ensureCompleteProfile: vi.fn(),
+  updateStudentProfile: vi.fn(),
   findCourseSlug: vi.fn(),
 }))
 
@@ -21,7 +21,7 @@ vi.mock('@/lib/auth/session-student', () => ({
 import { getSessionStudent } from '@/lib/auth/session-student'
 import {
   createStudentEnrollment,
-  ensureCompleteProfile,
+  updateStudentProfile,
   findCourseSlug,
 } from '@/services/student-enrollment'
 
@@ -33,7 +33,7 @@ const validProfile = { fullName: 'Nguyễn Văn A', phone: '0987654321' }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(ensureCompleteProfile).mockResolvedValue(undefined)
+  vi.mocked(updateStudentProfile).mockResolvedValue(undefined)
 })
 
 describe('createEnrollmentAction — the sign-in gate', () => {
@@ -64,7 +64,7 @@ describe('createEnrollmentAction — the sign-in gate', () => {
     const result = await createEnrollmentAction({ courseId: 12 })
 
     expect(result.redirectTo).toBeDefined()
-    expect(ensureCompleteProfile).not.toHaveBeenCalled()
+    expect(updateStudentProfile).not.toHaveBeenCalled()
   })
 })
 
@@ -141,7 +141,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
 
     expect(result.status).toBe('error')
     expect(result.message).not.toBe('Không thể đăng ký khóa học. Vui lòng thử lại.')
-    expect(ensureCompleteProfile).not.toHaveBeenCalled()
+    expect(updateStudentProfile).not.toHaveBeenCalled()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 
@@ -155,7 +155,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
     })
 
     expect(result.status).toBe('error')
-    expect(ensureCompleteProfile).not.toHaveBeenCalled()
+    expect(updateStudentProfile).not.toHaveBeenCalled()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 
@@ -163,8 +163,8 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
     vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
     const callOrder: string[] = []
-    vi.mocked(ensureCompleteProfile).mockImplementation(async () => {
-      callOrder.push('ensureCompleteProfile')
+    vi.mocked(updateStudentProfile).mockImplementation(async () => {
+      callOrder.push('updateStudentProfile')
     })
     vi.mocked(createStudentEnrollment).mockImplementation(async () => {
       callOrder.push('createStudentEnrollment')
@@ -172,8 +172,8 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
 
     await createEnrollmentAction({ courseId: 12, ...validProfile })
 
-    expect(ensureCompleteProfile).toHaveBeenCalledWith(7, 'Nguyễn Văn A', '0987654321')
-    expect(callOrder).toEqual(['ensureCompleteProfile', 'createStudentEnrollment'])
+    expect(updateStudentProfile).toHaveBeenCalledWith(7, 'Nguyễn Văn A', '0987654321')
+    expect(callOrder).toEqual(['updateStudentProfile', 'createStudentEnrollment'])
   })
 
   it('keeps the profile save even when the enrollment attempt fails for an unrelated reason (FR-005)', async () => {
@@ -182,7 +182,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
 
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
 
-    expect(ensureCompleteProfile).toHaveBeenCalledWith(7, 'Nguyễn Văn A', '0987654321')
+    expect(updateStudentProfile).toHaveBeenCalledWith(7, 'Nguyễn Văn A', '0987654321')
     expect(result.message).toBe('Bạn đã đăng ký khóa học này rồi.')
   })
 })

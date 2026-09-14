@@ -5,6 +5,8 @@ import { getPayload, Payload, ValidationError, type PayloadRequest } from 'paylo
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { sendEnrollmentConfirmationEmail } from '@/email/send'
 import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
+import { createNotification } from '@/notifications/create'
+import { enrollmentCreatedNotification } from '@/notifications/templates/enrollment-created'
 import { Course } from '@/payload-types'
 
 async function validateCourseForEnrollment(payload: Payload, courseId: number): Promise<Course> {
@@ -41,7 +43,7 @@ async function validateCourseForEnrollment(payload: Payload, courseId: number): 
  * excluded here to match that index's `WHERE` clause — a cancelled enrollment must not
  * block re-registration.
  */
-async function assertNoActiveEnrollment(
+async function guardAgainstDuplicateEnrollment(
   payload: Payload,
   studentId: number,
   courseId: number,
@@ -73,7 +75,7 @@ async function processEnrollmentTransaction(
   const req: Partial<PayloadRequest> = { transactionID }
 
   try {
-    await assertNoActiveEnrollment(payload, studentId, course.id)
+    await guardAgainstDuplicateEnrollment(payload, studentId, course.id)
 
     try {
       await payload.create({
@@ -95,20 +97,18 @@ async function processEnrollmentTransaction(
       throw error
     }
 
-    await payload.create({
-      collection: 'notifications',
-      data: {
-        student: studentId,
+    const { title, content } = enrollmentCreatedNotification(course.title)
+    await createNotification(
+      payload,
+      {
+        studentId,
         type: 'ENROLLMENT_CREATED',
-        title: 'Đăng ký khóa học thành công',
-        content: `Bạn đã đăng ký khóa học "${course.title}" thành công. Đơn đăng ký đang chờ trung tâm xác nhận.`,
+        title,
+        content,
         metadata: { course: course.id },
-        isRead: false,
       },
-      draft: false,
-      overrideAccess: true,
       req,
-    })
+    )
 
     if (transactionID) await payload.db.commitTransaction(transactionID)
   } catch (error) {
@@ -123,7 +123,7 @@ async function processEnrollmentTransaction(
  * own — not part of `processEnrollmentTransaction` — so the correction survives even when
  * the registration attempt that follows it is refused for an unrelated reason (FR-005).
  */
-export async function ensureCompleteProfile(
+export async function updateStudentProfile(
   studentId: number,
   fullName: string,
   phone: string,
