@@ -46,9 +46,10 @@ const exportedSymbols = (source: string): string[] => [
 
 describe('the design staging folder', () => {
   it('holds the components it is supposed to hold', () => {
-    // Without this every check below passes on an empty directory.
+    // Without this every check below passes on an empty directory. Was 10 — login-form was
+    // retired once /dang-nhap built its own real LoginForm directly (2026-09-14).
     const components = designFiles().filter((f) => f.endsWith('.tsx'))
-    expect(components.length).toBeGreaterThanOrEqual(10)
+    expect(components.length).toBeGreaterThanOrEqual(9)
   })
 
   it('documents every component it exports', () => {

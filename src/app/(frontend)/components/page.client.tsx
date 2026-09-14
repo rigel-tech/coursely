@@ -14,7 +14,6 @@ import { SpotlightTeacher } from '@/components/design/blocks/spotlight-teacher'
 import { Stats } from '@/components/design/blocks/stats'
 import { ClassAssignForm } from '@/components/design/forms/class-assign-form'
 import { CourseForm } from '@/components/design/forms/course-form'
-import { LoginForm as StagedLoginForm } from '@/components/design/forms/login-form'
 import { FormField } from '@/components/public/forms/field'
 import { CourseRegistrationForm } from '@/components/public/forms/CourseRegistrationForm'
 import { ForgotPasswordForm } from '@/components/public/forms/ForgotPasswordForm'
@@ -533,7 +532,7 @@ const READY_FORMS: Entry[] = [
     name: 'LoginForm',
     path: '@/components/public/forms/LoginForm',
     origin: 'public',
-    note: 'Trang /dang-nhap. Gọi loginAction trực tiếp — không nhận onSubmit như bản đang chờ.',
+    note: 'Trang /dang-nhap. Gọi loginAction trực tiếp.',
     preview: (
       <div className="max-w-sm">
         <LoginForm />
@@ -586,17 +585,10 @@ const READY_FORMS: Entry[] = [
   },
 ]
 
+// Was three, including a staged LoginForm — retired once /dang-nhap built its own real
+// one directly (2026-09-14), rather than being promoted from here. See
+// src/components/public/forms/LoginForm.tsx under "Biểu mẫu — dùng được ngay".
 const STAGED_FORMS: Entry[] = [
-  {
-    name: 'LoginForm',
-    path: '@/components/design/forms/login-form',
-    origin: 'design',
-    preview: (
-      <div className="max-w-sm">
-        <StagedLoginForm onSubmit={noop} />
-      </div>
-    ),
-  },
   {
     name: 'CourseForm',
     path: '@/components/design/forms/course-form',
