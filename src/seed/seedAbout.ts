@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
-import { heading, lexicalDoc, list, paragraph } from './lexical'
+import { getOrCreateMedia, heading, lexicalDoc, list, paragraph } from './lexical'
 
-export async function seedAbout(payload: Payload): Promise<string | number | null> {
+export async function seedAbout(payload: Payload): Promise<number | undefined> {
   const existing = await payload.find({
     collection: 'pages',
     where: { slug: { equals: 'gioi-thieu' } },
@@ -49,13 +49,17 @@ export async function seedAbout(payload: Payload): Promise<string | number | nul
     ),
   ])
 
-  const media = await payload.find({ collection: 'media', limit: 1 })
-  const mediaId = media.docs[0]?.id
+  const heroImageId = await getOrCreateMedia(
+    payload,
+    'public/images/hero-about.jpg',
+    'SpeakEdge Academy Classroom',
+  )
+
   const col = (richText: unknown) => ({
-    size: 'half' as const,
-    cardStyle: 'none' as const,
-    textColor: 'default' as const,
-    richText: richText as never,
+    size: 'half',
+    cardStyle: 'none',
+    textColor: 'default',
+    richText,
   })
 
   const page = await payload.create({
@@ -67,30 +71,30 @@ export async function seedAbout(payload: Payload): Promise<string | number | nul
       slug: 'gioi-thieu',
       _status: 'published',
       hero: {
-        type: mediaId ? ('mediumImpact' as const) : ('lowImpact' as const),
-        richText: heroRichText as never,
-        ...(mediaId && { media: mediaId }),
+        type: heroImageId ? 'mediumImpact' : 'lowImpact',
+        richText: heroRichText,
+        ...(heroImageId && { media: heroImageId }),
         links: [],
       },
       layout: [
         {
-          blockType: 'content' as const,
-          background: 'none' as const,
+          blockType: 'content',
+          background: 'none',
           columns: [col(col1), col(col2)],
         },
         {
-          blockType: 'cta' as const,
+          blockType: 'cta',
           richText: lexicalDoc([
             heading('Sẵn sàng bứt phá sự nghiệp cùng SpeakEdge?', 'h3'),
             paragraph('Khám phá ngay các khóa học chất lượng cao.'),
-          ]) as never,
+          ]),
           links: [
             {
               link: {
-                type: 'custom' as const,
+                type: 'custom',
                 url: '/khoa-hoc',
                 label: 'Khám phá khóa học',
-                appearance: 'default' as const,
+                appearance: 'default',
               },
             },
           ],
@@ -100,7 +104,7 @@ export async function seedAbout(payload: Payload): Promise<string | number | nul
         title: 'Giới thiệu về SpeakEdge — Nền tảng Đào tạo Tiếng Anh Thực Chiến',
         description: 'Tìm hiểu về sứ mệnh, tầm nhìn và đội ngũ giảng viên tại SpeakEdge.',
       },
-    } as never,
+    } as any,
   })
 
   payload.logger.info(`Đã tạo Trang Giới thiệu (ID: ${page.id})`)

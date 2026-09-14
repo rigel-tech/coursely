@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-type PageIds = { homePageId?: string | number | null; aboutPageId?: string | number | null }
+type PageIds = { homePageId?: number; aboutPageId?: number }
 
 export async function seedHeader(payload: Payload, ids: PageIds = {}) {
   const existing = await payload.findGlobal({ slug: 'header' })
@@ -26,13 +26,12 @@ export async function seedHeader(payload: Payload, ids: PageIds = {}) {
     aboutPageId = r.docs[0]?.id
   }
 
-  const toId = (v: string | number) => (typeof v === 'string' ? Number(v) || v : v)
-  const refLink = (id: string | number, label: string) => ({
-    type: 'reference' as const,
-    reference: { relationTo: 'pages' as const, value: toId(id) },
+  const refLink = (id: number, label: string) => ({
+    type: 'reference',
+    reference: { relationTo: 'pages', value: id },
     label,
   })
-  const customLink = (url: string, label: string) => ({ type: 'custom' as const, url, label })
+  const customLink = (url: string, label: string) => ({ type: 'custom', url, label })
 
   const navItems = [
     { link: homePageId ? refLink(homePageId, 'Trang chủ') : customLink('/', 'Trang chủ') },
@@ -47,7 +46,7 @@ export async function seedHeader(payload: Payload, ids: PageIds = {}) {
   await payload.updateGlobal({
     slug: 'header',
     context: { disableRevalidate: true },
-    data: { navItems: navItems as never },
+    data: { navItems: navItems as any },
   })
 
   payload.logger.info('Đã cấu hình Header: Trang chủ · Khóa học · Giới thiệu')

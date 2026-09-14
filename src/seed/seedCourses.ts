@@ -1,10 +1,11 @@
 import type { Payload } from 'payload'
+import { getOrCreateMedia } from './lexical'
 
 const CATEGORIES = [
   { title: 'Tiếng Anh Giao Tiếp', slug: 'tieng-anh-giao-tiep' },
   { title: 'Luyện Thi Chứng Chỉ', slug: 'luyen-thi-chung-chi' },
   { title: 'Tiếng Anh Chuyên Ngành', slug: 'tieng-anh-chuyen-nganh' },
-] as const
+]
 
 const COURSES = [
   {
@@ -13,8 +14,9 @@ const COURSES = [
     shortDescription:
       'Lộ trình thực chiến giúp bạn tự tin họp hành, viết email chuyên nghiệp và đàm phán với đối tác quốc tế.',
     duration: '8 tuần (24 buổi)',
-    courseType: 'OFFLINE' as const,
+    courseType: 'OFFLINE',
     catSlug: 'tieng-anh-giao-tiep',
+    imagePath: 'public/images/course-business-english.jpg',
     tags: [{ tag: 'Giao tiếp' }, { tag: 'Doanh nghiệp' }, { tag: 'Thực chiến' }],
   },
   {
@@ -23,8 +25,9 @@ const COURSES = [
     shortDescription:
       'Phương pháp học tập trọng tâm, tối ưu hóa thời gian với mục tiêu nâng từ 1.0–1.5 band score trong 3 tháng.',
     duration: '12 tuần (36 buổi)',
-    courseType: 'OFFLINE' as const,
+    courseType: 'OFFLINE',
     catSlug: 'luyen-thi-chung-chi',
+    imagePath: 'public/images/course-ielts.jpg',
     tags: [{ tag: 'IELTS' }, { tag: 'Cấp tốc' }, { tag: 'Band 6.5+' }],
   },
   {
@@ -33,8 +36,9 @@ const COURSES = [
     shortDescription:
       'Trang bị kỹ năng trả lời phỏng vấn xuất sắc vào các tập đoàn đa quốc gia và làm chủ sân khấu thuyết trình.',
     duration: '6 tuần (18 buổi)',
-    courseType: 'OFFLINE' as const,
+    courseType: 'OFFLINE',
     catSlug: 'tieng-anh-chuyen-nganh',
+    imagePath: 'public/images/course-presentation.jpg',
     tags: [{ tag: 'Thuyết trình' }, { tag: 'Phỏng vấn' }, { tag: 'Soft skills' }],
   },
   {
@@ -43,15 +47,38 @@ const COURSES = [
     shortDescription:
       'Nắm vững thuật ngữ tài chính–thương mại quốc tế, kỹ thuật thương lượng và soạn thảo hợp đồng chuẩn mực.',
     duration: '10 tuần (30 buổi)',
-    courseType: 'OFFLINE' as const,
+    courseType: 'OFFLINE',
     catSlug: 'tieng-anh-chuyen-nganh',
+    imagePath: 'public/images/course-negotiation.jpg',
     tags: [{ tag: 'Thương mại' }, { tag: 'Đàm phán' }, { tag: 'Hợp đồng' }],
   },
-] as const
+  {
+    title: 'Luyện Thi TOEIC 750+ Tinh Gọn Cho Người Bận Rộn',
+    slug: 'luyện-thi-toeic-750-tinh-gon',
+    shortDescription:
+      'Chiến thuật làm bài độc quyền, luyện đề chuyên sâu giúp đạt mục tiêu 750+ TOEIC nhanh chóng.',
+    duration: '8 tuần (24 buổi)',
+    courseType: 'OFFLINE',
+    catSlug: 'luyen-thi-chung-chi',
+    imagePath: 'public/images/course-toeic.jpg',
+    tags: [{ tag: 'TOEIC' }, { tag: '750+' }, { tag: 'Cấp tốc' }],
+  },
+  {
+    title: 'Tiếng Anh Phản Xạ & Viết Email Chuẩn Quốc Tế',
+    slug: 'tieng-anh-phan-xa-viet-email',
+    shortDescription:
+      'Xóa bỏ thói quen dịch nhẩm, làm chủ kỹ thuật phản xạ tự nhiên và soạn thảo email công việc chuyên nghiệp.',
+    duration: '6 tuần (18 buổi)',
+    courseType: 'OFFLINE',
+    catSlug: 'tieng-anh-giao-tiep',
+    imagePath: 'public/images/course-email-reflex.jpg',
+    tags: [{ tag: 'Phản xạ' }, { tag: 'Email' }, { tag: 'Giao tiếp' }],
+  },
+]
 
 export async function seedCourses(payload: Payload) {
   const existingCourses = await payload.find({ collection: 'courses', limit: 1 })
-  if (existingCourses.totalDocs > 0) {
+  if (existingCourses.totalDocs >= 6) {
     return payload.logger.info(`Đã có ${existingCourses.totalDocs} khóa học.`)
   }
 
@@ -74,11 +101,35 @@ export async function seedCourses(payload: Payload) {
   )
 
   await Promise.all(
-    COURSES.map(async ({ catSlug, ...rest }) => {
+    COURSES.map(async ({ catSlug, imagePath, ...rest }) => {
+      const existing = await payload.find({
+        collection: 'courses',
+        where: { slug: { equals: rest.slug } },
+        limit: 1,
+      })
+
+      const imageId = await getOrCreateMedia(payload, imagePath, rest.title)
+
+      if (existing.docs.length > 0) {
+        if (!existing.docs[0].image && imageId) {
+          await payload.update({
+            collection: 'courses',
+            id: existing.docs[0].id,
+            data: { image: imageId },
+          })
+        }
+        return
+      }
+
       await payload.create({
         collection: 'courses',
         draft: false,
-        data: { ...rest, category: catIds[catSlug], _status: 'published' } as never,
+        data: {
+          ...rest,
+          category: catIds[catSlug],
+          image: imageId,
+          _status: 'published',
+        } as any,
       })
       payload.logger.info(`Khóa học: ${rest.title}`)
     }),
