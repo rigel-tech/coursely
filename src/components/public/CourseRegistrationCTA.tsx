@@ -3,22 +3,30 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import {
-  CourseRegistrationForm,
-  type CourseRegistrationValues,
-} from '@/components/public/forms/CourseRegistrationForm'
+import { CourseRegistrationForm } from '@/components/public/forms/CourseRegistrationForm'
+import { Badge } from '@/components/public/ui/badge'
 import { Button } from '@/components/public/ui/button'
+
+const ENROLLMENT_STATUS_LABELS = {
+  NEW: 'Mới đăng ký',
+  CONFIRMED: 'Đã xác nhận',
+  ATTENDED: 'Đã vào học',
+  COMPLETED: 'Đã hoàn thành',
+  CANCELLED: 'Đã hủy',
+} as const
 
 type CourseRegistrationCTAProps = {
   courseId: number
   courseSlug: string
   courseTitle: string
+  enrollmentStatus?: keyof typeof ENROLLMENT_STATUS_LABELS
 }
 
 export function CourseRegistrationCTA({
   courseId,
   courseSlug,
   courseTitle,
+  enrollmentStatus,
 }: CourseRegistrationCTAProps) {
   const router = useRouter()
   const [isCheckingAuth, setIsCheckingAuth] = useState(false)
@@ -39,7 +47,6 @@ export function CourseRegistrationCTA({
       }
 
       setShowForm(true)
-      setToast('Bạn đã đăng nhập.')
     } catch {
       setToast('Không thể kiểm tra trạng thái đăng nhập. Vui lòng thử lại.')
     } finally {
@@ -47,12 +54,14 @@ export function CourseRegistrationCTA({
     }
   }
 
-  const handleSubmit = async (values: CourseRegistrationValues) => {
-    setToast(`Đã nhận yêu cầu đăng ký khóa học ${values.courseId}.`)
-  }
-
   return (
     <div>
+      {enrollmentStatus ? (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted px-3 py-3">
+          <span className="text-muted-foreground text-sm">Trạng thái đăng ký</span>
+          <Badge variant="success">{ENROLLMENT_STATUS_LABELS[enrollmentStatus]}</Badge>
+        </div>
+      ) : null}
       {toast ? (
         <p
           aria-live="polite"
@@ -62,7 +71,7 @@ export function CourseRegistrationCTA({
           {toast}
         </p>
       ) : null}
-      {!showForm ? (
+      {!enrollmentStatus && !showForm ? (
         <Button
           className="w-full py-6 text-base font-semibold"
           disabled={isCheckingAuth}
@@ -71,13 +80,9 @@ export function CourseRegistrationCTA({
         >
           {isCheckingAuth ? 'Đang kiểm tra...' : 'Đăng ký khóa học'}
         </Button>
-      ) : (
-        <CourseRegistrationForm
-          courseId={courseId}
-          courseTitle={courseTitle}
-          onSubmit={handleSubmit}
-        />
-      )}
+      ) : !enrollmentStatus && showForm ? (
+        <CourseRegistrationForm courseId={courseId} courseTitle={courseTitle} />
+      ) : null}
     </div>
   )
 }

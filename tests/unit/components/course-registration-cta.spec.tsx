@@ -44,8 +44,22 @@ describe('CourseRegistrationCTA', () => {
     render(<CourseRegistrationCTA courseId={12} courseSlug="frontend" courseTitle="Frontend" />)
     fireEvent.click(screen.getByRole('button', { name: 'Đăng ký khóa học' }))
 
-    expect((await screen.findByRole('status')).textContent).toContain('Bạn đã đăng nhập.')
     expect(await screen.findByTestId('course-registration-form')).toBeTruthy()
     expect(push).not.toHaveBeenCalled()
+  })
+
+  it('shows the existing enrollment status instead of the registration button', () => {
+    render(
+      <CourseRegistrationCTA
+        courseId={12}
+        courseSlug="frontend"
+        courseTitle="Frontend"
+        enrollmentStatus="CONFIRMED"
+      />,
+    )
+
+    expect(screen.getByText('Trạng thái đăng ký')).toBeTruthy()
+    expect(screen.getByText('Đã xác nhận')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Đăng ký khóa học' })).toBeNull()
   })
 })

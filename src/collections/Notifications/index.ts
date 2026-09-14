@@ -46,6 +46,10 @@ export const Notifications: CollectionConfig = {
           label: { vi: 'Tạo tài khoản thành công', en: 'Account Created' },
           value: 'ACCOUNT_CREATED',
         },
+        {
+          label: { vi: 'Đăng ký khóa học thành công', en: 'Enrollment Created' },
+          value: 'ENROLLMENT_CREATED',
+        },
       ],
       required: true,
     },

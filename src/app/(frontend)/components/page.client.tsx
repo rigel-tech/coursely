@@ -525,11 +525,7 @@ const READY_FORMS: Entry[] = [
     note: 'Form đăng ký khóa học, nhận dữ liệu khóa học động qua react-hook-form.',
     preview: (
       <div className="max-w-sm">
-        <CourseRegistrationForm
-          courseId={1}
-          courseTitle="Giao tiếp cho người đi làm"
-          onSubmit={noop}
-        />
+        <CourseRegistrationForm courseId={1} courseTitle="Giao tiếp cho người đi làm" />
       </div>
     ),
   },

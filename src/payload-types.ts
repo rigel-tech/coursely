@@ -992,7 +992,7 @@ export interface Form {
 export interface Notification {
   id: number;
   student: number | Student;
-  type: 'ACCOUNT_CREATED';
+  type: 'ACCOUNT_CREATED' | 'ENROLLMENT_CREATED';
   title: string;
   content: string;
   metadata?:

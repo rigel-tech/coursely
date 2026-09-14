@@ -21,6 +21,7 @@ import {
 import PageClient from './page.client'
 import { CourseRegistrationCTA } from '@/components/public/CourseRegistrationCTA'
 import { LivePreviewListener } from '@/components/public/LivePreviewListener'
+import { getSessionStudent } from '@/lib/auth/session-student'
 import type { Course, CourseObjective, CoursePhase } from '@/payload-types'
 
 export async function generateStaticParams() {
@@ -58,6 +59,20 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
   }
 
   const payload = await getPayload({ config: configPromise })
+  const student = await getSessionStudent()
+  const enrollment = student
+    ? await payload.find({
+        collection: 'enrollments',
+        depth: 0,
+        limit: 1,
+        overrideAccess: true,
+        pagination: false,
+        where: {
+          and: [{ student: { equals: student.id } }, { course: { equals: course.id } }],
+        },
+      })
+    : null
+  const enrollmentStatus = enrollment?.docs[0]?.enrollmentStatus
 
   // Lấy danh sách mục tiêu khóa học (Course Objectives)
   const objectivesRes = await payload.find({
@@ -298,6 +313,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                     courseId={course.id}
                     courseSlug={decodedSlug}
                     courseTitle={course.title}
+                    enrollmentStatus={enrollmentStatus}
                   />
                 )}
               </div>
