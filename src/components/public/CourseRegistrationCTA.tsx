@@ -2,14 +2,16 @@
 
 import { useState } from 'react'
 
-import { CourseRegistrationForm } from '@/components/public/forms/CourseRegistrationForm'
+import {
+  CourseRegistrationForm,
+  type CourseRegistrationCourse,
+} from '@/components/public/forms/CourseRegistrationForm'
 import { Badge } from '@/components/public/ui/badge'
 import { ENROLLMENT_STATUS } from '@/components/public/enrollment-status'
 import type { Enrollment } from '@/payload-types'
 
 type CourseRegistrationCTAProps = {
-  courseId: number
-  courseTitle: string
+  course: CourseRegistrationCourse
   email?: string
   enrollmentStatus?: Enrollment['enrollmentStatus']
   fullName?: string | null
@@ -24,8 +26,7 @@ type CourseRegistrationCTAProps = {
  * the badge immediately, without a reload.
  */
 export function CourseRegistrationCTA({
-  courseId,
-  courseTitle,
+  course,
   email,
   enrollmentStatus,
   fullName,
@@ -44,8 +45,7 @@ export function CourseRegistrationCTA({
         </div>
       ) : (
         <CourseRegistrationForm
-          courseId={courseId}
-          courseTitle={courseTitle}
+          course={course}
           profile={{ email, fullName, phone }}
           onSuccess={() => setStatus('NEW')}
         />

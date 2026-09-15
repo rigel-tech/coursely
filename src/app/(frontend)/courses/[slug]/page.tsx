@@ -310,8 +310,13 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                   </Button>
                 ) : (
                   <CourseRegistrationCTA
-                    courseId={course.id}
-                    courseTitle={course.title}
+                    course={{
+                      id: course.id,
+                      title: course.title,
+                      duration: course.duration,
+                      courseType: course.courseType,
+                      registrationEndAt: course.registrationEndAt,
+                    }}
                     email={student?.email}
                     enrollmentStatus={enrollmentStatus}
                     fullName={student?.fullName}

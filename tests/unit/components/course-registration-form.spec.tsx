@@ -23,6 +23,9 @@ const submit = async () => {
 /** A profile already complete — the shape most tests here render with. */
 const completeProfile = { fullName: 'Nguyễn Văn A', phone: '0987654321' }
 
+/** The course shape most tests here render with. */
+const baseCourse = { id: 12, title: 'Frontend' }
+
 beforeEach(() => {
   vi.mocked(createEnrollmentAction).mockReset()
   assign.mockReset()
@@ -41,9 +44,7 @@ describe('CourseRegistrationForm', () => {
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    render(
-      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
-    )
+    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
     await submit()
 
@@ -58,9 +59,7 @@ describe('CourseRegistrationForm', () => {
       message: 'Vui lòng đăng nhập để đăng ký khóa học.',
       redirectTo: '/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend',
     })
-    render(
-      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
-    )
+    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
     await submit()
 
@@ -77,8 +76,7 @@ describe('CourseRegistrationForm', () => {
     })
     render(
       <CourseRegistrationForm
-        courseId={12}
-        courseTitle="Frontend"
+        course={baseCourse}
         onSuccess={onSuccess}
         profile={completeProfile}
       />,
@@ -99,8 +97,7 @@ describe('CourseRegistrationForm', () => {
     })
     render(
       <CourseRegistrationForm
-        courseId={12}
-        courseTitle="Frontend"
+        course={baseCourse}
         onSuccess={onSuccess}
         profile={completeProfile}
       />,
@@ -118,8 +115,7 @@ describe('CourseRegistrationForm — reviewing an already-complete profile (spec
   it('shows full name, phone and email as plain text — none of them an input', () => {
     render(
       <CourseRegistrationForm
-        courseId={12}
-        courseTitle="Frontend"
+        course={baseCourse}
         profile={{ email: 'student@example.com', ...completeProfile }}
       />,
     )
@@ -135,9 +131,7 @@ describe('CourseRegistrationForm — reviewing an already-complete profile (spec
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    render(
-      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
-    )
+    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
     await submit()
 
@@ -149,13 +143,7 @@ describe('CourseRegistrationForm — reviewing an already-complete profile (spec
 
 describe('CourseRegistrationForm — a field that is missing or invalid becomes editable (specs/009)', () => {
   it('shows an input for a blank full name while phone stays plain text', () => {
-    render(
-      <CourseRegistrationForm
-        courseId={12}
-        courseTitle="Frontend"
-        profile={{ phone: '0987654321' }}
-      />,
-    )
+    render(<CourseRegistrationForm course={baseCourse} profile={{ phone: '0987654321' }} />)
 
     expect(screen.getByLabelText('Họ và tên')).toBeTruthy()
     expect(screen.getByText('0987654321')).toBeTruthy()
@@ -164,8 +152,7 @@ describe('CourseRegistrationForm — a field that is missing or invalid becomes 
   it('shows an input for an invalidly-formatted phone even though it is not blank', () => {
     render(
       <CourseRegistrationForm
-        courseId={12}
-        courseTitle="Frontend"
+        course={baseCourse}
         profile={{ fullName: 'Nguyễn Văn A', phone: '123456' }}
       />,
     )
@@ -175,13 +162,7 @@ describe('CourseRegistrationForm — a field that is missing or invalid becomes 
   })
 
   it('rejects submission client-side when full name is blank, without calling the action', async () => {
-    render(
-      <CourseRegistrationForm
-        courseId={12}
-        courseTitle="Frontend"
-        profile={{ phone: '0987654321' }}
-      />,
-    )
+    render(<CourseRegistrationForm course={baseCourse} profile={{ phone: '0987654321' }} />)
 
     clickSubmit()
 
@@ -194,7 +175,7 @@ describe('CourseRegistrationForm — a field that is missing or invalid becomes 
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    render(<CourseRegistrationForm courseId={12} courseTitle="Frontend" />)
+    render(<CourseRegistrationForm course={baseCourse} />)
 
     fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'Trần Thị B' } })
     fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0912345678' } })
@@ -212,9 +193,7 @@ describe('CourseRegistrationForm — a field that is missing or invalid becomes 
 
 describe('CourseRegistrationForm — confirmation modal', () => {
   it('opens a confirmation modal instead of submitting immediately', async () => {
-    render(
-      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
-    )
+    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
     clickSubmit()
 
@@ -227,9 +206,7 @@ describe('CourseRegistrationForm — confirmation modal', () => {
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    render(
-      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
-    )
+    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
     clickSubmit()
     await confirmInModal()
@@ -240,14 +217,32 @@ describe('CourseRegistrationForm — confirmation modal', () => {
   })
 
   it('cancelling the modal does not submit', async () => {
-    render(
-      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
-    )
+    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
     clickSubmit()
     fireEvent.click(await screen.findByRole('button', { name: 'Hủy' }))
 
     expect(screen.queryByRole('button', { name: 'Xác nhận đăng ký' })).toBeNull()
     expect(createEnrollmentAction).not.toHaveBeenCalled()
+  })
+
+  it('shows course and student details for review before confirming', async () => {
+    const registrationEndAt = '2026-12-31T00:00:00.000Z'
+    render(
+      <CourseRegistrationForm
+        course={{ ...baseCourse, duration: '8 tuần', courseType: 'OFFLINE', registrationEndAt }}
+        profile={{ email: 'student@example.com', ...completeProfile }}
+      />,
+    )
+
+    clickSubmit()
+    await screen.findByRole('button', { name: 'Xác nhận đăng ký' })
+
+    expect(screen.getByText('8 tuần')).toBeTruthy()
+    expect(screen.getByText('Lớp học Offline')).toBeTruthy()
+    expect(screen.getByText(new Date(registrationEndAt).toLocaleDateString('vi-VN'))).toBeTruthy()
+    expect(screen.getAllByText(completeProfile.fullName).length).toBeGreaterThan(1)
+    expect(screen.getAllByText(completeProfile.phone).length).toBeGreaterThan(1)
+    expect(screen.getAllByText('student@example.com').length).toBeGreaterThan(1)
   })
 })

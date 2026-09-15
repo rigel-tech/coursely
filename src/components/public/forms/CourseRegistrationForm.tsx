@@ -17,10 +17,20 @@ import {
   type EnrollmentProfileValues,
 } from '@/lib/validation/enrollment-profile-schema'
 import { VIETNAM_PHONE_REGEX } from '@/lib/validation/profile-schema'
+import type { Course } from '@/payload-types'
+
+/** Shared by `CourseRegistrationForm` and `CourseRegistrationCTA` — passed through unchanged. */
+export type CourseRegistrationCourse = {
+  id: number
+  title: string
+  /** Shown in the confirmation modal alongside the student's own details. */
+  duration?: string | null
+  courseType?: Course['courseType']
+  registrationEndAt?: string | null
+}
 
 type CourseRegistrationFormProps = {
-  courseId: number
-  courseTitle: string
+  course: CourseRegistrationCourse
   /** The signed-in student's own profile — email is shown, never edited (specs/009, Q1). */
   profile?: {
     email?: string
@@ -32,11 +42,17 @@ type CourseRegistrationFormProps = {
 }
 
 export function CourseRegistrationForm({
-  courseId,
-  courseTitle,
+  course,
   profile,
   onSuccess,
 }: CourseRegistrationFormProps) {
+  const {
+    id: courseId,
+    title: courseTitle,
+    duration: courseDuration,
+    courseType,
+    registrationEndAt,
+  } = course
   const { email, fullName, phone } = profile ?? {}
   const [message, setMessage] = useState<CreateEnrollmentState | null>(null)
   const [pendingValues, setPendingValues] = useState<EnrollmentProfileValues | null>(null)
@@ -198,7 +214,46 @@ export function CourseRegistrationForm({
         }}
         open={pendingValues !== null}
         title="Xác nhận đăng ký khóa học"
-      />
+      >
+        <dl className="flex flex-col gap-2 text-sm">
+          {courseDuration ? (
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Thời lượng</dt>
+              <dd className="font-medium">{courseDuration}</dd>
+            </div>
+          ) : null}
+          {courseType ? (
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Hình thức</dt>
+              <dd className="font-medium">
+                {courseType === 'MOODLE' ? 'Moodle E-Learning' : 'Lớp học Offline'}
+              </dd>
+            </div>
+          ) : null}
+          {registrationEndAt ? (
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Hạn chót đăng ký</dt>
+              <dd className="font-medium">
+                {new Date(registrationEndAt).toLocaleDateString('vi-VN')}
+              </dd>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between border-t border-border pt-2">
+            <dt className="text-muted-foreground">Họ và tên</dt>
+            <dd className="font-medium">{pendingValues?.fullName}</dd>
+          </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">Số điện thoại</dt>
+            <dd className="font-medium">{pendingValues?.phone}</dd>
+          </div>
+          {email ? (
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Email</dt>
+              <dd className="font-medium">{email}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </Modal>
     </>
   )
 }

@@ -10,6 +10,7 @@ vi.mock('@/actions/student/create-enrollment', () => ({
 import { createEnrollmentAction } from '@/actions/student/create-enrollment'
 
 const fetchSpy = vi.spyOn(global, 'fetch')
+const baseCourse = { id: 12, title: 'Frontend' }
 
 beforeEach(() => {
   vi.mocked(createEnrollmentAction).mockReset()
@@ -22,16 +23,14 @@ afterEach(() => {
 
 describe('CourseRegistrationCTA', () => {
   it('renders the registration form directly — the gate is the server action, not a client check', () => {
-    render(<CourseRegistrationCTA courseId={12} courseTitle="Frontend" />)
+    render(<CourseRegistrationCTA course={baseCourse} />)
 
     expect(screen.getByRole('button', { name: 'Gửi đăng ký' })).toBeTruthy()
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('shows the existing enrollment status instead of the registration form', () => {
-    render(
-      <CourseRegistrationCTA courseId={12} courseTitle="Frontend" enrollmentStatus="CONFIRMED" />,
-    )
+    render(<CourseRegistrationCTA course={baseCourse} enrollmentStatus="CONFIRMED" />)
 
     expect(screen.getByText('Trạng thái đăng ký')).toBeTruthy()
     expect(screen.getByText('Đã xác nhận')).toBeTruthy()
@@ -40,14 +39,12 @@ describe('CourseRegistrationCTA', () => {
 
   it('gives CANCELLED a different badge colour than CONFIRMED — statuses are not lumped together', () => {
     const { unmount } = render(
-      <CourseRegistrationCTA courseId={12} courseTitle="Frontend" enrollmentStatus="CONFIRMED" />,
+      <CourseRegistrationCTA course={baseCourse} enrollmentStatus="CONFIRMED" />,
     )
     const confirmedClass = screen.getByText('Đã xác nhận').className
     unmount()
 
-    render(
-      <CourseRegistrationCTA courseId={12} courseTitle="Frontend" enrollmentStatus="CANCELLED" />,
-    )
+    render(<CourseRegistrationCTA course={baseCourse} enrollmentStatus="CANCELLED" />)
     const cancelledClass = screen.getByText('Đã hủy').className
 
     expect(cancelledClass).not.toBe(confirmedClass)
@@ -58,14 +55,7 @@ describe('CourseRegistrationCTA', () => {
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    render(
-      <CourseRegistrationCTA
-        courseId={12}
-        courseTitle="Frontend"
-        fullName="Nguyễn Văn A"
-        phone="0987654321"
-      />,
-    )
+    render(<CourseRegistrationCTA course={baseCourse} fullName="Nguyễn Văn A" phone="0987654321" />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đăng ký' }))
@@ -77,8 +67,7 @@ describe('CourseRegistrationCTA', () => {
   it('passes the student profile fields through to the registration form (specs/009)', () => {
     render(
       <CourseRegistrationCTA
-        courseId={12}
-        courseTitle="Frontend"
+        course={baseCourse}
         email="a@b.com"
         fullName="Nguyễn Văn A"
         phone="0987654321"
