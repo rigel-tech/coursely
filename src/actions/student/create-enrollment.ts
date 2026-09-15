@@ -1,7 +1,7 @@
 'use server'
 
 import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
-import { StudentProfileWrite, updateStudentProfile } from '@/services/student-profile'
+import { updateStudentProfile } from '@/services/student-profile'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import {
   CourseNotFound,
@@ -10,35 +10,14 @@ import {
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
 import { enrollmentProfileSchema } from '@/lib/validation/enrollment-profile-schema'
+import type {
+  CreateEnrollmentInput,
+  CreateEnrollmentState,
+} from '@/lib/constants/create-enrollment-state'
+import { createEnrollmentSchema } from '@/lib/constants/create-enrollment-state'
 import type { Student } from '@/payload-types'
-import { z } from 'zod'
 
-/**
- * What `<CourseRegistrationForm>` acts on. `redirectTo` is set only when signing in is
- * what would help; every other refusal is a `message` the student reads where they stand.
- */
-export type CreateEnrollmentState = {
-  status: 'success' | 'error'
-  message: string
-  redirectTo?: string
-}
-
-/**
- * `fullName`/`phone` are optional here — a signed-out visitor's form has no profile to
- * send, and must still reach the sign-in redirect rather than a "profile incomplete"
- * refusal (specs/007-student-enrollment, research.md Decision 5). They
- * become required only once a signed-in, `ACTIVE` student is confirmed, via
- * `enrollmentProfileSchema`.
- */
-export type CreateEnrollmentInput = {
-  courseId: number
-  fullName?: string
-  phone?: string
-}
-
-const createEnrollmentSchema = z.object({
-  courseId: z.number().int().positive(),
-})
+export type { CreateEnrollmentInput, CreateEnrollmentState }
 
 const PROFILE_INCOMPLETE_MESSAGE =
   'Vui lòng bổ sung đầy đủ họ và tên, số điện thoại trước khi đăng ký khóa học.'
@@ -67,7 +46,7 @@ const STANDING_REFUSAL: Record<Exclude<Student['status'], 'ACTIVE'>, string> = {
 export async function createEnrollmentAction(
   input: CreateEnrollmentInput,
 ): Promise<CreateEnrollmentState> {
-  const parsed = createEnrollmentSchema.safeParse({ courseId: input.courseId })
+  const parsed = createEnrollmentSchema.safeParse(input)
   if (!parsed.success) {
     return { status: 'error', message: 'Khóa học không hợp lệ.' }
   }
@@ -101,12 +80,11 @@ export async function createEnrollmentAction(
     // correction survives a refusal for an unrelated reason below (FR-005). Skipped when
     // nothing changed, so reviewing an already-complete profile costs no write.
     if (profileChanged) {
-      const studentProfile: StudentProfileWrite = {
+      await updateStudentProfile({
         studentId: student.id,
         fullName: profile.data.fullName,
         phone: profile.data.phone,
-      }
-      await updateStudentProfile(studentProfile)
+      })
     }
     await createStudentEnrollment({ courseId: parsed.data.courseId, student })
   } catch (error) {

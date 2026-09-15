@@ -2,20 +2,8 @@ import configPromise from '@payload-config'
 import { getPayload, type PayloadRequest } from 'payload'
 import type { Student } from '@/payload-types'
 
-/**
- * Shared by `updateStudentProfile` and `updateStudentProfileWithAvatar` — each destructures
- * only the fields it uses. `avatarMediaId` is `updateStudentProfile`'s own (an id already on
- * hand); `avatarFile` is `updateStudentProfileWithAvatar`'s (a file still to upload); `req`
- * lets a caller join its own transaction.
- */
-export type StudentProfileWrite = {
-  studentId: number
-  fullName: string | undefined
-  phone: string | null
-  avatarMediaId?: number
-  avatarFile?: File
-  req?: Partial<PayloadRequest>
-}
+/** The fields `updateStudentProfile` and `updateStudentProfileWithAvatar` both write. */
+type ProfileFields = { studentId: number; fullName?: string; phone: string | null }
 
 /**
  * The one write for a student's own `fullName`/`phone` (and, from the account page, its
@@ -30,7 +18,7 @@ export async function updateStudentProfile({
   phone,
   avatarMediaId,
   req,
-}: StudentProfileWrite): Promise<Student> {
+}: ProfileFields & { avatarMediaId?: number; req?: Partial<PayloadRequest> }): Promise<Student> {
   const payload = await getPayload({ config: configPromise })
 
   return payload.update({
@@ -56,7 +44,7 @@ export async function updateStudentProfileWithAvatar({
   fullName,
   phone,
   avatarFile,
-}: StudentProfileWrite): Promise<Student> {
+}: ProfileFields & { avatarFile?: File }): Promise<Student> {
   const payload = await getPayload({ config: configPromise })
   const transactionID = (await payload.db.beginTransaction()) ?? undefined
   const req: Partial<PayloadRequest> = { transactionID }

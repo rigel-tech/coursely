@@ -22,4 +22,20 @@ describe('Enrollments setCreatedBy hook', () => {
     expect(result.createdBy).toBe(7)
     expect(result.registrationSource).toBe('ADMIN_CREATED')
   })
+
+  it('clears createdBy when a student creates their own enrollment', () => {
+    const result = setCreatedBy({
+      data: {
+        student: 12,
+        course: 4,
+        createdBy: 99,
+        registrationSource: 'SELF_REGISTRATION',
+      },
+      operation: 'create',
+      req: { user: { id: 12, collection: 'students' } } as unknown as PayloadRequest,
+    } as never)
+
+    expect(result.createdBy).toBeUndefined()
+    expect(result.registrationSource).toBe('SELF_REGISTRATION')
+  })
 })

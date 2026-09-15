@@ -9,6 +9,7 @@ import {
   type CreateEnrollmentState,
 } from '@/actions/student/create-enrollment'
 import { Button } from '@/components/public/ui/button'
+import { COURSE_TYPE_LABEL } from '@/components/public/course-type-label'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
 import { Modal } from '@/components/public/ui/modal'
@@ -16,26 +17,16 @@ import {
   enrollmentProfileSchema,
   type EnrollmentProfileValues,
 } from '@/lib/validation/enrollment-profile-schema'
-import type { Course } from '@/payload-types'
+import type { Course, Student } from '@/payload-types'
 
 /** Shared by `CourseRegistrationForm` and `CourseRegistrationCTA` — passed through unchanged. */
-export type CourseRegistrationCourse = {
-  id: number
-  title: string
-  /** Shown in the confirmation modal alongside the student's own details. */
-  duration?: string | null
-  courseType?: Course['courseType']
-  registrationEndAt?: string | null
-}
+export type CourseRegistrationCourse = Pick<Course, 'id' | 'title'> &
+  Partial<Pick<Course, 'duration' | 'courseType' | 'registrationEndAt'>>
 
 type CourseRegistrationFormProps = {
   course: CourseRegistrationCourse
   /** The signed-in student's own profile — email is shown, never edited (specs/009, Q1). */
-  profile?: {
-    email?: string
-    fullName?: string | null
-    phone?: string | null
-  }
+  profile?: Partial<Pick<Student, 'email' | 'fullName' | 'phone'>>
   /** Fires once, after the server confirms the enrollment was created. */
   onSuccess?: () => void
 }
@@ -80,25 +71,27 @@ export function CourseRegistrationForm({
   })
 
   const submitEnrollment = async (values: EnrollmentProfileValues) => {
-    const result: CreateEnrollmentState = await createEnrollmentAction({
+    const result = await createEnrollmentAction({
       courseId,
       fullName: values.fullName,
       phone: values.phone,
-    }).catch(() => ({
+    }).catch((): CreateEnrollmentState => ({
       status: 'error',
       message: 'Không thể đăng ký khóa học. Vui lòng thử lại.',
     }))
 
     setMessage(result)
 
+    if (result.status === 'success') {
+      onSuccess?.()
+      return
+    }
+
     // A redirectTo means the server refused for a reason only signing in can fix — follow
     // it with a full navigation so the fresh session cookie is read there.
     if (result.redirectTo) {
       window.location.assign(result.redirectTo)
-      return
     }
-
-    if (result.status === 'success') onSuccess?.()
   }
 
   const handleConfirm = async () => {
@@ -227,9 +220,7 @@ export function CourseRegistrationForm({
           {courseType ? (
             <div className="flex items-center justify-between">
               <dt className="text-muted-foreground">Hình thức</dt>
-              <dd className="font-medium">
-                {courseType === 'MOODLE' ? 'Moodle E-Learning' : 'Lớp học Offline'}
-              </dd>
+              <dd className="font-medium">{COURSE_TYPE_LABEL[courseType]}</dd>
             </div>
           ) : null}
           {registrationEndAt ? (

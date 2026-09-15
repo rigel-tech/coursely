@@ -18,17 +18,14 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { Popup, useConfig } from '@payloadcms/ui'
 import { requests } from '@payloadcms/ui/utilities/api'
 import { formatAdminURL } from 'payload/shared'
+import type { PaginatedDocs } from 'payload'
 import { Bell } from 'lucide-react'
+import type { Notification } from '@/payload-types'
 import './index.css'
 
 const POLL_INTERVAL_MS = 5_000
 
-type AdminNotification = {
-  id: number
-  content: string
-  title: string
-  student?: number | { id: number } | null
-}
+type AdminNotification = Pick<Notification, 'id' | 'content' | 'title' | 'student'>
 
 const buildURL = (apiRoute: string, path: `/${string}`, query: string) =>
   `${formatAdminURL({ apiRoute, path })}${query}`
@@ -74,8 +71,8 @@ export const NotificationBell: React.FC = () => {
     const res = await requests.get(buildURL(apiRoute, '/notifications', ''), {
       params: { sort: '-createdAt', limit: 20, depth: 0 },
     })
-    const data = await res.json()
-    const docs: AdminNotification[] = data.docs ?? []
+    const data: PaginatedDocs<AdminNotification> = await res.json()
+    const docs = data.docs ?? []
     setNotifications(docs)
 
     // A row with a `student` is that student's own notification — leave it for

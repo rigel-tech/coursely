@@ -2,13 +2,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Student } from '@/payload-types'
 
-import { createEnrollmentAction } from '@/actions/student/create-enrollment'
+import {
+  createEnrollmentAction,
+  type CreateEnrollmentState,
+} from '@/actions/student/create-enrollment'
 import {
   CourseNotFound,
   EnrollmentAlreadyExists,
   RegistrationClosed,
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
+
+/** `redirectTo` only exists on the `'error'` branch of the discriminated union. */
+const redirectTo = (result: CreateEnrollmentState) =>
+  result.status === 'error' ? result.redirectTo : undefined
 
 // Both dependencies reach for the Payload config, which a unit test has no business
 // booting. Mocking them leaves exactly what this action is: the decision about who may
@@ -51,7 +58,7 @@ describe('createEnrollmentAction — the sign-in gate', () => {
 
     const result = await createEnrollmentAction({ courseId: 12 })
 
-    expect(result.redirectTo).toBe('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend')
+    expect(redirectTo(result)).toBe('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend')
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 
@@ -71,7 +78,7 @@ describe('createEnrollmentAction — the sign-in gate', () => {
     // No fullName/phone sent at all — must not be misread as "profile incomplete".
     const result = await createEnrollmentAction({ courseId: 12 })
 
-    expect(result.redirectTo).toBeDefined()
+    expect(redirectTo(result)).toBeDefined()
     expect(updateStudentProfile).not.toHaveBeenCalled()
   })
 })
@@ -86,7 +93,7 @@ describe('createEnrollmentAction — an account that may not enrol', () => {
       status: 'error',
       message: 'Tài khoản chưa xác thực email. Vui lòng xác thực trước khi đăng ký khóa học.',
     })
-    expect(result.redirectTo).toBeUndefined()
+    expect(redirectTo(result)).toBeUndefined()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 
@@ -99,7 +106,7 @@ describe('createEnrollmentAction — an account that may not enrol', () => {
       status: 'error',
       message: 'Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ trung tâm để được hỗ trợ.',
     })
-    expect(result.redirectTo).toBeUndefined()
+    expect(redirectTo(result)).toBeUndefined()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 })
@@ -127,6 +134,17 @@ describe('createEnrollmentAction — the path that enrols', () => {
     expect(getSessionStudent).not.toHaveBeenCalled()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
+
+  it('rejects a course id of the wrong type — Server Action input is client-controlled', async () => {
+    await expect(
+      createEnrollmentAction({ courseId: 'abc' as unknown as number, ...validProfile }),
+    ).resolves.toEqual({
+      status: 'error',
+      message: 'Khóa học không hợp lệ.',
+    })
+    expect(getSessionStudent).not.toHaveBeenCalled()
+    expect(createStudentEnrollment).not.toHaveBeenCalled()
+  })
 })
 
 describe('createEnrollmentAction — already enrolled', () => {
@@ -140,7 +158,7 @@ describe('createEnrollmentAction — already enrolled', () => {
       status: 'error',
       message: 'Bạn đã đăng ký khóa học này rồi.',
     })
-    expect(result.redirectTo).toBeUndefined()
+    expect(redirectTo(result)).toBeUndefined()
   })
 })
 

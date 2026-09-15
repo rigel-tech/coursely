@@ -8,14 +8,13 @@ import {
 } from '@/components/public/forms/CourseRegistrationForm'
 import { Badge } from '@/components/public/ui/badge'
 import { ENROLLMENT_STATUS } from '@/components/public/enrollment-status'
-import type { Enrollment } from '@/payload-types'
+import type { Enrollment, Student } from '@/payload-types'
 
 type CourseRegistrationCTAProps = {
   course: CourseRegistrationCourse
-  email?: string
   enrollmentStatus?: Enrollment['enrollmentStatus']
-  fullName?: string | null
-  phone?: string | null
+  /** The signed-in student's own profile — passed straight through to the form unchanged. */
+  profile?: Partial<Pick<Student, 'email' | 'fullName' | 'phone'>>
 }
 
 /**
@@ -27,10 +26,8 @@ type CourseRegistrationCTAProps = {
  */
 export function CourseRegistrationCTA({
   course,
-  email,
   enrollmentStatus,
-  fullName,
-  phone,
+  profile,
 }: CourseRegistrationCTAProps) {
   const [status, setStatus] = useState(enrollmentStatus)
 
@@ -50,7 +47,7 @@ export function CourseRegistrationCTA({
           // its absence is what tells the form there is no signed-in visitor to validate
           // a profile for — never an object of all-undefined fields, which the form would
           // otherwise mistake for "signed in, with a blank profile."
-          profile={email ? { email, fullName, phone } : undefined}
+          profile={profile?.email ? profile : undefined}
           onSuccess={() => setStatus('NEW')}
         />
       )}

@@ -1,6 +1,7 @@
 import type { CollectionBeforeChangeHook } from 'payload'
+import type { Enrollment } from '@/payload-types'
 
-export const setCreatedBy: CollectionBeforeChangeHook = ({ data, operation, req }) => {
+export const setCreatedBy: CollectionBeforeChangeHook<Enrollment> = ({ data, operation, req }) => {
   if (operation === 'create') {
     if (req.user?.collection === 'users') {
       data.createdBy = req.user.id

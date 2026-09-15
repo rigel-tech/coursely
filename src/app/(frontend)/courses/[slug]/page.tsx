@@ -308,10 +308,12 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                       courseType: course.courseType,
                       registrationEndAt: course.registrationEndAt,
                     }}
-                    email={student?.email}
                     enrollmentStatus={enrollmentStatus}
-                    fullName={student?.fullName}
-                    phone={student?.phone}
+                    profile={
+                      student
+                        ? { email: student.email, fullName: student.fullName, phone: student.phone }
+                        : undefined
+                    }
                   />
                 )}
               </div>

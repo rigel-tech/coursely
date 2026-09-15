@@ -55,7 +55,12 @@ describe('CourseRegistrationCTA', () => {
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    render(<CourseRegistrationCTA course={baseCourse} fullName="Nguyễn Văn A" phone="0987654321" />)
+    render(
+      <CourseRegistrationCTA
+        course={baseCourse}
+        profile={{ fullName: 'Nguyễn Văn A', phone: '0987654321' }}
+      />,
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đăng ký' }))
@@ -68,9 +73,7 @@ describe('CourseRegistrationCTA', () => {
     render(
       <CourseRegistrationCTA
         course={baseCourse}
-        email="a@b.com"
-        fullName="Nguyễn Văn A"
-        phone="0987654321"
+        profile={{ email: 'a@b.com', fullName: 'Nguyễn Văn A', phone: '0987654321' }}
       />,
     )
 

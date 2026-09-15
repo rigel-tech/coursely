@@ -1,5 +1,5 @@
 import configPromise from '@payload-config'
-import { getPayload, Payload, ValidationError, type PayloadRequest } from 'payload'
+import { getPayload, ValidationError, type Payload, type PayloadRequest } from 'payload'
 import { sendEnrollmentConfirmationEmail } from '@/email/send'
 import {
   CourseNotFound,
@@ -9,7 +9,7 @@ import {
 } from '@/lib/errors/enrollment'
 import { createNotification } from '@/notifications/create'
 import { enrollmentCreatedNotification } from '@/notifications/templates/enrollment-created'
-import { Course, Enrollment, Student } from '@/payload-types'
+import type { Course, Enrollment, Student } from '@/payload-types'
 
 /**
  * A plain `id` lookup (`findByID`) does not filter by publish status — a course that has
@@ -182,7 +182,7 @@ export async function createStudentEnrollment({
   student,
 }: {
   courseId: number
-  student: Student
+  student: Pick<Student, 'id' | 'email'>
 }): Promise<void> {
   const payload = await getPayload({ config: configPromise })
   const course = await validateCourseForEnrollment(payload, courseId)
