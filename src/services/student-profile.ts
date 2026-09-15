@@ -30,3 +30,46 @@ export async function updateStudentProfile(
     req: options?.req,
   })
 }
+
+/**
+ * `updateProfileAction`'s (`/tai-khoan`) own write: uploads `avatarFile` (if given) as a new
+ * Media doc, then sets it on the student alongside `fullName`/`phone` — both in one
+ * transaction, so a failed profile save leaves no orphaned avatar upload behind.
+ */
+export async function updateStudentProfileWithAvatar(
+  studentId: number,
+  fullName: string | undefined,
+  phone: string | null,
+  avatarFile?: File,
+): Promise<void> {
+  const payload = await getPayload({ config: configPromise })
+  const transactionID = (await payload.db.beginTransaction()) ?? undefined
+  const req: Partial<PayloadRequest> = { transactionID }
+
+  try {
+    let avatarMediaId: number | undefined
+
+    if (avatarFile) {
+      const mediaDoc = await payload.create({
+        collection: 'media',
+        data: { alt: `Ảnh đại diện của ${fullName || 'học viên'}` },
+        file: {
+          data: Buffer.from(await avatarFile.arrayBuffer()),
+          mimetype: avatarFile.type,
+          name: avatarFile.name,
+          size: avatarFile.size,
+        },
+        overrideAccess: true,
+        req,
+      })
+      avatarMediaId = mediaDoc.id
+    }
+
+    await updateStudentProfile(studentId, fullName, phone, { avatarMediaId, req })
+
+    if (transactionID) await payload.db.commitTransaction(transactionID)
+  } catch (error) {
+    if (transactionID) await payload.db.rollbackTransaction(transactionID)
+    throw error
+  }
+}
