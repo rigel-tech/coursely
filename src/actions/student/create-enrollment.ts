@@ -1,7 +1,7 @@
 'use server'
 
 import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
-import { updateStudentProfile } from '@/services/student-profile'
+import { StudentProfileWrite, updateStudentProfile } from '@/services/student-profile'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
 import { enrollmentProfileSchema } from '@/lib/validation/enrollment-profile-schema'
@@ -88,11 +88,22 @@ export async function createEnrollmentAction(
     return { status: 'error', message: PROFILE_INCOMPLETE_MESSAGE }
   }
 
+  const profileChanged =
+    profile.data.fullName !== student.fullName || profile.data.phone !== student.phone
+
   try {
     // Saved before attempting the enrollment, and not part of its transaction, so a
-    // correction survives a refusal for an unrelated reason below (FR-005).
-    await updateStudentProfile(student.id, profile.data.fullName, profile.data.phone)
-    await createStudentEnrollment(parsed.data.courseId, student)
+    // correction survives a refusal for an unrelated reason below (FR-005). Skipped when
+    // nothing changed, so reviewing an already-complete profile costs no write.
+    if (profileChanged) {
+      const studentProfile: StudentProfileWrite = {
+        studentId: student.id,
+        fullName: profile.data.fullName,
+        phone: profile.data.phone,
+      }
+      await updateStudentProfile(studentProfile)
+    }
+    await createStudentEnrollment({ courseId: parsed.data.courseId, student })
   } catch (error) {
     // The one refusal with copy of its own so far (specs/008-enrollment-duplicate-guard).
     // Anything else is rethrown — an error nobody wrote a message for is a bug, not a

@@ -61,7 +61,12 @@ export async function updateProfileAction(formData: FormData): Promise<ProfileSt
     }
   }
 
-  await updateStudentProfileWithAvatar(student.id, fullName, phone, avatar)
+  await updateStudentProfileWithAvatar({
+    studentId: student.id,
+    fullName,
+    phone,
+    avatarFile: avatar,
+  })
 
   revalidatePath('/tai-khoan')
 

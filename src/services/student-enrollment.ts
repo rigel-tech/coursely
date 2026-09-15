@@ -44,8 +44,7 @@ async function validateCourseForEnrollment(payload: Payload, courseId: number): 
  */
 async function checkExistingEnrollment(
   payload: Payload,
-  studentId: number,
-  courseId: number,
+  { studentId, courseId }: { studentId: number; courseId: number },
 ): Promise<void> {
   const existing = await payload.find({
     collection: 'enrollments',
@@ -67,14 +66,13 @@ async function checkExistingEnrollment(
 
 async function processEnrollmentTransaction(
   payload: Payload,
-  studentId: number,
-  course: Course,
+  { studentId, course }: { studentId: number; course: Course },
 ): Promise<void> {
   const transactionID = (await payload.db.beginTransaction()) ?? undefined
   const req: Partial<PayloadRequest> = { transactionID }
 
   try {
-    await checkExistingEnrollment(payload, studentId, course.id)
+    await checkExistingEnrollment(payload, { studentId, courseId: course.id })
 
     try {
       await payload.create({
@@ -137,13 +135,20 @@ export async function findCourseSlug(courseId: number): Promise<string | null> {
  * caller (`createEnrollmentAction`) — this does not re-fetch or re-check the session
  * itself, to avoid doing that work twice on every registration.
  */
-export async function createStudentEnrollment(courseId: number, student: Student): Promise<void> {
+export async function createStudentEnrollment({
+  courseId,
+  student,
+}: {
+  courseId: number
+  student: Student
+}): Promise<void> {
   const payload = await getPayload({ config: configPromise })
   const course = await validateCourseForEnrollment(payload, courseId)
 
-  await processEnrollmentTransaction(payload, student.id, course)
+  await processEnrollmentTransaction(payload, { studentId: student.id, course })
 
-  void sendEnrollmentConfirmationEmail(payload, student.email, course.title).catch((error) =>
-    payload.logger.error({ error }, 'ENROLLMENT_CONFIRMATION email failed'),
-  )
+  void sendEnrollmentConfirmationEmail(payload, {
+    to: student.email,
+    courseTitle: course.title,
+  }).catch((error) => payload.logger.error({ error }, 'ENROLLMENT_CONFIRMATION email failed'))
 }

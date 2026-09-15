@@ -32,8 +32,7 @@ export async function sendResetPasswordEmail(
 
 export async function sendEnrollmentConfirmationEmail(
   payload: Payload,
-  to: string,
-  courseTitle: string,
+  { to, courseTitle }: { to: string; courseTitle: string },
 ): Promise<void> {
   const { subject, html, text } = enrollmentCreatedEmail(courseTitle)
   await payload.sendEmail({ to, subject, html, text })

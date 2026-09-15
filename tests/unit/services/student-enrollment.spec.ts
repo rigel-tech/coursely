@@ -33,7 +33,9 @@ describe('createStudentEnrollment', () => {
     const create = vi.fn().mockResolvedValue({ id: 31 })
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ create }) as never)
 
-    await expect(createStudentEnrollment(12, activeStudent)).resolves.toBeUndefined()
+    await expect(
+      createStudentEnrollment({ courseId: 12, student: activeStudent }),
+    ).resolves.toBeUndefined()
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: 'enrollments',
@@ -55,9 +57,9 @@ describe('createStudentEnrollment — the duplicate guard', () => {
     const find = vi.fn().mockResolvedValue({ docs: [{ id: 99, enrollmentStatus: 'NEW' }] })
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ create, find }) as never)
 
-    await expect(createStudentEnrollment(12, activeStudent)).rejects.toBeInstanceOf(
-      EnrollmentAlreadyExists,
-    )
+    await expect(
+      createStudentEnrollment({ courseId: 12, student: activeStudent }),
+    ).rejects.toBeInstanceOf(EnrollmentAlreadyExists)
     expect(create).not.toHaveBeenCalled()
   })
 
@@ -65,7 +67,7 @@ describe('createStudentEnrollment — the duplicate guard', () => {
     const find = vi.fn().mockResolvedValue({ docs: [] })
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ find }) as never)
 
-    await createStudentEnrollment(12, activeStudent)
+    await createStudentEnrollment({ courseId: 12, student: activeStudent })
 
     expect(find).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -89,8 +91,8 @@ describe('createStudentEnrollment — the duplicate guard', () => {
       .mockRejectedValue(new ValidationError({ collection: 'enrollments', errors: [] }))
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ create }) as never)
 
-    await expect(createStudentEnrollment(12, activeStudent)).rejects.toBeInstanceOf(
-      EnrollmentAlreadyExists,
-    )
+    await expect(
+      createStudentEnrollment({ courseId: 12, student: activeStudent }),
+    ).rejects.toBeInstanceOf(EnrollmentAlreadyExists)
   })
 })

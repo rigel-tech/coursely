@@ -30,7 +30,7 @@ describe('student enrollment notifications', () => {
       logger: { error: vi.fn() },
     } as never)
 
-    await createStudentEnrollment(12, student)
+    await createStudentEnrollment({ courseId: 12, student })
 
     expect(create).toHaveBeenNthCalledWith(
       2,
@@ -43,10 +43,9 @@ describe('student enrollment notifications', () => {
         }),
       }),
     )
-    expect(sendEnrollmentConfirmationEmail).toHaveBeenCalledWith(
-      expect.anything(),
-      'student@example.com',
-      'Frontend cơ bản',
-    )
+    expect(sendEnrollmentConfirmationEmail).toHaveBeenCalledWith(expect.anything(), {
+      to: 'student@example.com',
+      courseTitle: 'Frontend cơ bản',
+    })
   })
 })

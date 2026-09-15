@@ -13,7 +13,7 @@ describe('updateStudentProfile', () => {
     const update = vi.fn().mockResolvedValue({ id: 7 })
     vi.mocked(getPayload).mockResolvedValue({ update } as never)
 
-    await updateStudentProfile(7, 'Nguyễn Văn A', '0987654321')
+    await updateStudentProfile({ studentId: 7, fullName: 'Nguyễn Văn A', phone: '0987654321' })
 
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -32,7 +32,13 @@ describe('updateStudentProfile', () => {
     vi.mocked(getPayload).mockResolvedValue({ update } as never)
     const req = { transactionID: 'tx-1' }
 
-    await updateStudentProfile(7, 'Nguyễn Văn A', null, { avatarMediaId: 42, req })
+    await updateStudentProfile({
+      studentId: 7,
+      fullName: 'Nguyễn Văn A',
+      phone: null,
+      avatarMediaId: 42,
+      req,
+    })
 
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -49,7 +55,7 @@ describe('updateStudentProfile', () => {
     const update = vi.fn().mockResolvedValue({ id: 7 })
     vi.mocked(getPayload).mockResolvedValue({ update } as never)
 
-    await updateStudentProfile(7, undefined, null)
+    await updateStudentProfile({ studentId: 7, fullName: undefined, phone: null })
 
     const { data } = update.mock.calls[0][0]
     expect(data).not.toHaveProperty('avatar')
@@ -89,7 +95,12 @@ describe('updateStudentProfileWithAvatar', () => {
     const stub = payloadStub({ create, update })
     vi.mocked(getPayload).mockResolvedValue(stub as never)
 
-    await updateStudentProfileWithAvatar(7, 'Nguyễn Văn A', '0987654321', avatarFile())
+    await updateStudentProfileWithAvatar({
+      studentId: 7,
+      fullName: 'Nguyễn Văn A',
+      phone: '0987654321',
+      avatarFile: avatarFile(),
+    })
 
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -114,7 +125,7 @@ describe('updateStudentProfileWithAvatar', () => {
     const update = vi.fn().mockResolvedValue({ id: 7 })
     vi.mocked(getPayload).mockResolvedValue(payloadStub({ create, update }) as never)
 
-    await updateStudentProfileWithAvatar(7, 'Nguyễn Văn A', null)
+    await updateStudentProfileWithAvatar({ studentId: 7, fullName: 'Nguyễn Văn A', phone: null })
 
     expect(create).not.toHaveBeenCalled()
     const { data } = update.mock.calls[0][0]
@@ -127,7 +138,12 @@ describe('updateStudentProfileWithAvatar', () => {
     vi.mocked(getPayload).mockResolvedValue(stub as never)
 
     await expect(
-      updateStudentProfileWithAvatar(7, 'Nguyễn Văn A', null, avatarFile()),
+      updateStudentProfileWithAvatar({
+        studentId: 7,
+        fullName: 'Nguyễn Văn A',
+        phone: null,
+        avatarFile: avatarFile(),
+      }),
     ).rejects.toThrow('db unreachable')
 
     expect(stub.db.rollbackTransaction).toHaveBeenCalledWith('tx-1')

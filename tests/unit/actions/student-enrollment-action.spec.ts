@@ -26,14 +26,17 @@ import { createStudentEnrollment, findCourseSlug } from '@/services/student-enro
 import { updateStudentProfile } from '@/services/student-profile'
 
 /** Only the fields the action reads. The rest of `Student` is irrelevant to this decision. */
-const studentWith = (status: Student['status']) => ({ id: 7, status }) as Student
+const studentWith = (
+  status: Student['status'],
+  profile?: { fullName?: string | null; phone?: string | null },
+) => ({ id: 7, status, ...profile }) as Student
 
 /** A complete, valid profile — the shape most tests that reach the profile gate submit. */
 const validProfile = { fullName: 'Nguyễn Văn A', phone: '0987654321' }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(updateStudentProfile).mockResolvedValue(undefined)
+  vi.mocked(updateStudentProfile).mockResolvedValue(studentWith('ACTIVE'))
 })
 
 describe('createEnrollmentAction — the sign-in gate', () => {
@@ -105,7 +108,10 @@ describe('createEnrollmentAction — the path that enrols', () => {
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    expect(createStudentEnrollment).toHaveBeenCalledWith(12, studentWith('ACTIVE'))
+    expect(createStudentEnrollment).toHaveBeenCalledWith({
+      courseId: 12,
+      student: studentWith('ACTIVE'),
+    })
   })
 
   it('rejects an invalid course id before looking anything up', async () => {
@@ -165,6 +171,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
     const callOrder: string[] = []
     vi.mocked(updateStudentProfile).mockImplementation(async () => {
       callOrder.push('updateStudentProfile')
+      return studentWith('ACTIVE')
     })
     vi.mocked(createStudentEnrollment).mockImplementation(async () => {
       callOrder.push('createStudentEnrollment')
@@ -172,7 +179,11 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
 
     await createEnrollmentAction({ courseId: 12, ...validProfile })
 
-    expect(updateStudentProfile).toHaveBeenCalledWith(7, 'Nguyễn Văn A', '0987654321')
+    expect(updateStudentProfile).toHaveBeenCalledWith({
+      studentId: 7,
+      fullName: 'Nguyễn Văn A',
+      phone: '0987654321',
+    })
     expect(callOrder).toEqual(['updateStudentProfile', 'createStudentEnrollment'])
   })
 
@@ -182,7 +193,83 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
 
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
 
-    expect(updateStudentProfile).toHaveBeenCalledWith(7, 'Nguyễn Văn A', '0987654321')
+    expect(updateStudentProfile).toHaveBeenCalledWith({
+      studentId: 7,
+      fullName: 'Nguyễn Văn A',
+      phone: '0987654321',
+    })
     expect(result.message).toBe('Bạn đã đăng ký khóa học này rồi.')
+  })
+})
+
+describe('createEnrollmentAction — skips the profile write when nothing changed', () => {
+  it('does not call updateStudentProfile when the submitted profile matches the stored one', async () => {
+    const student = studentWith('ACTIVE', validProfile)
+    vi.mocked(getSessionStudent).mockResolvedValue(student)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+
+    await createEnrollmentAction({ courseId: 12, ...validProfile })
+
+    expect(updateStudentProfile).not.toHaveBeenCalled()
+  })
+
+  it('still enrols when the profile write is skipped', async () => {
+    const student = studentWith('ACTIVE', validProfile)
+    vi.mocked(getSessionStudent).mockResolvedValue(student)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+
+    await createEnrollmentAction({ courseId: 12, ...validProfile })
+
+    expect(createStudentEnrollment).toHaveBeenCalledWith({ courseId: 12, student })
+  })
+
+  it('still calls updateStudentProfile when the stored profile differs', async () => {
+    const student = studentWith('ACTIVE', validProfile)
+    vi.mocked(getSessionStudent).mockResolvedValue(student)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+
+    await createEnrollmentAction({ courseId: 12, fullName: 'Trần Thị B', phone: '0912345678' })
+
+    expect(updateStudentProfile).toHaveBeenCalledWith({
+      studentId: 7,
+      fullName: 'Trần Thị B',
+      phone: '0912345678',
+    })
+  })
+
+  it('still calls updateStudentProfile when only the phone differs', async () => {
+    const student = studentWith('ACTIVE', validProfile)
+    vi.mocked(getSessionStudent).mockResolvedValue(student)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+
+    await createEnrollmentAction({
+      courseId: 12,
+      fullName: validProfile.fullName,
+      phone: '0912345678',
+    })
+
+    expect(updateStudentProfile).toHaveBeenCalledWith({
+      studentId: 7,
+      fullName: validProfile.fullName,
+      phone: '0912345678',
+    })
+  })
+
+  it('still calls updateStudentProfile when only the full name differs', async () => {
+    const student = studentWith('ACTIVE', validProfile)
+    vi.mocked(getSessionStudent).mockResolvedValue(student)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+
+    await createEnrollmentAction({
+      courseId: 12,
+      fullName: 'Trần Thị B',
+      phone: validProfile.phone,
+    })
+
+    expect(updateStudentProfile).toHaveBeenCalledWith({
+      studentId: 7,
+      fullName: 'Trần Thị B',
+      phone: validProfile.phone,
+    })
   })
 })
