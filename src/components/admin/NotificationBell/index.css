@@ -1,0 +1,10 @@
+/* Payload's own Popup caps its scroll area at `calc(var(--base) * 10)` (~200px), too short
+   to read more than a couple of rows. Widened and made taller here via `portalClassName`,
+   since Popup exposes no height/width prop of its own. */
+.notification-bell-popup {
+  min-width: 320px;
+}
+
+.notification-bell-popup .popup__scroll-container {
+  max-height: 480px;
+}

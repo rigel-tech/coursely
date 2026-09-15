@@ -19,6 +19,7 @@ import { Popup, useConfig } from '@payloadcms/ui'
 import { requests } from '@payloadcms/ui/utilities/api'
 import { formatAdminURL } from 'payload/shared'
 import { Bell } from 'lucide-react'
+import './index.css'
 
 const POLL_INTERVAL_MS = 5_000
 
@@ -94,6 +95,7 @@ export const NotificationBell: React.FC = () => {
       onToggleOpen={(active) => {
         if (active) void loadList()
       }}
+      portalClassName="notification-bell-popup"
       render={() => (
         <ul>
           {notifications.length === 0 && <li>Không có thông báo</li>}
