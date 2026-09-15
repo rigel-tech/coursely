@@ -69,15 +69,13 @@ describe('NotificationBell (admin) — the count', () => {
     expect(screen.queryByText('0')).toBeNull()
   })
 
-  it('calls the staff-facing unread-count endpoint — never a student-scoped one', async () => {
+  it('calls the unread-count endpoint for the whole collection — not scoped to staff-only rows', async () => {
     jsonOnce({ totalDocs: 0 })
     render(<NotificationBell />)
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     const [url] = fetchMock.mock.calls[0] as [string]
-    expect(url).toBe(
-      '/api/notifications/count?where%5Bstudent%5D%5Bexists%5D=false&where%5BisRead%5D%5Bequals%5D=false',
-    )
+    expect(url).toBe('/api/notifications/count?where%5BisRead%5D%5Bequals%5D=false')
   })
 
   it('polls again after 5 seconds', async () => {
@@ -108,7 +106,7 @@ describe('NotificationBell (admin) — the count', () => {
 })
 
 describe('NotificationBell (admin) — opening the list', () => {
-  it('fetches the staff-facing list and marks exactly the returned batch as read', async () => {
+  it("fetches the whole collection's list, not just staff-only rows", async () => {
     jsonOnce({ totalDocs: 1 })
     render(<NotificationBell />)
     await screen.findByText('1')
@@ -123,9 +121,30 @@ describe('NotificationBell (admin) — opening the list', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
 
     const [listUrl] = fetchMock.mock.calls[1] as [string]
-    expect(listUrl).toBe(
-      '/api/notifications?where%5Bstudent%5D%5Bexists%5D=false&sort=-createdAt&limit=20',
-    )
+    expect(listUrl).toBe('/api/notifications?sort=-createdAt&limit=20')
+  })
+
+  it("marks only the rows without a student as read — a student's own notification is left untouched", async () => {
+    jsonOnce({ totalDocs: 2 })
+    render(<NotificationBell />)
+    await screen.findByText('2')
+
+    jsonOnce({
+      docs: [
+        {
+          id: 101,
+          title: 'Có người dùng đăng ký tài khoản mới',
+          content: 'Nội dung',
+          student: null,
+        },
+        { id: 202, title: 'Đăng ký khóa học thành công', content: 'Nội dung', student: 7 },
+      ],
+    })
+    jsonOnce({})
+    fireEvent.click(screen.getByRole('button', { name: /thông báo/i }))
+
+    expect(await screen.findByText('Đăng ký khóa học thành công')).toBeTruthy()
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
 
     const [patchUrl, patchOptions] = fetchMock.mock.calls[2] as [
       string,
@@ -142,6 +161,23 @@ describe('NotificationBell (admin) — opening the list', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
 
     jsonOnce({ docs: [] })
+    fireEvent.click(screen.getByRole('button', { name: /thông báo/i }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ method: 'PATCH' }),
+    )
+  })
+
+  it('does not PATCH at all when every fetched notification belongs to a student', async () => {
+    jsonOnce({ totalDocs: 1 })
+    render(<NotificationBell />)
+    await screen.findByText('1')
+
+    jsonOnce({
+      docs: [{ id: 202, title: 'Đăng ký khóa học thành công', content: 'Nội dung', student: 7 }],
+    })
     fireEvent.click(screen.getByRole('button', { name: /thông báo/i }))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))

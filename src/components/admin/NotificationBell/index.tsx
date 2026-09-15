@@ -2,12 +2,17 @@
 
 /**
  * The admin-panel counterpart to `src/components/public/NotificationBell` (specs/010):
- * shows staff-facing notifications — rows with no `student` (specs/011). Talks directly
- * to Payload's own generated REST endpoints for `notifications` (no custom Next.js route
- * or Server Action — staff already pass the collection's own `authenticated` access,
- * research.md Decision 1). `limit: 0` on `find` is not a count shortcut (it disables
- * pagination and returns every row — see INVARIANTS.md), so the count comes from the
- * collection's own `/count` endpoint instead.
+ * shows every row in the `notifications` collection, staff-facing and student-facing
+ * alike. Talks directly to Payload's own generated REST endpoints for `notifications` (no
+ * custom Next.js route or Server Action — staff already pass the collection's own
+ * `authenticated` access, research.md Decision 1). `limit: 0` on `find` is not a count
+ * shortcut (it disables pagination and returns every row — see INVARIANTS.md), so the
+ * count comes from the collection's own `/count` endpoint instead.
+ *
+ * Opening the list marks rows read, but only the ones with no `student` — a row that
+ * belongs to a student is that student's own unread notification (read through
+ * `student-notifications.ts`), and staff merely glancing at it here must not silently mark
+ * it read on the student's behalf.
  */
 import React, { useCallback, useEffect, useState } from 'react'
 import { Popup, useConfig } from '@payloadcms/ui'
@@ -16,10 +21,11 @@ import { formatAdminURL } from 'payload/shared'
 
 const POLL_INTERVAL_MS = 5_000
 
-type StaffNotification = {
+type AdminNotification = {
   id: number
   content: string
   title: string
+  student?: number | { id: number } | null
 }
 
 const buildURL = (apiRoute: string, path: `/${string}`, query: string) =>
@@ -29,7 +35,7 @@ export const NotificationBell: React.FC = () => {
   const { config } = useConfig()
   const apiRoute = config.routes.api
   const [count, setCount] = useState(0)
-  const [notifications, setNotifications] = useState<StaffNotification[]>([])
+  const [notifications, setNotifications] = useState<AdminNotification[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -37,7 +43,7 @@ export const NotificationBell: React.FC = () => {
     const poll = () => {
       requests
         .get(buildURL(apiRoute, '/notifications/count', ''), {
-          params: { where: { student: { exists: false }, isRead: { equals: false } } },
+          params: { where: { isRead: { equals: false } } },
         })
         .then((res) => res.json())
         .then((data: { totalDocs?: unknown }) => {
@@ -59,20 +65,23 @@ export const NotificationBell: React.FC = () => {
 
   const loadList = useCallback(async () => {
     const res = await requests.get(buildURL(apiRoute, '/notifications', ''), {
-      params: { where: { student: { exists: false } }, sort: '-createdAt', limit: 20 },
+      params: { sort: '-createdAt', limit: 20 },
     })
     const data = await res.json()
-    const docs: StaffNotification[] = data.docs ?? []
+    const docs: AdminNotification[] = data.docs ?? []
     setNotifications(docs)
 
-    if (docs.length === 0) return
+    // A row with a `student` is that student's own notification — leave it for
+    // `student-notifications.ts` to mark read, never mark it read on their behalf here.
+    const staffDocs = docs.filter((doc) => !doc.student)
+    if (staffDocs.length === 0) return
 
-    const idsQuery = docs.map((doc, i) => `where[id][in][${i}]=${doc.id}`).join('&')
+    const idsQuery = staffDocs.map((doc, i) => `where[id][in][${i}]=${doc.id}`).join('&')
     await requests.patch(buildURL(apiRoute, '/notifications', `?${idsQuery}`), {
       body: JSON.stringify({ isRead: true }),
       headers: { 'Content-Type': 'application/json' },
     })
-    setCount(0)
+    setCount((prev) => Math.max(0, prev - staffDocs.length))
   }, [apiRoute])
 
   return (

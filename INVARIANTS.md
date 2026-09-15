@@ -140,6 +140,29 @@ who edits their own query (or calls the API directly) can ask for `student: { eq
 `src/actions/student/notifications.ts`. `src/collections/Notifications/index.ts`'s
 `access` block is the thing this entry says never to touch for this purpose.
 
+### The admin notification bell must never mark a student's own notification as read
+
+**Rule** — `src/components/admin/NotificationBell`'s `loadList` fetches the whole
+`notifications` collection (staff-facing and student-facing rows alike), but its
+mark-as-read `PATCH` must only ever target rows with no `student` — filter to that subset
+(`staffDocs` in the current code) before building the `where[id][in][...]` query. Never
+`PATCH` the full fetched batch.
+
+**Why it breaks silently** — a student's own unread count
+(`countUnreadNotifications`/`listAndMarkRecentNotifications` in
+`src/services/student-notifications.ts`) trusts `isRead` as the only signal that the
+student has seen a notification. Batch-PATCHing every row the admin bell fetches compiles,
+passes lint, and looks like a harmless simplification — the admin panel renders fine and
+the badge clears as expected. But it silently flips `isRead` on a student's own
+`ENROLLMENT_CREATED`/etc. notification the moment a staff member merely opens their own
+bell, and that notification then vanishes from the student's unread count without the
+student ever having opened it. Nothing throws, nothing logs.
+
+**Where** — `src/components/admin/NotificationBell/index.tsx` (`loadList`, the `staffDocs`
+filter), pinned by `tests/unit/components/admin/notification-bell.spec.tsx` § "marks only
+the rows without a student as read". `src/services/student-notifications.ts` is the reader
+this protects.
+
 ## Cache invalidation
 
 ### Every `revalidateTag(X)` must match an `unstable_cache` tag `X` character for character
