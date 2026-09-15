@@ -45,32 +45,43 @@ export const Students: CollectionConfig = {
     {
       name: 'fullName',
       type: 'text',
-      label: 'Họ và tên',
+      label: { vi: 'Họ và tên', en: 'Full Name' },
       maxLength: 255,
     },
     {
       name: 'phone',
       type: 'text',
+      label: { vi: 'Số điện thoại', en: 'Phone' },
       maxLength: 30,
     },
     {
       name: 'avatar',
       type: 'upload',
       relationTo: 'media',
+      label: { vi: 'Ảnh đại diện', en: 'Avatar' },
     },
     {
       name: 'status',
       type: 'select',
-      options: ['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'],
+      label: { vi: 'Trạng thái', en: 'Status' },
+      options: [
+        {
+          label: { vi: 'Chờ xác minh', en: 'Pending Verification' },
+          value: 'PENDING_VERIFICATION',
+        },
+        { label: { vi: 'Đang hoạt động', en: 'Active' }, value: 'ACTIVE' },
+        { label: { vi: 'Đã khóa', en: 'Disabled' }, value: 'DISABLED' },
+      ],
       defaultValue: 'ACTIVE',
       required: true,
       admin: {
-        description: 'Trạng thái tài khoản học viên',
+        description: { vi: 'Trạng thái tài khoản học viên', en: 'Student account status' },
       },
     },
     {
       name: 'verifiedAt',
       type: 'date',
+      label: { vi: 'Thời điểm xác minh', en: 'Verified At' },
       admin: {
         readOnly: true,
         date: {
@@ -83,6 +94,7 @@ export const Students: CollectionConfig = {
     {
       name: 'lastLoginAt',
       type: 'date',
+      label: { vi: 'Lần đăng nhập gần nhất', en: 'Last Login At' },
       admin: {
         readOnly: true,
         date: {
@@ -96,9 +108,13 @@ export const Students: CollectionConfig = {
       name: 'createdBy',
       type: 'relationship',
       relationTo: 'users',
+      label: { vi: 'Người tạo', en: 'Created By' },
       admin: {
         readOnly: true,
-        description: 'Nhân sự đã tạo tài khoản này. Trống với tài khoản tự đăng ký.',
+        description: {
+          vi: 'Nhân sự đã tạo tài khoản này. Trống với tài khoản tự đăng ký.',
+          en: 'Staff member who created this account. Empty for self-registered accounts.',
+        },
       },
     },
   ],

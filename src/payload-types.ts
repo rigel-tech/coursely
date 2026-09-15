@@ -200,13 +200,13 @@ export interface Student {
   phone?: string | null;
   avatar?: (number | null) | Media;
   /**
-   * Trạng thái tài khoản học viên
+   * Student account status
    */
   status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
   verifiedAt?: string | null;
   lastLoginAt?: string | null;
   /**
-   * Nhân sự đã tạo tài khoản này. Trống với tài khoản tự đăng ký.
+   * Staff member who created this account. Empty for self-registered accounts.
    */
   createdBy?: (number | null) | User;
   updatedAt: string;
