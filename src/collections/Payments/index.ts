@@ -26,6 +26,10 @@ export const validatePaymentAmount: Validate<number> = (value) => {
  */
 export const Payments: CollectionConfig = {
   slug: 'payments',
+  labels: {
+    singular: { vi: 'Thanh toán', en: 'Payment' },
+    plural: { vi: 'Thanh toán', en: 'Payments' },
+  },
   access: {
     create: authenticated,
     read: authenticated,

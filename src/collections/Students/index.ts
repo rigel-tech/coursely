@@ -20,6 +20,10 @@ import { setCreatedBy } from './hooks/setCreatedBy'
  */
 export const Students: CollectionConfig = {
   slug: 'students',
+  labels: {
+    singular: { vi: 'Học viên', en: 'Student' },
+    plural: { vi: 'Học viên', en: 'Students' },
+  },
   hooks: {
     beforeChange: [setCreatedBy],
   },
