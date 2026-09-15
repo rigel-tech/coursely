@@ -17,9 +17,6 @@ import PageClient from './[...slug]/page.client'
 import { LivePreviewListener } from '@/components/public/LivePreviewListener'
 import { ArrowRight } from 'lucide-react'
 
-export const dynamic = 'force-static'
-export const revalidate = 600
-
 export default async function HomePage() {
   const { isEnabled: draft } = await draftMode()
   const payload = await getPayload({ config: configPromise })
@@ -28,7 +25,6 @@ export default async function HomePage() {
 
   page = await queryHomePage()
 
-  // Lấy các khóa học nổi bật hiển thị trên Trang Chủ
   const coursesRes = await payload.find({
     collection: 'courses',
     depth: 1,
