@@ -63,7 +63,7 @@ export const OtpForm: React.FC = () => {
 
   useEffect(() => {
     // Full-document load so the fresh session cookies are read server-side.
-    if (state.status === 'success') window.location.assign(state.redirectTo ?? '/')
+    if (state.status === 'success') window.location.replace(state.redirectTo ?? '/')
   }, [state.status, state.redirectTo])
 
   if (state.status === 'success') {
