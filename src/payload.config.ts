@@ -85,8 +85,11 @@ export default buildConfig({
     prodMigrations: migrations,
     // A student may hold at most one *active* enrollment per course — CANCELLED does not
     // count (specs/007-student-enrollment, Story 3). A plain compound-unique index can't
-    // express that exception; a partial index can. This is the single source of truth for
-    // the guard — read there is the src/services/student-enrollment.ts pre-check.
+    // express that exception; a partial index can. This is what dev/test's drizzle-push
+    // creates; prod instead applies the hand-written
+    // `20260914_130000_add_enrollment_active_guard` migration, which must define the same
+    // index. `src/services/student-enrollment.ts`'s `checkExistingEnrollment` only mirrors
+    // this for a fast, specific message — it is not itself the guard (see INVARIANTS.md).
     afterSchemaInit: [
       ({ extendTable, schema }) => {
         extendTable({

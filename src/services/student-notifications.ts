@@ -2,7 +2,7 @@
  * Reads a student's own notifications. `Notifications.access` stays staff-only
  * (`src/access/authenticated.ts`) — every function here takes an already-resolved
  * `studentId` and scopes its own query by it with `overrideAccess: true`, the same shape
- * `findCourseSlug` / `ensureCompleteProfile` already use. See INVARIANTS.md: this is the
+ * `findCourseSlug` / `updateStudentProfile` already use. See INVARIANTS.md: this is the
  * only sanctioned way a student reads their own notifications — never by widening the
  * collection's own access.
  */

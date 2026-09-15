@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { getPayload } from 'payload'
+import { asPayload } from '../helpers/payload-stub'
 import { updateStudentProfile, updateStudentProfileWithAvatar } from '@/services/student-profile'
 
 vi.mock('payload', async (importOriginal) => ({
@@ -11,7 +12,7 @@ vi.mock('payload', async (importOriginal) => ({
 describe('updateStudentProfile', () => {
   it('saves the submitted full name and phone on the student record', async () => {
     const update = vi.fn().mockResolvedValue({ id: 7 })
-    vi.mocked(getPayload).mockResolvedValue({ update } as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload({ update }))
 
     await updateStudentProfile({ studentId: 7, fullName: 'Nguyễn Văn A', phone: '0987654321' })
 
@@ -29,7 +30,7 @@ describe('updateStudentProfile', () => {
   // transaction and optionally set a freshly-uploaded avatar in the same write.
   it('joins the caller’s transaction and merges an avatar id when given', async () => {
     const update = vi.fn().mockResolvedValue({ id: 7 })
-    vi.mocked(getPayload).mockResolvedValue({ update } as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload({ update }))
     const req = { transactionID: 'tx-1' }
 
     await updateStudentProfile({
@@ -53,7 +54,7 @@ describe('updateStudentProfile', () => {
 
   it('omits the avatar key entirely when no avatar id is given', async () => {
     const update = vi.fn().mockResolvedValue({ id: 7 })
-    vi.mocked(getPayload).mockResolvedValue({ update } as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload({ update }))
 
     await updateStudentProfile({ studentId: 7, fullName: undefined, phone: null })
 
@@ -93,7 +94,7 @@ describe('updateStudentProfileWithAvatar', () => {
     const create = vi.fn().mockResolvedValue({ id: 55 })
     const update = vi.fn().mockResolvedValue({ id: 7 })
     const stub = payloadStub({ create, update })
-    vi.mocked(getPayload).mockResolvedValue(stub as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(stub))
 
     await updateStudentProfileWithAvatar({
       studentId: 7,
@@ -123,7 +124,7 @@ describe('updateStudentProfileWithAvatar', () => {
   it('writes fullName/phone with no avatar key when no file is given', async () => {
     const create = vi.fn()
     const update = vi.fn().mockResolvedValue({ id: 7 })
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ create, update }) as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ create, update })))
 
     await updateStudentProfileWithAvatar({ studentId: 7, fullName: 'Nguyễn Văn A', phone: null })
 
@@ -135,7 +136,7 @@ describe('updateStudentProfileWithAvatar', () => {
   it('rolls back and rethrows when the write fails', async () => {
     const update = vi.fn().mockRejectedValue(new Error('db unreachable'))
     const stub = payloadStub({ update })
-    vi.mocked(getPayload).mockResolvedValue(stub as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(stub))
 
     await expect(
       updateStudentProfileWithAvatar({

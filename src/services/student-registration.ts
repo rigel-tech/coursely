@@ -2,8 +2,8 @@
  * Registration domain logic (§5.1 steps 3–7). No HTTP concerns here — the caller
  * owns the `pending_email` cookie and the redirect. This module owns: email
  * normalisation, the branch on any existing account, the student +
- * welcome-notification transaction, and issuing / emailing the OTP after that
- * transaction commits.
+ * account-created-notification transaction, and issuing / emailing the OTP after
+ * that transaction commits.
  *
  * Nothing about the request is recorded. The IP and user agent used to be written onto
  * the welcome notification; registering an account never read them back, so they were
@@ -68,7 +68,7 @@ async function applyRegistration(
   data: RegisterInput,
 ): Promise<ApplyRegistrationOutcome> {
   if (!existing) {
-    await createStudentWithWelcomeNotification(payload, data)
+    await createStudentWithAccountCreatedNotification(payload, data)
     return { kind: 'otp', mode: 'initial' }
   }
 
@@ -95,8 +95,8 @@ async function applyRegistration(
   return { kind: 'noop' }
 }
 
-/** §5.1 step 5 — student + welcome notification, atomically. */
-async function createStudentWithWelcomeNotification(
+/** §5.1 step 5 — student + account-created notification, atomically. */
+async function createStudentWithAccountCreatedNotification(
   payload: Payload,
   data: RegisterInput,
 ): Promise<void> {

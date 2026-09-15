@@ -1,5 +1,9 @@
 import type { EmailBody } from './verify-otp'
 
+/** `courseTitle` is staff-entered, not this module's own data — escape it before it reaches markup. */
+const escapeHtml = (value: string): string =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
 export function enrollmentCreatedEmail(courseTitle: string): EmailBody {
   return {
     subject: 'Đăng ký khóa học thành công | Coursely',
@@ -8,7 +12,7 @@ export function enrollmentCreatedEmail(courseTitle: string): EmailBody {
 <html lang="vi">
   <body style="font-family: system-ui, sans-serif; line-height: 1.5">
     <p>Chào bạn,</p>
-    <p>Bạn đã đăng ký khóa học <strong>${courseTitle}</strong> thành công.</p>
+    <p>Bạn đã đăng ký khóa học <strong>${escapeHtml(courseTitle)}</strong> thành công.</p>
     <p>Đơn đăng ký đang chờ trung tâm xác nhận. Coursely sẽ thông báo khi trạng thái thay đổi.</p>
   </body>
 </html>`,

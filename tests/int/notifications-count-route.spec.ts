@@ -33,7 +33,7 @@ const seedStudent = async () => {
     collection: 'students',
     data: { email: uniqueEmail(), password: 'Secret123', status: 'ACTIVE' },
   })
-  madeStudentIds.add(student.id as number)
+  madeStudentIds.add(student.id)
   return student
 }
 
@@ -49,7 +49,7 @@ const seedNotification = async (studentId: number, isRead: boolean) => {
     },
     overrideAccess: true,
   })
-  madeNotificationIds.add(notification.id as number)
+  madeNotificationIds.add(notification.id)
 }
 
 beforeAll(async () => {
@@ -72,11 +72,11 @@ describe('GET /next/notifications-count', () => {
   it('counts only the signed-in student’s unread notifications', async () => {
     const student = await seedStudent()
     const otherStudent = await seedStudent()
-    await seedNotification(student.id as number, false)
-    await seedNotification(student.id as number, false)
-    await seedNotification(student.id as number, true)
-    await seedNotification(otherStudent.id as number, false)
-    ctx.cookieJar.set(ACCESS_COOKIE, await signAccessToken({ id: student.id as number }))
+    await seedNotification(student.id, false)
+    await seedNotification(student.id, false)
+    await seedNotification(student.id, true)
+    await seedNotification(otherStudent.id, false)
+    ctx.cookieJar.set(ACCESS_COOKIE, await signAccessToken({ id: student.id }))
 
     expect(await read(await GET())).toEqual({ count: 2 })
   })

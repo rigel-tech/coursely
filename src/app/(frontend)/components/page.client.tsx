@@ -585,9 +585,10 @@ const READY_FORMS: Entry[] = [
   },
 ]
 
-// Was three, including a staged LoginForm — retired once /dang-nhap built its own real
-// one directly (2026-09-14), rather than being promoted from here. See
-// src/components/public/forms/LoginForm.tsx under "Biểu mẫu — dùng được ngay".
+// Holds only a form with no real page built yet. A form promoted out of here (built
+// directly into its real route, like LoginForm at /dang-nhap) must be removed from this
+// list in the same change — left in, the gallery shows two versions with nothing telling
+// a reader which one is current.
 const STAGED_FORMS: Entry[] = [
   {
     name: 'CourseForm',

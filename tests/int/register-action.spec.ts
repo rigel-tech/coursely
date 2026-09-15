@@ -107,10 +107,9 @@ describe('registerAction — new email', () => {
     const broadcastWhere: Where = {
       and: [{ type: { equals: 'ACCOUNT_CREATED' } }, { student: { exists: false } }],
     }
-    const before = await payload.find({
+    const before = await payload.count({
       collection: 'notifications',
       where: broadcastWhere,
-      limit: 0,
     })
 
     expect(await run(validForm(email))).toEqual({ status: 'success' })
@@ -125,10 +124,9 @@ describe('registerAction — new email', () => {
 
     // The whole point of the split: registration writes to `students` and leaves
     // `users` — the staff table — untouched.
-    const staff = await payload.find({
+    const staff = await payload.count({
       collection: 'users',
       where: { email: { equals: email } },
-      limit: 0,
     })
     expect(staff.totalDocs).toBe(0)
 
@@ -179,10 +177,9 @@ describe('registerAction — existing ACTIVE email', () => {
       message: 'Email đã tồn tại.',
     })
 
-    const { totalDocs } = await payload.find({
+    const { totalDocs } = await payload.count({
       collection: 'students',
       where: { email: { equals: email } },
-      limit: 0,
     })
     expect(totalDocs).toBe(1)
     expect(await readOtp(payload, email)).toBeNull()
@@ -212,10 +209,9 @@ describe('registerAction — existing PENDING_VERIFICATION email', () => {
       await run(validForm(email, { password: 'newpass123', confirmPassword: 'newpass123' })),
     ).toEqual({ status: 'success' })
 
-    const notes = await payload.find({
+    const notes = await payload.count({
       collection: 'notifications',
       where: { student: { equals: existing.id } },
-      limit: 0,
     })
     expect(notes.totalDocs).toBe(0)
     expect(await readOtp(payload, email)).toBeTruthy()
@@ -267,10 +263,9 @@ describe('registerAction — transaction atomicity', () => {
     await expect(run(validForm(email))).rejects.toThrow('boom')
 
     vi.restoreAllMocks()
-    const { totalDocs } = await payload.find({
+    const { totalDocs } = await payload.count({
       collection: 'students',
       where: { email: { equals: email } },
-      limit: 0,
     })
     expect(totalDocs).toBe(0)
   })
@@ -285,10 +280,9 @@ describe('registerAction — guards', () => {
       status: 'error',
       message: 'Vui lòng kiểm tra lại thông tin đã nhập.',
     })
-    const { totalDocs } = await payload.find({
+    const { totalDocs } = await payload.count({
       collection: 'students',
       where: { email: { equals: email } },
-      limit: 0,
     })
     expect(totalDocs).toBe(0)
   })

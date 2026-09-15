@@ -692,9 +692,19 @@ unique field) hidden behind copy that describes something else entirely. Nothing
 error, warn, or fail a type check; the tests that pass today would keep passing, because
 none of them add such a field.
 
+A second, separate way this breaks silently: `afterSchemaInit` is what dev/test's
+drizzle-push reads, but prod runs `prodMigrations` instead — this index also has to exist
+as a hand-written migration (`20260914_130000_add_enrollment_active_guard`) for prod to
+ever get it. The two are two independent definitions of the same index with nothing that
+checks they match. Edit the `WHERE` clause or the columns in one and not the other, and
+`pnpm test:int` (drizzle-push) keeps passing while prod either never gets the guard or gets
+a different one — no error, no failed migration, just a duplicate-enrollment guard that
+silently doesn't match between environments.
+
 **Where** — `src/services/student-enrollment.ts` (`processEnrollmentTransaction`'s inner
 `try/catch`), `src/payload.config.ts` (`afterSchemaInit`, the index this catch assumes is
-the only source of the error), `src/lib/errors/enrollment.ts`
+the only source of the error), `src/migrations/20260914_130000_add_enrollment_active_guard.ts`
+(the hand-written prod copy of the same index — change one, change both), `src/lib/errors/enrollment.ts`
 (`EnrollmentAlreadyExists`). Adding a `unique: true` field to `Enrollments` must narrow this
 catch at the same time — e.g. by checking `error.errors[0]?.path` for the new field's name
 before assuming it is this guard. Design rationale:
@@ -723,10 +733,7 @@ always right and nothing in review would have caught it.
 `countOperation`, a real `SELECT count(*)`). Used correctly by
 `src/services/student-notifications.ts`'s `countUnreadNotifications` (Local API
 `payload.count()`) and `src/components/admin/NotificationBell/index.tsx` (REST
-`GET /notifications/count`). Existing test code (`tests/int/register-action.spec.ts`,
-`tests/int/registerAction — existing ACTIVE email` and others) uses `find({ limit: 0 })`
-to read `totalDocs` in a handful of one-off assertions against tiny test tables — tolerable
-there, not a pattern to carry into application code.
+`GET /notifications/count`).
 
 ## Identifiers
 

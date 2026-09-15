@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { getPayload, ValidationError } from 'payload'
+import { asPayload } from '../helpers/payload-stub'
 import {
   createStudentEnrollment,
   findCourseSlug,
@@ -60,7 +61,7 @@ const payloadStub = (overrides: {
 describe('createStudentEnrollment', () => {
   it('creates an enrollment for the given student and course', async () => {
     const create = vi.fn().mockResolvedValue({ id: 31 })
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ create }) as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ create })))
 
     await expect(
       createStudentEnrollment({ courseId: 12, student: activeStudent }),
@@ -83,7 +84,7 @@ describe('createStudentEnrollment', () => {
 describe('createStudentEnrollment — course validity', () => {
   it('refuses a course that has never been published (draft-only)', async () => {
     const courseFind = vi.fn().mockResolvedValue({ docs: [] })
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ courseFind }) as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ courseFind })))
 
     await expect(
       createStudentEnrollment({ courseId: 12, student: activeStudent }),
@@ -102,7 +103,7 @@ describe('createStudentEnrollment — course validity', () => {
     const courseFind = vi.fn().mockResolvedValue({
       docs: [{ ...publishedCourse, registrationStartAt: '2099-01-01T00:00:00.000Z' }],
     })
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ courseFind }) as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ courseFind })))
 
     await expect(
       createStudentEnrollment({ courseId: 12, student: activeStudent }),
@@ -113,7 +114,7 @@ describe('createStudentEnrollment — course validity', () => {
     const courseFind = vi.fn().mockResolvedValue({
       docs: [{ ...publishedCourse, registrationEndAt: '2000-01-01T00:00:00.000Z' }],
     })
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ courseFind }) as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ courseFind })))
 
     await expect(
       createStudentEnrollment({ courseId: 12, student: activeStudent }),
@@ -127,7 +128,7 @@ describe('createStudentEnrollment — the duplicate guard', () => {
     const enrollmentFind = vi
       .fn()
       .mockResolvedValue({ docs: [{ id: 99, enrollmentStatus: 'NEW' }] })
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ create, enrollmentFind }) as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ create, enrollmentFind })))
 
     await expect(
       createStudentEnrollment({ courseId: 12, student: activeStudent }),
@@ -137,7 +138,7 @@ describe('createStudentEnrollment — the duplicate guard', () => {
 
   it('scopes the pre-check to exclude CANCELLED enrollments (FR-008)', async () => {
     const enrollmentFind = vi.fn().mockResolvedValue({ docs: [] })
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ enrollmentFind }) as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ enrollmentFind })))
 
     await createStudentEnrollment({ courseId: 12, student: activeStudent })
 
@@ -157,7 +158,7 @@ describe('createStudentEnrollment — the duplicate guard', () => {
     const enrollmentFind = vi.fn().mockResolvedValue({ docs: [] })
     const stub = payloadStub({ enrollmentFind })
     stub.db.beginTransaction = vi.fn().mockResolvedValue('txn-1')
-    vi.mocked(getPayload).mockResolvedValue(stub as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(stub))
 
     await createStudentEnrollment({ courseId: 12, student: activeStudent })
 
@@ -174,7 +175,7 @@ describe('createStudentEnrollment — the duplicate guard', () => {
     const create = vi
       .fn()
       .mockRejectedValue(new ValidationError({ collection: 'enrollments', errors: [] }))
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ create }) as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ create })))
 
     await expect(
       createStudentEnrollment({ courseId: 12, student: activeStudent }),
@@ -185,7 +186,7 @@ describe('createStudentEnrollment — the duplicate guard', () => {
 describe('getActiveEnrollmentStatus', () => {
   it("returns undefined when the student's only enrollment for the course is CANCELLED", async () => {
     const find = vi.fn().mockResolvedValue({ docs: [] })
-    vi.mocked(getPayload).mockResolvedValue({ find } as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload({ find }))
 
     const payload = await getPayload({} as never)
     await expect(
@@ -205,7 +206,7 @@ describe('getActiveEnrollmentStatus', () => {
 
   it('returns the active enrollment status when one exists', async () => {
     const find = vi.fn().mockResolvedValue({ docs: [{ id: 99, enrollmentStatus: 'CONFIRMED' }] })
-    vi.mocked(getPayload).mockResolvedValue({ find } as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload({ find }))
 
     const payload = await getPayload({} as never)
     await expect(getActiveEnrollmentStatus(payload, { studentId: 7, courseId: 12 })).resolves.toBe(
@@ -219,14 +220,14 @@ describe('findCourseSlug', () => {
     const courseFind = vi
       .fn()
       .mockResolvedValue({ docs: [{ ...publishedCourse, slug: 'frontend' }] })
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ courseFind }) as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ courseFind })))
 
     await expect(findCourseSlug(12)).resolves.toBe('frontend')
   })
 
   it('returns null for a course that has never been published', async () => {
     const courseFind = vi.fn().mockResolvedValue({ docs: [] })
-    vi.mocked(getPayload).mockResolvedValue(payloadStub({ courseFind }) as never)
+    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ courseFind })))
 
     await expect(findCourseSlug(12)).resolves.toBeNull()
     expect(courseFind).toHaveBeenCalledWith(

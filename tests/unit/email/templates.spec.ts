@@ -43,4 +43,18 @@ describe('enrollmentCreatedEmail', () => {
     expect(html).toContain('Giao tiếp cho người đi làm')
     expect(text).toContain('Giao tiếp cho người đi làm')
   })
+
+  it('escapes a course title containing < and & so it cannot break the HTML markup', () => {
+    const { html } = enrollmentCreatedEmail('Toán <cao cấp> & Vật lý')
+
+    expect(html).not.toContain('<cao cấp>')
+    expect(html).toContain('&lt;cao cấp&gt;')
+    expect(html).toContain('&amp;')
+  })
+
+  it('leaves the plain-text body with the title exactly as given, unescaped', () => {
+    const { text } = enrollmentCreatedEmail('Toán <cao cấp> & Vật lý')
+
+    expect(text).toContain('Toán <cao cấp> & Vật lý')
+  })
 })
