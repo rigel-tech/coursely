@@ -35,8 +35,9 @@ jobs:
 
       - name: Run Unit Tests
         run: pnpm test:unit
+
   integration-tests:
-    name: Integration Tests (Postgres + Redis)
+    name: Integration Tests (Postgres)
     runs-on: ubuntu-latest
     environment: test
     services:
@@ -53,15 +54,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - name: Create .env file
@@ -80,8 +72,56 @@ jobs:
       - name: Run Integration Tests
         run: pnpm test:int
 
+  e2e-smoke:
+    name: E2E Smoke Test
+    runs-on: ubuntu-latest
+    environment: test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: coursely
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env file
+        run: echo "${{ secrets.TEST_ENV }}" > .env
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright OS Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+      - name: Run Migrations
+        run: pnpm payload migrate
+      - name: Run E2E Smoke Test
+        run: pnpm test:smoke
+
   build-and-push:
-    needs: [verify, integration-tests]
+    needs: [verify, integration-tests, e2e-smoke]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -146,7 +186,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Đồng bộ file docker-compose.yml sang VPS
       - name: Copy docker-compose.yml to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -157,7 +196,6 @@ jobs:
           source: 'docker-compose.yml'
           target: '~/projects/coursely/'
 
-      # Thực thi deploy an toàn và verify trạng thái
       - name: Deploy on VPS
         uses: appleboy/ssh-action@v1.0.3
         env:
