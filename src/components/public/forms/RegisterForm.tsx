@@ -37,6 +37,7 @@ export function RegisterForm() {
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
+    setError,
   } = useForm<RegisterValues>({ resolver: zodResolver(registerSchema) })
 
   const onSubmit = async (values: RegisterValues) => {
@@ -44,11 +45,14 @@ export function RegisterForm() {
 
     setState(result)
     if (result.status === 'success') router.push('/xac-thuc-otp')
+    if (result.status === 'error' && result.field === 'email' && result.message) {
+      setError('email', { type: 'server', message: result.message })
+    }
   }
 
   return (
     <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit(onSubmit)}>
-      {state.status === 'error' && state.message ? (
+      {state.status === 'error' && state.message && !state.field ? (
         <p
           className="border-error-foreground bg-error text-error-foreground rounded-md border px-3 py-2 text-sm"
           role="alert"
