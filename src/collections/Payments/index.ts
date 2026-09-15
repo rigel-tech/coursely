@@ -17,12 +17,12 @@ export const validatePaymentAmount: Validate<number> = (value) => {
 }
 
 /**
- * Ghi nhận từng khoản học viên đã nộp tiền cho một enrollment. `enrollmentId`
- * là số thường — chưa có relationship tới `enrollments` ở giai đoạn này (việc
- * nối FK là một tính năng sau). `studentId` và `userId` thì đã nối relationship
- * thật, tới `students` và `users`. `payment_status` (tổng trạng thái đã đóng
- * đủ/thiếu/hủy của một enrollment) không thuộc collection này — nó là trạng
- * thái suy ra từ tổng các payment, không phải thuộc tính của một payment đơn lẻ.
+ * Records each payment a student makes toward an enrollment. `enrollmentId` is
+ * a plain number — no relationship to `enrollments` yet at this stage (wiring
+ * that FK is a later feature). `studentId` and `userId` are real relationships,
+ * to `students` and `users`. `payment_status` (an enrollment's aggregate
+ * paid/partial/cancelled state) does not belong to this collection — it is
+ * derived from the sum of payments, not a property of a single payment.
  */
 export const Payments: CollectionConfig = {
   slug: 'payments',
