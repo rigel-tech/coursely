@@ -28,6 +28,20 @@ describe('decideRoute — /admin is no longer routed here', () => {
   })
 })
 
+describe('decideRoute — guest-only auth pages', () => {
+  it('redirects an active student away from login and register to /', () => {
+    expect(decideRoute('/dang-nhap', student, false)).toEqual({ type: 'redirect', to: '/' })
+    expect(decideRoute('/dang-ky', student, false)).toEqual({ type: 'redirect', to: '/' })
+    expect(decideRoute('/student/login', student, false)).toEqual({ type: 'redirect', to: '/' })
+    expect(decideRoute('/student/register', student, false)).toEqual({ type: 'redirect', to: '/' })
+  })
+
+  it('allows an anonymous visitor to reach login and register', () => {
+    expect(decideRoute('/dang-nhap', null, false)).toEqual({ type: 'next' })
+    expect(decideRoute('/dang-ky', null, false)).toEqual({ type: 'next' })
+  })
+})
+
 describe('decideRoute — /xac-thuc-otp', () => {
   it('redirects home without the pending_email cookie', () => {
     expect(decideRoute('/xac-thuc-otp', null, false)).toEqual({ type: 'redirect', to: '/' })

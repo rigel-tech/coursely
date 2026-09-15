@@ -35,3 +35,12 @@ export const REFRESH_TTL_SEC = 30 * 24 * 60 * 60
  * `tests/unit/repo/protected-prefixes.spec.ts` is what notices.
  */
 export const PROTECTED_PREFIXES = ['/tai-khoan', '/student/account', '/khoa-hoc-cua-toi'] as const
+
+export const AUTH_PREFIXES = [
+  '/dang-nhap',
+  '/student/login',
+  '/dang-ky',
+  '/student/register',
+  '/xac-thuc-otp',
+  '/student/verify-otp',
+] as const
