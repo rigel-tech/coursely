@@ -39,6 +39,7 @@ export async function listAndMarkRecentNotifications(studentId: number): Promise
     where: { student: { equals: studentId } },
     sort: '-createdAt',
     limit: RECENT_LIMIT,
+    depth: 0,
     overrideAccess: true,
   })
 
@@ -46,8 +47,11 @@ export async function listAndMarkRecentNotifications(studentId: number): Promise
   if (ids.length > 0) {
     await payload.update({
       collection: 'notifications',
-      where: { id: { in: ids } },
+      // `isRead: { equals: false }` alongside the id list — some of these 20 may already
+      // be read, and rewriting them again would only bump `updatedAt` for nothing.
+      where: { and: [{ id: { in: ids } }, { isRead: { equals: false } }] },
       data: { isRead: true },
+      depth: 0,
       overrideAccess: true,
     })
   }

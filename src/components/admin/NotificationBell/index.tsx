@@ -72,7 +72,7 @@ export const NotificationBell: React.FC = () => {
 
   const loadList = useCallback(async () => {
     const res = await requests.get(buildURL(apiRoute, '/notifications', ''), {
-      params: { sort: '-createdAt', limit: 20 },
+      params: { sort: '-createdAt', limit: 20, depth: 0 },
     })
     const data = await res.json()
     const docs: AdminNotification[] = data.docs ?? []

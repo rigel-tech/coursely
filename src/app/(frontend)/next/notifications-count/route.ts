@@ -4,7 +4,7 @@
  * Mirrors `/next/auth-status`: exists so the public header can poll a signed-in student's
  * unread notification count without a Server Component reading `headers()` / `cookies()`
  * — the header's host pages are `force-static`, which blanks those APIs. Pure read, no
- * side effect, safe to call every 60 seconds.
+ * side effect, safe to call every 5 seconds.
  *
  * Anything short of a resolvable student reports `count: 0` — there is nothing to show,
  * not an error.

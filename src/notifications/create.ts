@@ -12,6 +12,7 @@ import type { Payload, PayloadRequest } from 'payload'
 export type CreateNotificationInput = {
   content: Notification['content']
   metadata?: Notification['metadata']
+  req?: Partial<PayloadRequest>
   studentId?: number
   title: Notification['title']
   type: Notification['type']
@@ -19,17 +20,16 @@ export type CreateNotificationInput = {
 
 export async function createNotification(
   payload: Payload,
-  input: CreateNotificationInput,
-  req?: Partial<PayloadRequest>,
+  { content, metadata, req, studentId, title, type }: CreateNotificationInput,
 ): Promise<void> {
   await payload.create({
     collection: 'notifications',
     data: {
-      ...(input.studentId !== undefined ? { student: input.studentId } : {}),
-      type: input.type,
-      title: input.title,
-      content: input.content,
-      metadata: input.metadata,
+      ...(studentId !== undefined ? { student: studentId } : {}),
+      type,
+      title,
+      content,
+      metadata,
       isRead: false,
     },
     overrideAccess: true,

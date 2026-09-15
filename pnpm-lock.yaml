@@ -80,9 +80,6 @@ importers:
       dotenv:
         specifier: 16.4.7
         version: 16.4.7
-      drizzle-orm:
-        specifier: 0.45.2
-        version: 0.45.2(@types/pg@8.20.0)(pg@8.20.0)
       graphql:
         specifier: ^16.8.2
         version: 16.14.2

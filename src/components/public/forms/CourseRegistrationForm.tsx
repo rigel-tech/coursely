@@ -16,7 +16,6 @@ import {
   enrollmentProfileSchema,
   type EnrollmentProfileValues,
 } from '@/lib/validation/enrollment-profile-schema'
-import { VIETNAM_PHONE_REGEX } from '@/lib/validation/profile-schema'
 import type { Course } from '@/payload-types'
 
 /** Shared by `CourseRegistrationForm` and `CourseRegistrationCTA` — passed through unchanged. */
@@ -63,7 +62,9 @@ export function CourseRegistrationForm({
   // no separate "Chỉnh sửa" step (unlike /tai-khoan's ProfileForm). A validly-formatted but
   // factually wrong value is not reachable from here; that stays /tai-khoan's job.
   const hasFullName = Boolean(fullName?.trim())
-  const hasValidPhone = Boolean(phone && VIETNAM_PHONE_REGEX.test(phone))
+  const hasValidPhone = Boolean(
+    phone && enrollmentProfileSchema.shape.phone.safeParse(phone).success,
+  )
 
   const {
     formState: { errors, isSubmitting },
@@ -128,10 +129,10 @@ export function CourseRegistrationForm({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={hasFullName ? undefined : 'registration-fullName'}>Họ và tên</Label>
           {hasFullName ? (
-            <>
-              <p className="text-muted-foreground text-sm">{fullName}</p>
-              <input type="hidden" {...register('fullName')} />
-            </>
+            // `shouldUnregister` defaults to `false`, so `register('fullName')`'s
+            // `defaultValues` entry still reaches `handleSubmit` without a control on the
+            // page for it — no hidden input needed to carry it through.
+            <p className="text-muted-foreground text-sm">{fullName}</p>
           ) : (
             <>
               <Input
@@ -144,7 +145,7 @@ export function CourseRegistrationForm({
                 <p
                   id="registration-fullName-error"
                   role="alert"
-                  className="text-destructive-foreground text-xs font-medium"
+                  className="text-error-foreground text-xs font-medium"
                 >
                   {errors.fullName.message}
                 </p>
@@ -156,10 +157,7 @@ export function CourseRegistrationForm({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={hasValidPhone ? undefined : 'registration-phone'}>Số điện thoại</Label>
           {hasValidPhone ? (
-            <>
-              <p className="text-muted-foreground text-sm">{phone}</p>
-              <input type="hidden" {...register('phone')} />
-            </>
+            <p className="text-muted-foreground text-sm">{phone}</p>
           ) : (
             <>
               <Input
@@ -172,7 +170,7 @@ export function CourseRegistrationForm({
                 <p
                   id="registration-phone-error"
                   role="alert"
-                  className="text-destructive-foreground text-xs font-medium"
+                  className="text-error-foreground text-xs font-medium"
                 >
                   {errors.phone.message}
                 </p>

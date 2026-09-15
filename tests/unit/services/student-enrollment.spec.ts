@@ -153,6 +153,19 @@ describe('createStudentEnrollment — the duplicate guard', () => {
     )
   })
 
+  it('runs the pre-check inside the same transaction as the insert', async () => {
+    const enrollmentFind = vi.fn().mockResolvedValue({ docs: [] })
+    const stub = payloadStub({ enrollmentFind })
+    stub.db.beginTransaction = vi.fn().mockResolvedValue('txn-1')
+    vi.mocked(getPayload).mockResolvedValue(stub as never)
+
+    await createStudentEnrollment({ courseId: 12, student: activeStudent })
+
+    expect(enrollmentFind).toHaveBeenCalledWith(
+      expect.objectContaining({ req: { transactionID: 'txn-1' } }),
+    )
+  })
+
   it('treats a database-level unique violation the same as the pre-check catching it', async () => {
     // The race the pre-check cannot close on its own (FR-002): two requests both see no
     // existing enrollment, both proceed to create — the partial unique index is what

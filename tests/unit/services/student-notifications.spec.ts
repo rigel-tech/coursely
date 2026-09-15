@@ -44,6 +44,7 @@ describe('listAndMarkRecentNotifications', () => {
         where: { student: { equals: 7 } },
         sort: '-createdAt',
         limit: 20,
+        depth: 0,
         overrideAccess: true,
       }),
     )
@@ -59,8 +60,11 @@ describe('listAndMarkRecentNotifications', () => {
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: 'notifications',
-        where: { id: { in: [101, 102] } },
+        where: {
+          and: [{ id: { in: [101, 102] } }, { isRead: { equals: false } }],
+        },
         data: { isRead: true },
+        depth: 0,
         overrideAccess: true,
       }),
     )

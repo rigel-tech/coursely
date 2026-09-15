@@ -124,7 +124,7 @@ describe('NotificationBell (admin) — opening the list', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
 
     const [listUrl] = fetchMock.mock.calls[1] as [string]
-    expect(listUrl).toBe('/api/notifications?sort=-createdAt&limit=20')
+    expect(listUrl).toBe('/api/notifications?sort=-createdAt&limit=20&depth=0')
   })
 
   it("marks only the rows without a student as read — a student's own notification is left untouched", async () => {

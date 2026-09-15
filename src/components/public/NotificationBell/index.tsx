@@ -24,6 +24,10 @@ export function NotificationBell() {
     let cancelled = false
 
     const poll = () => {
+      // A hidden tab has no visible badge to update — skip the request rather than pay
+      // for one nobody can see.
+      if (document.visibilityState === 'hidden') return
+
       fetch('/next/notifications-count')
         .then((res) => res.json())
         .then((data: { count?: unknown }) => {
@@ -37,9 +41,17 @@ export function NotificationBell() {
     poll()
     const interval = setInterval(poll, POLL_INTERVAL_MS)
 
+    // Catch up immediately on return, rather than waiting out whatever is left of the
+    // current interval.
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') poll()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
     return () => {
       cancelled = true
       clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [])
 
@@ -57,15 +69,28 @@ export function NotificationBell() {
   }, [open])
 
   const handleToggle = () => {
-    setOpen((wasOpen) => {
-      const nextOpen = !wasOpen
-      if (nextOpen) {
-        // Fetching the list is what marks it read (FR-005) — fetched fresh on every open,
-        // never cached from the last time.
-        listNotificationsAction().then(setItems)
-      }
-      return nextOpen
-    })
+    const nextOpen = !open
+    setOpen(nextOpen)
+
+    if (nextOpen) {
+      // Clear any list left over from the previous open so it never flashes stale content
+      // while this fetch is in flight.
+      setItems(null)
+      // Fetching the list is what marks it read (FR-005) — fetched fresh on every open,
+      // never cached from the last time. Kept outside the `setOpen` updater: React
+      // StrictMode invokes a functional updater twice in dev, which would call the action
+      // twice for one click.
+      listNotificationsAction()
+        .then((fetched) => {
+          setItems(fetched)
+          // The server just marked these read — reflect that now rather than waiting out
+          // the rest of the current poll interval.
+          setCount(0)
+        })
+        .catch(() => {
+          setItems([])
+        })
+    }
   }
 
   return (

@@ -62,7 +62,11 @@ async function validateCourseForEnrollment(payload: Payload, courseId: number): 
  */
 async function checkExistingEnrollment(
   payload: Payload,
-  { studentId, courseId }: { studentId: number; courseId: number },
+  {
+    studentId,
+    courseId,
+    req,
+  }: { studentId: number; courseId: number; req: Partial<PayloadRequest> },
 ): Promise<void> {
   const existing = await payload.find({
     collection: 'enrollments',
@@ -75,6 +79,7 @@ async function checkExistingEnrollment(
     },
     limit: 1,
     overrideAccess: true,
+    req,
   })
 
   if (existing.docs.length > 0) {
@@ -90,7 +95,10 @@ async function processEnrollmentTransaction(
   const req: Partial<PayloadRequest> = { transactionID }
 
   try {
-    await checkExistingEnrollment(payload, { studentId, courseId: course.id })
+    // Same transaction as everything below — the pre-check's own read is not the race
+    // guard (the partial unique index is), but running it outside the transaction that
+    // is about to write serves no purpose either.
+    await checkExistingEnrollment(payload, { studentId, courseId: course.id, req })
 
     try {
       await payload.create({
@@ -113,17 +121,14 @@ async function processEnrollmentTransaction(
     }
 
     const { title, content } = enrollmentCreatedNotification(course.title)
-    await createNotification(
-      payload,
-      {
-        studentId,
-        type: 'ENROLLMENT_CREATED',
-        title,
-        content,
-        metadata: { course: course.id },
-      },
+    await createNotification(payload, {
+      studentId,
+      type: 'ENROLLMENT_CREATED',
+      title,
+      content,
+      metadata: { course: course.id },
       req,
-    )
+    })
 
     if (transactionID) await payload.db.commitTransaction(transactionID)
   } catch (error) {
@@ -187,5 +192,5 @@ export async function createStudentEnrollment({
   void sendEnrollmentConfirmationEmail(payload, {
     to: student.email,
     courseTitle: course.title,
-  }).catch((error) => payload.logger.error({ error }, 'ENROLLMENT_CONFIRMATION email failed'))
+  }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CONFIRMATION email failed'))
 }
