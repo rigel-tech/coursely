@@ -1,0 +1,191 @@
+// @vitest-environment node
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { getPayload, type Payload } from 'payload'
+import configPromise from '@payload-config'
+
+let payload: Payload
+let staffUserId: number
+let studentId: number
+let mediaId: number
+const madePayments: number[] = []
+const madeStaff: number[] = []
+const madeStudents: number[] = []
+const madeMedia: number[] = []
+
+const uniqueEmail = (tag: string) =>
+  `${tag}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`
+
+type LooseData = Record<string, unknown>
+type LooseDoc = Record<string, unknown> & { id: number }
+
+const relId = (v: unknown): unknown => (v && typeof v === 'object' ? (v as { id: unknown }).id : v)
+
+const createPayment = (data: LooseData) =>
+  payload.create({ collection: 'payments', data } as Parameters<
+    Payload['create']
+  >[0]) as unknown as Promise<LooseDoc>
+
+// 1x1 transparent PNG — smallest valid file the `media` upload collection will accept.
+const TINY_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+
+beforeAll(async () => {
+  payload = await getPayload({ config: await configPromise })
+
+  const staff = await payload.create({
+    collection: 'users',
+    data: { email: uniqueEmail('pay-staff'), password: 'Secret123' },
+  })
+  staffUserId = staff.id as number
+  madeStaff.push(staffUserId)
+
+  const student = await payload.create({
+    collection: 'students',
+    data: {
+      email: uniqueEmail('pay-student'),
+      password: 'Secret123',
+      status: 'ACTIVE',
+      fullName: 'Nguyễn Văn A',
+    },
+  })
+  studentId = student.id as number
+  madeStudents.push(studentId)
+
+  const media = await payload.create({
+    collection: 'media',
+    data: { alt: 'Ảnh bằng chứng thanh toán' },
+    file: {
+      data: Buffer.from(TINY_PNG_BASE64, 'base64'),
+      mimetype: 'image/png',
+      name: 'proof.png',
+      size: Buffer.from(TINY_PNG_BASE64, 'base64').length,
+    },
+  })
+  mediaId = media.id as number
+  madeMedia.push(mediaId)
+})
+
+afterAll(async () => {
+  for (const id of madePayments.splice(0)) {
+    await payload.delete({ collection: 'payments', id }).catch(() => {})
+  }
+  for (const id of madeStaff) await payload.delete({ collection: 'users', id }).catch(() => {})
+  for (const id of madeStudents)
+    await payload.delete({ collection: 'students', id }).catch(() => {})
+  for (const id of madeMedia) await payload.delete({ collection: 'media', id }).catch(() => {})
+})
+
+const baseData = (): LooseData => ({
+  enrollmentId: 1,
+  studentId,
+  amount: 500000,
+  paymentMethod: 'CASH',
+})
+
+describe('payments collection — required fields', () => {
+  it('creates a payment with all required fields', async () => {
+    const doc = await createPayment(baseData())
+    madePayments.push(doc.id)
+
+    expect(doc.amount).toBe(500000)
+    expect(doc.paymentMethod).toBe('CASH')
+    expect(doc.createdAt).toBeTruthy()
+    expect(doc.updatedAt).toBeTruthy()
+  })
+
+  it('rejects a create missing any required field', async () => {
+    for (const key of ['enrollmentId', 'studentId', 'amount', 'paymentMethod']) {
+      const data = baseData()
+      delete data[key]
+      await expect(createPayment(data)).rejects.toThrow()
+    }
+  })
+})
+
+describe('payments collection — amount validation', () => {
+  it('rejects amount 0, a negative amount, and a non-integer amount', async () => {
+    for (const amount of [0, -100, 1000.5]) {
+      await expect(createPayment({ ...baseData(), amount })).rejects.toThrow()
+    }
+  })
+
+  it('accepts a positive integer amount', async () => {
+    const doc = await createPayment({ ...baseData(), amount: 1 })
+    madePayments.push(doc.id)
+    expect(doc.amount).toBe(1)
+  })
+})
+
+describe('payments collection — paymentDate is set automatically', () => {
+  it('auto-fills paymentDate to the save time when omitted', async () => {
+    const before = Date.now()
+    const doc = await createPayment(baseData())
+    madePayments.push(doc.id)
+    const after = Date.now()
+
+    expect(doc.paymentDate).toBeTruthy()
+    const savedAt = new Date(doc.paymentDate as string).getTime()
+    expect(savedAt).toBeGreaterThanOrEqual(before)
+    expect(savedAt).toBeLessThanOrEqual(after)
+  })
+
+  it('overrides a manually supplied paymentDate with the save time', async () => {
+    const before = Date.now()
+    const doc = await createPayment({ ...baseData(), paymentDate: '2020-01-01T00:00:00.000Z' })
+    madePayments.push(doc.id)
+    const after = Date.now()
+
+    const savedAt = new Date(doc.paymentDate as string).getTime()
+    expect(savedAt).toBeGreaterThanOrEqual(before)
+    expect(savedAt).toBeLessThanOrEqual(after)
+  })
+})
+
+describe('payments collection — studentId relationship', () => {
+  it('creates a payment whose studentId resolves to the real student', async () => {
+    const doc = await createPayment(baseData())
+    madePayments.push(doc.id)
+    expect(relId(doc.studentId)).toBe(studentId)
+
+    const populated = await payload.findByID({ collection: 'payments', id: doc.id, depth: 1 })
+    const populatedStudent = populated.studentId as unknown as { id: number; email: string }
+    expect(populatedStudent.id).toBe(studentId)
+    expect(populatedStudent.email).toBeTruthy()
+  })
+})
+
+describe('payments collection — proof of payment image (US2)', () => {
+  it('creates a payment with proofImage attached', async () => {
+    const doc = await createPayment({ ...baseData(), proofImage: mediaId })
+    madePayments.push(doc.id)
+    expect(relId(doc.proofImage)).toBe(mediaId)
+  })
+
+  it('creates a payment with recordedBy, referenceNote, and proofImage all omitted', async () => {
+    const doc = await createPayment(baseData())
+    madePayments.push(doc.id)
+    expect(doc.id).toBeTruthy()
+  })
+})
+
+describe('payments collection — access control', () => {
+  it('denies read with no user', async () => {
+    await expect(payload.find({ collection: 'payments', overrideAccess: false })).rejects.toThrow()
+  })
+
+  it('denies read for a student principal', async () => {
+    const student = await payload.findByID({ collection: 'students', id: studentId })
+    const studentPrincipal = { ...student, collection: 'students' }
+
+    await expect(
+      payload.find({ collection: 'payments', overrideAccess: false, user: studentPrincipal }),
+    ).rejects.toThrow()
+  })
+
+  it('allows read for a staff principal', async () => {
+    const staff = await payload.findByID({ collection: 'users', id: staffUserId })
+    const res = await payload.find({ collection: 'payments', overrideAccess: false, user: staff })
+
+    expect(Array.isArray(res.docs)).toBe(true)
+  })
+})

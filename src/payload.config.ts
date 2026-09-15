@@ -13,6 +13,7 @@ import { Courses } from './collections/Courses'
 import { Media } from './collections/Media'
 import { Notifications } from './collections/Notifications'
 import { Pages } from './collections/Pages'
+import { Payments } from './collections/Payments'
 import { Posts } from './collections/Posts'
 import { Students } from './collections/Students'
 import { Users } from './collections/Users'
@@ -104,6 +105,7 @@ export default buildConfig({
     CoursePhases,
     CourseObjectives,
     Categories,
+    Payments,
     // --- 2. Content (Nội dung & Truyền thông) ---
     Pages,
     Posts,

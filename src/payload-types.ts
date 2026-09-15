@@ -74,6 +74,7 @@ export interface Config {
     'course-phases': CoursePhase;
     'course-objectives': CourseObjective;
     categories: Category;
+    payments: Payment;
     pages: Page;
     posts: Post;
     media: Media;
@@ -106,6 +107,7 @@ export interface Config {
     'course-phases': CoursePhasesSelect<false> | CoursePhasesSelect<true>;
     'course-objectives': CourseObjectivesSelect<false> | CourseObjectivesSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    payments: PaymentsSelect<false> | PaymentsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -508,6 +510,35 @@ export interface Class {
   scheduleTime?: string | null;
   location?: string | null;
   maxStudents: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payments".
+ */
+export interface Payment {
+  id: number;
+  enrollmentId: number;
+  studentId: number | Student;
+  amount: number;
+  paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CARD' | 'OTHER';
+  /**
+   * Automatically set to the moment the record is saved — not manually entered.
+   */
+  paymentDate: string;
+  /**
+   * ID of the staff member who recorded this payment. Leave blank if unknown.
+   */
+  recordedBy?: number | null;
+  /**
+   * Receipt number, transfer memo, or other supplementary note.
+   */
+  referenceNote?: string | null;
+  /**
+   * Screenshot of a successful transfer or a receipt photo.
+   */
+  proofImage?: (number | null) | Media;
   updatedAt: string;
   createdAt: string;
 }
@@ -1201,6 +1232,10 @@ export interface PayloadLockedDocument {
         value: number | Category;
       } | null)
     | ({
+        relationTo: 'payments';
+        value: number | Payment;
+      } | null)
+    | ({
         relationTo: 'pages';
         value: number | Page;
       } | null)
@@ -1407,6 +1442,22 @@ export interface CategoriesSelect<T extends boolean = true> {
         label?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payments_select".
+ */
+export interface PaymentsSelect<T extends boolean = true> {
+  enrollmentId?: T;
+  studentId?: T;
+  amount?: T;
+  paymentMethod?: T;
+  paymentDate?: T;
+  recordedBy?: T;
+  referenceNote?: T;
+  proofImage?: T;
   updatedAt?: T;
   createdAt?: T;
 }

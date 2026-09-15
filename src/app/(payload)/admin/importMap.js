@@ -12,6 +12,8 @@ import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c08
 import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { SlugField as SlugField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
+import { StudentCell as StudentCell_4d8fff6d508f27a6f34be67490c0cedb } from '@/collections/Payments/components/StudentCell'
+import { AmountField as AmountField_fddaf644989526e4a3e78c55be2144a3 } from '@/collections/Payments/components/AmountField'
 import { InlineToolbarFeatureClient as InlineToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { FixedToolbarFeatureClient as FixedToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { HeadingFeatureClient as HeadingFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
@@ -57,6 +59,10 @@ export const importMap = {
   '@payloadcms/plugin-seo/client#PreviewComponent':
     PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
   '@payloadcms/next/client#SlugField': SlugField_2b8867833a34864a02ddf429b0728a40,
+  '@/collections/Payments/components/StudentCell#StudentCell':
+    StudentCell_4d8fff6d508f27a6f34be67490c0cedb,
+  '@/collections/Payments/components/AmountField#AmountField':
+    AmountField_fddaf644989526e4a3e78c55be2144a3,
   '@payloadcms/richtext-lexical/client#InlineToolbarFeatureClient':
     InlineToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   '@payloadcms/richtext-lexical/client#FixedToolbarFeatureClient':
