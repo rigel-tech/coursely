@@ -528,9 +528,9 @@ export interface Payment {
    */
   paymentDate: string;
   /**
-   * ID of the staff member who recorded this payment. Leave blank if unknown.
+   * Staff member who recorded this payment. Leave blank if unknown.
    */
-  recordedBy?: number | null;
+  userId?: (number | null) | User;
   /**
    * Receipt number, transfer memo, or other supplementary note.
    */
@@ -1455,7 +1455,7 @@ export interface PaymentsSelect<T extends boolean = true> {
   amount?: T;
   paymentMethod?: T;
   paymentDate?: T;
-  recordedBy?: T;
+  userId?: T;
   referenceNote?: T;
   proofImage?: T;
   updatedAt?: T;

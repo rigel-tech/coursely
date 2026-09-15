@@ -154,6 +154,36 @@ describe('payments collection — studentId relationship', () => {
   })
 })
 
+describe('payments collection — userId relationship', () => {
+  it('creates a payment whose userId resolves to the real staff account', async () => {
+    const doc = await createPayment({ ...baseData(), userId: staffUserId })
+    madePayments.push(doc.id)
+    expect(relId(doc.userId)).toBe(staffUserId)
+
+    const populated = await payload.findByID({ collection: 'payments', id: doc.id, depth: 1 })
+    const populatedUser = populated.userId as unknown as { id: number; email: string }
+    expect(populatedUser.id).toBe(staffUserId)
+    expect(populatedUser.email).toBeTruthy()
+  })
+
+  it('populates studentId and userId together on the same document', async () => {
+    const doc = await createPayment({ ...baseData(), userId: staffUserId })
+    madePayments.push(doc.id)
+
+    const populated = await payload.findByID({ collection: 'payments', id: doc.id, depth: 1 })
+    const populatedStudent = populated.studentId as unknown as { id: number; email: string }
+    const populatedUser = populated.userId as unknown as { id: number; email: string }
+    expect(populatedStudent.id).toBe(studentId)
+    expect(populatedStudent.email).toBeTruthy()
+    expect(populatedUser.id).toBe(staffUserId)
+    expect(populatedUser.email).toBeTruthy()
+  })
+
+  it('rejects a userId that does not reference an existing user', async () => {
+    await expect(createPayment({ ...baseData(), userId: 999999999 })).rejects.toThrow()
+  })
+})
+
 describe('payments collection — proof of payment image (US2)', () => {
   it('creates a payment with proofImage attached', async () => {
     const doc = await createPayment({ ...baseData(), proofImage: mediaId })
@@ -161,7 +191,7 @@ describe('payments collection — proof of payment image (US2)', () => {
     expect(relId(doc.proofImage)).toBe(mediaId)
   })
 
-  it('creates a payment with recordedBy, referenceNote, and proofImage all omitted', async () => {
+  it('creates a payment with userId, referenceNote, and proofImage all omitted', async () => {
     const doc = await createPayment(baseData())
     madePayments.push(doc.id)
     expect(doc.id).toBeTruthy()

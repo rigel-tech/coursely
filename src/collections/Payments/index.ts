@@ -18,12 +18,11 @@ export const validatePaymentAmount: Validate<number> = (value) => {
 
 /**
  * Ghi nhận từng khoản học viên đã nộp tiền cho một enrollment. `enrollmentId`
- * và `recordedBy` là số thường — chưa có relationship tới
- * `enrollments`/`users` ở giai đoạn này (việc nối FK là một tính năng sau).
- * `studentId` thì đã nối relationship thật tới `students`. `payment_status`
- * (tổng trạng thái đã đóng đủ/thiếu/hủy của một enrollment) không thuộc
- * collection này — nó là trạng thái suy ra từ tổng các payment, không phải
- * thuộc tính của một payment đơn lẻ.
+ * là số thường — chưa có relationship tới `enrollments` ở giai đoạn này (việc
+ * nối FK là một tính năng sau). `studentId` và `userId` thì đã nối relationship
+ * thật, tới `students` và `users`. `payment_status` (tổng trạng thái đã đóng
+ * đủ/thiếu/hủy của một enrollment) không thuộc collection này — nó là trạng
+ * thái suy ra từ tổng các payment, không phải thuộc tính của một payment đơn lẻ.
  */
 export const Payments: CollectionConfig = {
   slug: 'payments',
@@ -35,7 +34,14 @@ export const Payments: CollectionConfig = {
   },
   admin: {
     group: adminGroups.academic,
-    defaultColumns: ['studentId', 'enrollmentId', 'amount', 'paymentMethod', 'paymentDate'],
+    defaultColumns: [
+      'studentId',
+      'userId',
+      'enrollmentId',
+      'amount',
+      'paymentMethod',
+      'paymentDate',
+    ],
   },
   hooks: {
     beforeChange: [setPaymentDate],
@@ -104,13 +110,17 @@ export const Payments: CollectionConfig = {
       },
     },
     {
-      name: 'recordedBy',
-      type: 'number',
+      name: 'userId',
+      type: 'relationship',
+      relationTo: 'users',
       label: { vi: 'Người ghi nhận', en: 'Recorded By' },
       admin: {
         description: {
-          vi: 'Mã nhân sự đã trực tiếp ghi nhận khoản thu này. Để trống nếu không xác định.',
-          en: 'ID of the staff member who recorded this payment. Leave blank if unknown.',
+          vi: 'Nhân sự đã trực tiếp ghi nhận khoản thu này. Để trống nếu không xác định.',
+          en: 'Staff member who recorded this payment. Leave blank if unknown.',
+        },
+        components: {
+          Cell: '@/collections/Payments/components/RecorderCell#RecorderCell',
         },
       },
     },

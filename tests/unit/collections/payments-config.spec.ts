@@ -24,7 +24,7 @@ const CORE_FIELDS = [
   'amount',
   'paymentMethod',
   'paymentDate',
-  'recordedBy',
+  'userId',
   'referenceNote',
 ]
 
@@ -43,18 +43,16 @@ describe('Payments fields', () => {
     }
   })
 
-  it('leaves recordedBy and referenceNote optional', () => {
-    for (const name of ['recordedBy', 'referenceNote']) {
+  it('leaves userId and referenceNote optional', () => {
+    for (const name of ['userId', 'referenceNote']) {
       const f = field(Payments.fields, name) as { required?: boolean } | undefined
       expect(f?.required, `field ${name} should not be required`).toBeFalsy()
     }
   })
 
-  it('types enrollmentId and recordedBy as plain numbers, not relationships', () => {
-    for (const name of ['enrollmentId', 'recordedBy']) {
-      const f = field(Payments.fields, name) as { type?: string } | undefined
-      expect(f?.type).toBe('number')
-    }
+  it('types enrollmentId as a plain number, not a relationship', () => {
+    const f = field(Payments.fields, 'enrollmentId') as { type?: string } | undefined
+    expect(f?.type).toBe('number')
   })
 
   it('types studentId as a relationship to students', () => {
@@ -62,6 +60,13 @@ describe('Payments fields', () => {
     expect(f?.type).toBe('relationship')
     expect(f?.relationTo).toBe('students')
     expect(f?.required).toBe(true)
+  })
+
+  it('types userId as a relationship to users', () => {
+    const f = field(Payments.fields, 'userId') as Extract<Field, { type: 'relationship' }>
+    expect(f?.type).toBe('relationship')
+    expect(f?.relationTo).toBe('users')
+    expect(f?.required).toBeFalsy()
   })
 
   it('types paymentDate as a read-only date field — staff never enter it by hand', () => {
