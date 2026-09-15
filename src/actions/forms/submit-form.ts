@@ -44,7 +44,6 @@ export async function submitFormAction(input: SubmitFormInput): Promise<SubmitFo
       message: 'Gửi thông tin tư vấn thành công!',
     }
   } catch (error) {
-    console.error('Lỗi khi submit form tư vấn:', error)
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Đã có lỗi xảy ra, vui lòng thử lại sau.',
