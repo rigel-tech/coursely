@@ -165,7 +165,7 @@ describe('registerAction — new email', () => {
 })
 
 describe('registerAction — existing ACTIVE email', () => {
-  it('does not reveal the collision: no new user, duplicate-attempt email, still cookie + success', async () => {
+  it('reports the email as taken, sends a duplicate-attempt email, and does not proceed to OTP', async () => {
     const email = uniqueEmail('active')
     await payload.create({
       collection: 'students',
@@ -173,7 +173,11 @@ describe('registerAction — existing ACTIVE email', () => {
     })
     const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
 
-    expect(await run(validForm(email))).toEqual({ status: 'success' })
+    expect(await run(validForm(email))).toEqual({
+      status: 'error',
+      field: 'email',
+      message: 'Email đã tồn tại.',
+    })
 
     const { totalDocs } = await payload.find({
       collection: 'students',
@@ -182,7 +186,7 @@ describe('registerAction — existing ACTIVE email', () => {
     })
     expect(totalDocs).toBe(1)
     expect(await readOtp(payload, email)).toBeNull()
-    expect(ctx.cookieJar.get('pending_email')).toBe(email)
+    expect(ctx.cookieJar.get('pending_email')).toBeUndefined()
     expect(sendEmail).toHaveBeenCalledTimes(1)
   })
 })

@@ -23,12 +23,14 @@ import { createNotification } from '@/notifications/create'
 import { accountCreatedNotification } from '@/notifications/templates/account-created'
 import { sendVerificationOtp, type VerificationOtpMode } from '@/services/student-verification-otp'
 
+export type RegisterResult = { ok: true; email: string } | { ok: false; reason: 'duplicate-email' }
+
 /**
- * Runs a self-registration attempt. Returns the normalised email for the caller's
- * cookie. Throws on an unexpected failure — the student/notification write is
+ * Runs a self-registration attempt. On success returns the normalised email for the
+ * caller's cookie. Throws on an unexpected failure — the student/notification write is
  * rolled back before it propagates.
  */
-export async function registerStudent(input: RegisterInput): Promise<string> {
+export async function registerStudent(input: RegisterInput): Promise<RegisterResult> {
   // §5.1 step 3 — normalise
   const email = input.email.trim().toLowerCase()
   const payload = await getPayload({ config: await configPromise })
@@ -43,35 +45,39 @@ export async function registerStudent(input: RegisterInput): Promise<string> {
     })
   ).docs[0]
 
-  const otpMode = await applyRegistration(payload, existing, input)
+  const outcome = await applyRegistration(payload, existing, input)
 
-  if (otpMode) await sendVerificationOtp(payload, email, otpMode)
+  if (outcome.kind === 'duplicate') return { ok: false, reason: 'duplicate-email' }
+  if (outcome.kind === 'otp') await sendVerificationOtp(payload, email, outcome.mode)
 
-  return email
+  return { ok: true, email }
 }
+
+type ApplyRegistrationOutcome =
+  { kind: 'otp'; mode: VerificationOtpMode } | { kind: 'duplicate' } | { kind: 'noop' }
 
 /**
  * §5.1 step 4 — what this attempt does depends on whether `email` already has an
- * account, and if so, its `status`. Each case returns early with whether to (re)send an
- * OTP, so `existing` narrows from `Student | undefined` to `Student` the normal way
- * TypeScript does it, without a cast.
+ * account, and if so, its `status`. Each case returns early with the outcome, so
+ * `existing` narrows from `Student | undefined` to `Student` the normal way TypeScript
+ * does it, without a cast.
  */
 async function applyRegistration(
   payload: Payload,
   existing: Student | undefined,
   data: RegisterInput,
-): Promise<VerificationOtpMode | null> {
+): Promise<ApplyRegistrationOutcome> {
   if (!existing) {
     await createStudentWithWelcomeNotification(payload, data)
-    return 'initial'
+    return { kind: 'otp', mode: 'initial' }
   }
 
   if (existing.status === 'ACTIVE') {
-    // never reveal the collision — notify the real owner instead
+    // reported to the submitter as a taken email — notify the real owner too
     void sendDuplicateAttemptEmail(payload, data.email).catch((err) =>
       payload.logger.error({ err }, 'DUPLICATE_REGISTER_ATTEMPT email failed'),
     )
-    return null
+    return { kind: 'duplicate' }
   }
 
   if (existing.status === 'PENDING_VERIFICATION') {
@@ -81,12 +87,12 @@ async function applyRegistration(
       id: existing.id,
       data: { password: data.password, fullName: data.fullName, phone: data.phone },
     })
-    return 'resend'
+    return { kind: 'otp', mode: 'resend' }
   }
 
   // DISABLED — do nothing, just leave a trail
   payload.logger.warn({ email: data.email }, 'registration attempt on a DISABLED account')
-  return null
+  return { kind: 'noop' }
 }
 
 /** §5.1 step 5 — student + welcome notification, atomically. */

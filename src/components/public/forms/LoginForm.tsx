@@ -57,7 +57,7 @@ export const LoginForm: React.FC = () => {
     }).catch(() => SYSTEM_FAILURE)
 
     setState(result)
-    if (result.redirectTo) window.location.assign(result.redirectTo)
+    if (result.redirectTo) window.location.replace(result.redirectTo)
   }
 
   return (

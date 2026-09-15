@@ -9,8 +9,8 @@ import type { RegisterState } from '@/lib/constants/register-state'
 
 /**
  * Server action for self-registration (§5.1). Orchestration only: validate, delegate to
- * `registerStudent`, then translate the result into a `pending_email` cookie +
- * `{ status: 'success' }`.
+ * `registerStudent`, then translate the result into either a duplicate-email field error
+ * or a `pending_email` cookie + `{ status: 'success' }`.
  *
  * It takes a plain object, not a `FormData`: the form is a `react-hook-form` one and calls
  * this directly, the same as `loginAction`. `registerInputSchema.safeParse` runs directly
@@ -31,10 +31,13 @@ export async function registerAction(input: RegisterValues): Promise<RegisterSta
     return { status: 'error', message: 'Vui lòng kiểm tra lại thông tin đã nhập.' }
   }
 
-  const registeredEmail = await registerStudent(parsed.data)
+  const result = await registerStudent(parsed.data)
+  if (!result.ok) {
+    return { status: 'error', field: 'email', message: 'Email đã tồn tại.' }
+  }
 
   const cookieStore = await cookies()
-  cookieStore.set(PENDING_EMAIL_COOKIE, registeredEmail, {
+  cookieStore.set(PENDING_EMAIL_COOKIE, result.email, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',

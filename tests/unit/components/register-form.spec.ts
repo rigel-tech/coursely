@@ -73,6 +73,24 @@ describe('RegisterForm', () => {
     expect(push).not.toHaveBeenCalled()
   })
 
+  // Duplicate-email failures target the email field specifically, not the generic banner —
+  // distinct from a system failure or a server-side validation rejection.
+  it('shows the message under the email field, not the generic banner, when the action reports a duplicate email', async () => {
+    registerAction.mockResolvedValue({
+      status: 'error',
+      field: 'email',
+      message: 'Email đã tồn tại.',
+    })
+    render(React.createElement(RegisterForm))
+
+    fillAndSubmit()
+
+    const messages = await screen.findAllByText('Email đã tồn tại.')
+    expect(messages).toHaveLength(1)
+    expect(messages[0].id).toBe('register-email-error')
+    expect(push).not.toHaveBeenCalled()
+  })
+
   // The action rethrows anything it has no copy for (rule: throw, never console.error), so
   // this is the last place a system failure can reach the person instead of crashing the page.
   it('shows a system-failure banner when the action throws', async () => {
