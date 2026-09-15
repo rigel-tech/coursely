@@ -10,7 +10,15 @@ vi.mock('@/actions/student/create-enrollment', () => ({
 import { createEnrollmentAction } from '@/actions/student/create-enrollment'
 
 const assign = vi.fn()
-const submit = () => fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
+const clickSubmit = () => fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
+/** Validation runs through zodResolver asynchronously, so the modal appears a tick later. */
+const confirmInModal = async () =>
+  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đăng ký' }))
+/** Opens the confirm modal and confirms — the full path to an actual submission. */
+const submit = async () => {
+  clickSubmit()
+  await confirmInModal()
+}
 
 /** A profile already complete — the shape most tests here render with. */
 const completeProfile = { fullName: 'Nguyễn Văn A', phone: '0987654321' }
@@ -33,9 +41,11 @@ describe('CourseRegistrationForm', () => {
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    render(<CourseRegistrationForm courseId={12} courseTitle="Frontend" {...completeProfile} />)
+    render(
+      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
+    )
 
-    submit()
+    await submit()
 
     await waitFor(() =>
       expect(createEnrollmentAction).toHaveBeenCalledWith({ courseId: 12, ...completeProfile }),
@@ -48,9 +58,11 @@ describe('CourseRegistrationForm', () => {
       message: 'Vui lòng đăng nhập để đăng ký khóa học.',
       redirectTo: '/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend',
     })
-    render(<CourseRegistrationForm courseId={12} courseTitle="Frontend" {...completeProfile} />)
+    render(
+      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
+    )
 
-    submit()
+    await submit()
 
     await waitFor(() =>
       expect(assign).toHaveBeenCalledWith('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend'),
@@ -68,11 +80,11 @@ describe('CourseRegistrationForm', () => {
         courseId={12}
         courseTitle="Frontend"
         onSuccess={onSuccess}
-        {...completeProfile}
+        profile={completeProfile}
       />,
     )
 
-    submit()
+    await submit()
 
     expect(await screen.findByText('Đăng ký khóa học thành công.')).toBeTruthy()
     expect(onSuccess).toHaveBeenCalledTimes(1)
@@ -90,11 +102,11 @@ describe('CourseRegistrationForm', () => {
         courseId={12}
         courseTitle="Frontend"
         onSuccess={onSuccess}
-        {...completeProfile}
+        profile={completeProfile}
       />,
     )
 
-    submit()
+    await submit()
 
     expect(await screen.findByText('Thời hạn đăng ký khóa học này đã kết thúc.')).toBeTruthy()
     expect(onSuccess).not.toHaveBeenCalled()
@@ -108,8 +120,7 @@ describe('CourseRegistrationForm — reviewing an already-complete profile (spec
       <CourseRegistrationForm
         courseId={12}
         courseTitle="Frontend"
-        email="student@example.com"
-        {...completeProfile}
+        profile={{ email: 'student@example.com', ...completeProfile }}
       />,
     )
 
@@ -124,9 +135,11 @@ describe('CourseRegistrationForm — reviewing an already-complete profile (spec
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
-    render(<CourseRegistrationForm courseId={12} courseTitle="Frontend" {...completeProfile} />)
+    render(
+      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
+    )
 
-    submit()
+    await submit()
 
     await waitFor(() =>
       expect(createEnrollmentAction).toHaveBeenCalledWith({ courseId: 12, ...completeProfile }),
@@ -136,7 +149,13 @@ describe('CourseRegistrationForm — reviewing an already-complete profile (spec
 
 describe('CourseRegistrationForm — a field that is missing or invalid becomes editable (specs/009)', () => {
   it('shows an input for a blank full name while phone stays plain text', () => {
-    render(<CourseRegistrationForm courseId={12} courseTitle="Frontend" phone="0987654321" />)
+    render(
+      <CourseRegistrationForm
+        courseId={12}
+        courseTitle="Frontend"
+        profile={{ phone: '0987654321' }}
+      />,
+    )
 
     expect(screen.getByLabelText('Họ và tên')).toBeTruthy()
     expect(screen.getByText('0987654321')).toBeTruthy()
@@ -147,8 +166,7 @@ describe('CourseRegistrationForm — a field that is missing or invalid becomes 
       <CourseRegistrationForm
         courseId={12}
         courseTitle="Frontend"
-        fullName="Nguyễn Văn A"
-        phone="123456"
+        profile={{ fullName: 'Nguyễn Văn A', phone: '123456' }}
       />,
     )
 
@@ -157,9 +175,15 @@ describe('CourseRegistrationForm — a field that is missing or invalid becomes 
   })
 
   it('rejects submission client-side when full name is blank, without calling the action', async () => {
-    render(<CourseRegistrationForm courseId={12} courseTitle="Frontend" phone="0987654321" />)
+    render(
+      <CourseRegistrationForm
+        courseId={12}
+        courseTitle="Frontend"
+        profile={{ phone: '0987654321' }}
+      />,
+    )
 
-    submit()
+    clickSubmit()
 
     expect(await screen.findByText('Vui lòng nhập họ và tên.')).toBeTruthy()
     expect(createEnrollmentAction).not.toHaveBeenCalled()
@@ -174,7 +198,7 @@ describe('CourseRegistrationForm — a field that is missing or invalid becomes 
 
     fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'Trần Thị B' } })
     fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0912345678' } })
-    submit()
+    await submit()
 
     await waitFor(() =>
       expect(createEnrollmentAction).toHaveBeenCalledWith({
@@ -183,5 +207,47 @@ describe('CourseRegistrationForm — a field that is missing or invalid becomes 
         phone: '0912345678',
       }),
     )
+  })
+})
+
+describe('CourseRegistrationForm — confirmation modal', () => {
+  it('opens a confirmation modal instead of submitting immediately', async () => {
+    render(
+      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
+    )
+
+    clickSubmit()
+
+    expect(await screen.findByRole('button', { name: 'Xác nhận đăng ký' })).toBeTruthy()
+    expect(createEnrollmentAction).not.toHaveBeenCalled()
+  })
+
+  it('confirming in the modal submits the registration', async () => {
+    vi.mocked(createEnrollmentAction).mockResolvedValue({
+      status: 'success',
+      message: 'Đăng ký khóa học thành công.',
+    })
+    render(
+      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
+    )
+
+    clickSubmit()
+    await confirmInModal()
+
+    await waitFor(() =>
+      expect(createEnrollmentAction).toHaveBeenCalledWith({ courseId: 12, ...completeProfile }),
+    )
+  })
+
+  it('cancelling the modal does not submit', async () => {
+    render(
+      <CourseRegistrationForm courseId={12} courseTitle="Frontend" profile={completeProfile} />,
+    )
+
+    clickSubmit()
+    fireEvent.click(await screen.findByRole('button', { name: 'Hủy' }))
+
+    expect(screen.queryByRole('button', { name: 'Xác nhận đăng ký' })).toBeNull()
+    expect(createEnrollmentAction).not.toHaveBeenCalled()
   })
 })

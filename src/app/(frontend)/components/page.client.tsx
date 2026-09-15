@@ -24,7 +24,7 @@ import { RegisterForm } from '@/components/public/forms/RegisterForm'
 import { ResetPasswordForm } from '@/components/public/forms/ResetPasswordForm'
 import { Avatar } from '@/components/public/ui/avatar'
 import { EmptyState } from '@/components/public/ui/empty-state'
-import { Modal } from '@/components/design/ui/modal'
+import { Modal } from '@/components/public/ui/modal'
 import { Tabs } from '@/components/design/ui/tabs'
 import { Badge } from '@/components/public/ui/badge'
 import { Button } from '@/components/public/ui/button'
@@ -355,8 +355,8 @@ const PRIMITIVES: Entry[] = [
 const STAGED_UI: Entry[] = [
   {
     name: 'Modal',
-    path: '@/components/design/ui/modal',
-    origin: 'design',
+    path: '@/components/public/ui/modal',
+    origin: 'public',
     note: 'Radix lo focus trap, Esc và khoá cuộn — bấm nút để mở.',
     preview: (
       <Modal

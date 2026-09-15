@@ -38,6 +38,21 @@ describe('CourseRegistrationCTA', () => {
     expect(screen.queryByRole('button', { name: 'Gửi đăng ký' })).toBeNull()
   })
 
+  it('gives CANCELLED a different badge colour than CONFIRMED — statuses are not lumped together', () => {
+    const { unmount } = render(
+      <CourseRegistrationCTA courseId={12} courseTitle="Frontend" enrollmentStatus="CONFIRMED" />,
+    )
+    const confirmedClass = screen.getByText('Đã xác nhận').className
+    unmount()
+
+    render(
+      <CourseRegistrationCTA courseId={12} courseTitle="Frontend" enrollmentStatus="CANCELLED" />,
+    )
+    const cancelledClass = screen.getByText('Đã hủy').className
+
+    expect(cancelledClass).not.toBe(confirmedClass)
+  })
+
   it('switches to the status badge right after a successful registration, no reload needed', async () => {
     vi.mocked(createEnrollmentAction).mockResolvedValue({
       status: 'success',
@@ -53,6 +68,7 @@ describe('CourseRegistrationCTA', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đăng ký' }))
 
     await waitFor(() => expect(screen.getByText('Mới đăng ký')).toBeTruthy())
     expect(screen.queryByRole('button', { name: 'Gửi đăng ký' })).toBeNull()

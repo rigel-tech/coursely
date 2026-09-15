@@ -4,22 +4,14 @@ import { useState } from 'react'
 
 import { CourseRegistrationForm } from '@/components/public/forms/CourseRegistrationForm'
 import { Badge } from '@/components/public/ui/badge'
-
-const ENROLLMENT_STATUS_LABELS = {
-  NEW: 'Mới đăng ký',
-  CONFIRMED: 'Đã xác nhận',
-  ATTENDED: 'Đã vào học',
-  COMPLETED: 'Đã hoàn thành',
-  CANCELLED: 'Đã hủy',
-}
-
-type EnrollmentStatus = keyof typeof ENROLLMENT_STATUS_LABELS
+import { ENROLLMENT_STATUS } from '@/components/public/enrollment-status'
+import type { Enrollment } from '@/payload-types'
 
 type CourseRegistrationCTAProps = {
   courseId: number
   courseTitle: string
   email?: string
-  enrollmentStatus?: EnrollmentStatus
+  enrollmentStatus?: Enrollment['enrollmentStatus']
   fullName?: string | null
   phone?: string | null
 }
@@ -46,15 +38,15 @@ export function CourseRegistrationCTA({
       {status ? (
         <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted px-3 py-3">
           <span className="text-muted-foreground text-sm">Trạng thái đăng ký</span>
-          <Badge variant="success">{ENROLLMENT_STATUS_LABELS[status]}</Badge>
+          <Badge variant={ENROLLMENT_STATUS[status].variant}>
+            {ENROLLMENT_STATUS[status].label}
+          </Badge>
         </div>
       ) : (
         <CourseRegistrationForm
           courseId={courseId}
           courseTitle={courseTitle}
-          email={email}
-          fullName={fullName}
-          phone={phone}
+          profile={{ email, fullName, phone }}
           onSuccess={() => setStatus('NEW')}
         />
       )}
