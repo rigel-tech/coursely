@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { Popup, useConfig } from '@payloadcms/ui'
 import { requests } from '@payloadcms/ui/utilities/api'
 import { formatAdminURL } from 'payload/shared'
+import { Bell } from 'lucide-react'
 
 const POLL_INTERVAL_MS = 5_000
 
@@ -40,21 +41,19 @@ export const NotificationBell: React.FC = () => {
   useEffect(() => {
     let cancelled = false
 
-    const poll = () => {
-      requests
-        .get(buildURL(apiRoute, '/notifications/count', ''), {
+    const poll = async () => {
+      try {
+        const res = await requests.get(buildURL(apiRoute, '/notifications/count', ''), {
           params: { where: { isRead: { equals: false } } },
         })
-        .then((res) => res.json())
-        .then((data: { totalDocs?: unknown }) => {
-          if (!cancelled && typeof data?.totalDocs === 'number') setCount(data.totalDocs)
-        })
-        .catch(() => {
-          // A failed poll stays quiet — the header has nothing useful to say about it.
-        })
+        const data: { totalDocs?: unknown } = await res.json()
+        if (!cancelled && typeof data?.totalDocs === 'number') setCount(data.totalDocs)
+      } catch {
+        // A failed poll stays quiet — the header has nothing useful to say about it.
+      }
     }
 
-    poll()
+    void poll()
     const interval = setInterval(poll, POLL_INTERVAL_MS)
 
     return () => {
@@ -88,7 +87,7 @@ export const NotificationBell: React.FC = () => {
     <Popup
       button={
         <>
-          <span aria-label="Thông báo">🔔</span>
+          <Bell aria-label="Thông báo" size={20} strokeWidth={1.75} />
           {count > 0 ? <span>{count}</span> : null}
         </>
       }
