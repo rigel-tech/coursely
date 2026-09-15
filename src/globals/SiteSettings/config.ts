@@ -56,7 +56,13 @@ export const SiteSettings: GlobalConfig = {
       },
       filterOptions: {
         mimeType: {
-          in: ['image/x-icon', 'image/vnd.microsoft.icon', 'image/png', 'image/webp'],
+          in: [
+            'image/x-icon',
+            'image/vnd.microsoft.icon',
+            'image/png',
+            'image/webp',
+            'image/svg+xml',
+          ],
         },
       },
     },

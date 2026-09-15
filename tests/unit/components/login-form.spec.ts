@@ -11,12 +11,14 @@ vi.mock('@/actions/student/login', () => ({
 const { LoginForm } = await import('@/components/public/forms/LoginForm')
 
 const assign = vi.fn()
+const replace = vi.fn()
 
 beforeEach(() => {
   loginAction.mockReset()
   assign.mockReset()
-  // jsdom's window.location.assign is non-configurable, so shadow the whole object.
-  vi.stubGlobal('location', { assign, href: 'http://localhost/' })
+  replace.mockReset()
+  // jsdom's window.location.assign/replace is non-configurable, so shadow the whole object.
+  vi.stubGlobal('location', { assign, replace, href: 'http://localhost/' })
 })
 
 afterEach(() => {
@@ -38,7 +40,7 @@ describe('LoginForm', () => {
     fill()
     submit()
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/'))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/'))
   })
 
   it('follows redirectTo on an error state too (AUTH_022 → /xac-thuc-otp)', async () => {
@@ -52,7 +54,7 @@ describe('LoginForm', () => {
     fill()
     submit()
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/xac-thuc-otp'))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/xac-thuc-otp'))
   })
 
   it('shows the message and stays put when there is no redirectTo', async () => {
