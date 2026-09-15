@@ -1,7 +1,8 @@
-# Specification Quality Checklist: Enrollment Duplicate Guard
+# Specification Quality Checklist: Student Enrollment
 
-**Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-09-14
+**Purpose**: Validate specification completeness and quality
+**Merged**: 2026-09-15, from the three passed checklists of `007-enrollment-login-gate`,
+`008-enrollment-duplicate-guard`, `009-enrollment-profile-completeness`
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -31,11 +32,10 @@
 
 ## Notes
 
-- **Q1 resolved 2026-09-14** — CANCELLED does not count as active; re-registration after a
-  cancellation creates a fresh enrollment (FR-008). Added acceptance scenario 2 under User
-  Story 1.
-- FR-002 states a concurrency requirement in outcome terms ("MUST hold under concurrent
-  submissions") without naming a mechanism — this is a real requirement, not an
-  implementation leak: a spec that let a check-then-insert count as sufficient would be
-  wrong about what "prevent" means, which is exactly the gap the current code has today.
-- Everything else passes on the first iteration.
+- All three source checklists passed individually before this merge; the merge itself
+  re-verified cross-story consistency specifically — the two spots where one story's
+  Out of Scope/Edge Case text had gone stale after a later story shipped (duplicate
+  registration was "not guarded, out of scope" in the original 007, then Story 3 added
+  exactly that guard) were corrected in `spec.md`, not left contradicting the code.
+- FR numbering is continuous (FR-001…FR-020) across all four stories; SC numbering
+  continuous (SC-001…SC-012). Clarifications renumbered Q1–Q5 in story order.

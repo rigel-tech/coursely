@@ -83,7 +83,7 @@ export default buildConfig({
     },
     prodMigrations: migrations,
     // A student may hold at most one *active* enrollment per course — CANCELLED does not
-    // count (specs/008-enrollment-duplicate-guard). A plain compound-unique index can't
+    // count (specs/007-student-enrollment, Story 3). A plain compound-unique index can't
     // express that exception; a partial index can. This is the single source of truth for
     // the guard — read there is the src/services/student-enrollment.ts pre-check.
     afterSchemaInit: [

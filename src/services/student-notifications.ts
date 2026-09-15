@@ -6,7 +6,6 @@
  * only sanctioned way a student reads their own notifications — never by widening the
  * collection's own access.
  */
-'use server'
 
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'

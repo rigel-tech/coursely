@@ -1,34 +1,52 @@
-'use server'
-
 import configPromise from '@payload-config'
 import { getPayload, Payload, ValidationError, type PayloadRequest } from 'payload'
 import { sendEnrollmentConfirmationEmail } from '@/email/send'
-import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
+import {
+  CourseNotFound,
+  EnrollmentAlreadyExists,
+  RegistrationClosed,
+  RegistrationNotOpen,
+} from '@/lib/errors/enrollment'
 import { createNotification } from '@/notifications/create'
 import { enrollmentCreatedNotification } from '@/notifications/templates/enrollment-created'
-import { Course, Student } from '@/payload-types'
+import { Course, Enrollment, Student } from '@/payload-types'
 
-async function validateCourseForEnrollment(payload: Payload, courseId: number): Promise<Course> {
-  const course: Course | null = await payload.findByID({
+/**
+ * A plain `id` lookup (`findByID`) does not filter by publish status — a course that has
+ * never been published still resolves. Filtering `_status` explicitly is what actually
+ * keeps a draft-only course out of this flow, matching `queryCourseBySlug` in the course
+ * detail page.
+ */
+async function findPublishedCourse(payload: Payload, courseId: number): Promise<Course | null> {
+  const result = await payload.find({
     collection: 'courses',
-    id: courseId,
+    where: {
+      id: { equals: courseId },
+      _status: { equals: 'published' },
+    },
+    limit: 1,
     depth: 0,
-    draft: false,
     overrideAccess: true,
   })
 
+  return result.docs[0] ?? null
+}
+
+async function validateCourseForEnrollment(payload: Payload, courseId: number): Promise<Course> {
+  const course = await findPublishedCourse(payload, courseId)
+
   if (!course) {
-    throw new Error('Khóa học không tồn tại.')
+    throw new CourseNotFound()
   }
 
   const now = new Date()
 
   if (course.registrationStartAt && new Date(course.registrationStartAt) > now) {
-    throw new Error('Khóa học chưa đến thời gian mở đăng ký.')
+    throw new RegistrationNotOpen()
   }
 
   if (course.registrationEndAt && new Date(course.registrationEndAt) < now) {
-    throw new Error('Thời hạn đăng ký khóa học này đã kết thúc.')
+    throw new RegistrationClosed()
   }
 
   return course
@@ -114,18 +132,37 @@ async function processEnrollmentTransaction(
   }
 }
 
-/** The course's public slug, or `null` when no course carries that id. */
-export async function findCourseSlug(courseId: number): Promise<string | null> {
-  const payload = await getPayload({ config: configPromise })
-
-  const course = await payload.findByID({
-    collection: 'courses',
-    id: courseId,
+/**
+ * The student's current active (non-CANCELLED) enrollment status for a course, or
+ * `undefined` if none — used by the course detail page to choose between the
+ * registration form and a status badge. Same `where` shape as `checkExistingEnrollment`,
+ * so a CANCELLED enrollment never blocks the form from showing again (FR-008).
+ */
+export async function getActiveEnrollmentStatus(
+  payload: Payload,
+  { studentId, courseId }: { studentId: number; courseId: number },
+): Promise<Enrollment['enrollmentStatus'] | undefined> {
+  const result = await payload.find({
+    collection: 'enrollments',
+    where: {
+      and: [
+        { student: { equals: studentId } },
+        { course: { equals: courseId } },
+        { enrollmentStatus: { not_equals: 'CANCELLED' } },
+      ],
+    },
+    limit: 1,
     depth: 0,
-    disableErrors: true,
-    draft: false,
     overrideAccess: true,
   })
+
+  return result.docs[0]?.enrollmentStatus
+}
+
+/** The course's public slug, or `null` when no course carries that id — never a draft's. */
+export async function findCourseSlug(courseId: number): Promise<string | null> {
+  const payload = await getPayload({ config: configPromise })
+  const course = await findPublishedCourse(payload, courseId)
 
   return course?.slug ?? null
 }

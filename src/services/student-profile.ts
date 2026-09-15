@@ -1,5 +1,3 @@
-'use server'
-
 import configPromise from '@payload-config'
 import { getPayload, type PayloadRequest } from 'payload'
 import type { Student } from '@/payload-types'

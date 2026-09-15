@@ -16,7 +16,6 @@ vi.mock('@/email/send', () => ({
 describe('student enrollment notifications', () => {
   it('creates an in-app notification and sends a confirmation email', async () => {
     const create = vi.fn().mockResolvedValueOnce({ id: 31 }).mockResolvedValueOnce({ id: 32 })
-    const findByID = vi.fn().mockResolvedValue({ id: 12, title: 'Frontend cơ bản' })
     const student = { id: 7, status: 'ACTIVE', email: 'student@example.com' } as Student
     vi.mocked(getPayload).mockResolvedValue({
       create,
@@ -25,8 +24,11 @@ describe('student enrollment notifications', () => {
         commitTransaction: vi.fn(),
         rollbackTransaction: vi.fn(),
       },
-      find: vi.fn().mockResolvedValue({ docs: [] }),
-      findByID,
+      find: vi.fn((args: { collection: string }) =>
+        args.collection === 'courses'
+          ? Promise.resolve({ docs: [{ id: 12, title: 'Frontend cơ bản' }] })
+          : Promise.resolve({ docs: [] }),
+      ),
       logger: { error: vi.fn() },
     } as never)
 

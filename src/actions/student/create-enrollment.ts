@@ -3,7 +3,12 @@
 import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
 import { StudentProfileWrite, updateStudentProfile } from '@/services/student-profile'
 import { getSessionStudent } from '@/lib/auth/session-student'
-import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
+import {
+  CourseNotFound,
+  EnrollmentAlreadyExists,
+  RegistrationClosed,
+  RegistrationNotOpen,
+} from '@/lib/errors/enrollment'
 import { enrollmentProfileSchema } from '@/lib/validation/enrollment-profile-schema'
 import type { Student } from '@/payload-types'
 import { z } from 'zod'
@@ -21,7 +26,7 @@ export type CreateEnrollmentState = {
 /**
  * `fullName`/`phone` are optional here — a signed-out visitor's form has no profile to
  * send, and must still reach the sign-in redirect rather than a "profile incomplete"
- * refusal (specs/009-enrollment-profile-completeness, research.md Decision 1). They
+ * refusal (specs/007-student-enrollment, research.md Decision 5). They
  * become required only once a signed-in, `ACTIVE` student is confirmed, via
  * `enrollmentProfileSchema`.
  */
@@ -105,10 +110,15 @@ export async function createEnrollmentAction(
     }
     await createStudentEnrollment({ courseId: parsed.data.courseId, student })
   } catch (error) {
-    // The one refusal with copy of its own so far (specs/008-enrollment-duplicate-guard).
+    // Every refusal this flow distinguishes (specs/007-student-enrollment, Stories 3–4).
     // Anything else is rethrown — an error nobody wrote a message for is a bug, not a
     // "please try again" to hide it behind (mirrors loginAction's instanceof chain).
-    if (error instanceof EnrollmentAlreadyExists) {
+    if (
+      error instanceof EnrollmentAlreadyExists ||
+      error instanceof CourseNotFound ||
+      error instanceof RegistrationNotOpen ||
+      error instanceof RegistrationClosed
+    ) {
       return { status: 'error', message: error.message }
     }
     throw error

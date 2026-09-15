@@ -70,7 +70,11 @@ export function CourseRegistrationForm({
     handleSubmit,
     register,
   } = useForm<EnrollmentProfileValues>({
-    resolver: zodResolver(enrollmentProfileSchema),
+    // No `profile` means a signed-out visitor: there is no profile of theirs to validate
+    // yet, and the submission must still reach the server's sign-in redirect rather than
+    // get stuck on required-field errors for fields the visitor was never shown as theirs
+    // to fill in (research.md Decision 5).
+    resolver: profile ? zodResolver(enrollmentProfileSchema) : undefined,
     defaultValues: { fullName: fullName ?? '', phone: phone ?? '' },
   })
 

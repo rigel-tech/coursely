@@ -316,6 +316,46 @@ session". Any action reachable from a page under `PROTECTED_PREFIXES`
 (`src/lib/constants/auth.ts`) depends on this — today that's
 `src/actions/student/profile.ts`'s `updateProfileAction`, called from `/tai-khoan`.
 
+### A refusal must be _returned_, not thrown, or the client's catch-all swallows its message
+
+**Rule** — A server action that wants a specific message to reach the student returns
+`{ status: 'error', message }` from an early check or a narrow `try/catch`. It must not let
+a refusal escape as a thrown error and rely on the calling component to read `error.message`
+— if that component's own `.catch()` is a blanket "show the generic retry text" (the normal,
+correct shape for a truly unexpected failure), a thrown refusal with its own carefully
+written copy is discarded exactly the same as a real crash.
+
+**Why it breaks silently** — nothing here throws a type error, fails a build, or fails a
+test that doesn't specifically assert on the client's rendered message: the server-side
+function still returns/throws with the right Vietnamese string attached, `pnpm typecheck`
+and a unit test calling the action directly both see a correctly-thrown `Error` with the
+correct `.message`, and the client component still renders _some_ text, so nothing looks
+broken in a cursory check. Only opening the browser and triggering that specific refusal
+shows the generic fallback where the specific message should be. This was live from when
+the duplicate-enrollment guard shipped (`specs/007-student-enrollment/research.md`
+Decision 3's note flagged it as an accepted, unclosed gap) until it was fixed on
+2026-09-15: `validateCourseForEnrollment` threw two distinct, already-written Vietnamese
+messages for "registration not open yet" and "registration deadline passed", but
+`createEnrollmentAction` only converted `EnrollmentAlreadyExists` to a returned message and
+re-threw everything else, so `CourseRegistrationForm`'s
+`.catch(() => ({ message: 'Không thể đăng ký khóa học. Vui lòng thử lại.' }))` replaced both
+with the generic fallback. The fix was to give each refusal its own `APIError` subclass
+(`CourseNotFound`, `RegistrationNotOpen`, `RegistrationClosed` alongside
+`EnrollmentAlreadyExists`, all in `src/lib/errors/enrollment.ts`) and map every one of them
+in `createEnrollmentAction`'s `try/catch` — the trap is what a _new_ refusal added to this
+chain falls back into if it throws a plain `Error` instead of one of these classes.
+
+**Where** — `src/actions/student/create-enrollment.ts` (`createEnrollmentAction`'s
+`try/catch`, one `instanceof` branch per class in `src/lib/errors/enrollment.ts`),
+`src/services/student-enrollment.ts` (`validateCourseForEnrollment`, throwing the typed
+classes instead of a plain `Error`),
+`src/components/public/forms/CourseRegistrationForm.tsx` (`submitEnrollment`'s `.catch()`,
+unchanged — it is the reason the action-level fix was necessary, not itself where the fix
+lives). The same shape this repo already gets right elsewhere is what the fix copies:
+`createEnrollmentAction`'s own `STANDING_REFUSAL`/`PROFILE_INCOMPLETE_MESSAGE` branches, and
+`loginAction`'s `instanceof` chain against `src/lib/errors/auth.ts`, both _return_ their
+refusal instead of throwing it.
+
 ## Routing
 
 ### A rewritten page has two live paths — link the public one, gate both
@@ -644,7 +684,7 @@ the only source of the error), `src/lib/errors/enrollment.ts`
 (`EnrollmentAlreadyExists`). Adding a `unique: true` field to `Enrollments` must narrow this
 catch at the same time — e.g. by checking `error.errors[0]?.path` for the new field's name
 before assuming it is this guard. Design rationale:
-`specs/008-enrollment-duplicate-guard/research.md` Decision 2.
+`specs/007-student-enrollment/research.md` Decision 2.
 
 ### `find`'s `limit: 0` is not a cheap count — it disables pagination and returns every row
 

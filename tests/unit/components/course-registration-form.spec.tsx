@@ -111,6 +111,28 @@ describe('CourseRegistrationForm', () => {
   })
 })
 
+describe('CourseRegistrationForm — no profile at all (signed-out visitor)', () => {
+  it('does not block submission client-side, and reaches the sign-in redirect', async () => {
+    vi.mocked(createEnrollmentAction).mockResolvedValue({
+      status: 'error',
+      message: 'Vui lòng đăng nhập để đăng ký khóa học.',
+      redirectTo: '/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend',
+    })
+    render(<CourseRegistrationForm course={baseCourse} />)
+
+    await submit()
+
+    await waitFor(() =>
+      expect(createEnrollmentAction).toHaveBeenCalledWith({
+        courseId: 12,
+        fullName: '',
+        phone: '',
+      }),
+    )
+    expect(assign).toHaveBeenCalledWith('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend')
+  })
+})
+
 describe('CourseRegistrationForm — reviewing an already-complete profile (specs/009)', () => {
   it('shows full name, phone and email as plain text — none of them an input', () => {
     render(

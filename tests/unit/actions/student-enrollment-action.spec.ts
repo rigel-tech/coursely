@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Student } from '@/payload-types'
 
 import { createEnrollmentAction } from '@/actions/student/create-enrollment'
-import { EnrollmentAlreadyExists } from '@/lib/errors/enrollment'
+import {
+  CourseNotFound,
+  EnrollmentAlreadyExists,
+  RegistrationClosed,
+  RegistrationNotOpen,
+} from '@/lib/errors/enrollment'
 
 // Both dependencies reach for the Payload config, which a unit test has no business
 // booting. Mocking them leaves exactly what this action is: the decision about who may
@@ -136,6 +141,50 @@ describe('createEnrollmentAction — already enrolled', () => {
       message: 'Bạn đã đăng ký khóa học này rồi.',
     })
     expect(result.redirectTo).toBeUndefined()
+  })
+})
+
+describe('createEnrollmentAction — course refusals reach their own message', () => {
+  it('shows the course-not-found message, not the generic fallback', async () => {
+    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(createStudentEnrollment).mockRejectedValue(new CourseNotFound())
+
+    const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
+
+    expect(result).toEqual({ status: 'error', message: 'Khóa học không tồn tại.' })
+  })
+
+  it('shows the registration-not-open message, not the generic fallback', async () => {
+    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(createStudentEnrollment).mockRejectedValue(new RegistrationNotOpen())
+
+    const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
+
+    expect(result).toEqual({
+      status: 'error',
+      message: 'Khóa học chưa đến thời gian mở đăng ký.',
+    })
+  })
+
+  it('shows the registration-closed message, not the generic fallback', async () => {
+    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(createStudentEnrollment).mockRejectedValue(new RegistrationClosed())
+
+    const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
+
+    expect(result).toEqual({
+      status: 'error',
+      message: 'Thời hạn đăng ký khóa học này đã kết thúc.',
+    })
+  })
+
+  it('still rethrows an error none of the refusal classes recognise', async () => {
+    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(createStudentEnrollment).mockRejectedValue(new Error('db unreachable'))
+
+    await expect(createEnrollmentAction({ courseId: 12, ...validProfile })).rejects.toThrow(
+      'db unreachable',
+    )
   })
 })
 

@@ -1,7 +1,7 @@
 /**
  * Zod schema for a student's own profile fields (full name, phone). `makeProfileSchema`
  * is the one definition of what a valid value looks like; `{ required: true }` is the
- * stricter reading `specs/009-enrollment-profile-completeness` needs (non-blank, trimmed)
+ * stricter reading `specs/007-student-enrollment` (Story 2) needs (non-blank, trimmed)
  * without forking the rule into a second, drifting copy. `profileSchema` — used by
  * `/tai-khoan`'s `<ProfileForm>` — is `makeProfileSchema()` with no options, so its
  * behaviour (blank allowed, untrimmed) is unchanged.

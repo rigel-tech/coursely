@@ -46,7 +46,11 @@ export function CourseRegistrationCTA({
       ) : (
         <CourseRegistrationForm
           course={course}
-          profile={{ email, fullName, phone }}
+          // `email` is always present for a real student (Payload's own auth field), so
+          // its absence is what tells the form there is no signed-in visitor to validate
+          // a profile for — never an object of all-undefined fields, which the form would
+          // otherwise mistake for "signed in, with a blank profile."
+          profile={email ? { email, fullName, phone } : undefined}
           onSuccess={() => setStatus('NEW')}
         />
       )}

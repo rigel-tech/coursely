@@ -34,7 +34,7 @@ describe('profileSchema', () => {
     }
   })
 
-  // specs/009-enrollment-profile-completeness: `profileSchema` is `makeProfileSchema()`
+  // specs/007-student-enrollment (Story 2): `profileSchema` is `makeProfileSchema()`
   // with no options, so `/tai-khoan` keeps accepting a blank name/phone exactly as above —
   // this pins that default explicitly, on the factory itself, not just on the alias.
   it('makeProfileSchema() with no options is exactly as lenient as profileSchema', () => {
