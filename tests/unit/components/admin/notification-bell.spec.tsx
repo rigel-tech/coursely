@@ -69,13 +69,15 @@ describe('NotificationBell (admin) — the count', () => {
     expect(screen.queryByText('0')).toBeNull()
   })
 
-  it('calls the unread-count endpoint for the whole collection — not scoped to staff-only rows', async () => {
+  it('calls the unread-count endpoint scoped to staff-only rows — a student unread does not count', async () => {
     jsonOnce({ totalDocs: 0 })
     render(<NotificationBell />)
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     const [url] = fetchMock.mock.calls[0] as [string]
-    expect(url).toBe('/api/notifications/count?where%5BisRead%5D%5Bequals%5D=false')
+    expect(url).toBe(
+      '/api/notifications/count?where%5BisRead%5D%5Bequals%5D=false&where%5Bstudent%5D%5Bexists%5D=false',
+    )
   })
 
   it('polls again after 5 seconds', async () => {
@@ -114,11 +116,12 @@ describe('NotificationBell (admin) — opening the list', () => {
     jsonOnce({
       docs: [{ id: 101, title: 'Có người dùng đăng ký tài khoản mới', content: 'Nội dung' }],
     })
-    jsonOnce({})
+    jsonOnce({}) // PATCH response
+    jsonOnce({ totalDocs: 0 }) // count re-fetched after marking read
     fireEvent.click(screen.getByRole('button', { name: /thông báo/i }))
 
     expect(await screen.findByText('Có người dùng đăng ký tài khoản mới')).toBeTruthy()
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
 
     const [listUrl] = fetchMock.mock.calls[1] as [string]
     expect(listUrl).toBe('/api/notifications?sort=-createdAt&limit=20')
@@ -140,19 +143,50 @@ describe('NotificationBell (admin) — opening the list', () => {
         { id: 202, title: 'Đăng ký khóa học thành công', content: 'Nội dung', student: 7 },
       ],
     })
-    jsonOnce({})
+    jsonOnce({}) // PATCH response
+    jsonOnce({ totalDocs: 1 }) // count re-fetched after marking read
     fireEvent.click(screen.getByRole('button', { name: /thông báo/i }))
 
     expect(await screen.findByText('Đăng ký khóa học thành công')).toBeTruthy()
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
 
     const [patchUrl, patchOptions] = fetchMock.mock.calls[2] as [
       string,
       { body: string; method: string },
     ]
-    expect(patchUrl).toBe('/api/notifications?where[id][in][0]=101')
+    expect(patchUrl).toBe('/api/notifications?where[isRead][equals]=false&where[id][in][0]=101')
     expect(patchOptions.method).toBe('PATCH')
     expect(JSON.parse(patchOptions.body)).toEqual({ isRead: true })
+  })
+
+  it('re-fetches the count from the server after marking rows read, instead of subtracting locally', async () => {
+    jsonOnce({ totalDocs: 2 })
+    render(<NotificationBell />)
+    await screen.findByText('2')
+
+    jsonOnce({
+      docs: [
+        {
+          id: 101,
+          title: 'Có người dùng đăng ký tài khoản mới',
+          content: 'Nội dung',
+          student: null,
+        },
+      ],
+    })
+    jsonOnce({}) // PATCH response
+    // The server, not a local subtraction, is what the badge shows next — proves there is
+    // no `prev - staffDocs.length` arithmetic that could under- or over-count rows that
+    // were already read.
+    jsonOnce({ totalDocs: 0 })
+    fireEvent.click(screen.getByRole('button', { name: /thông báo/i }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
+    expect(screen.queryByText('0')).toBeNull()
+    const [countUrl] = fetchMock.mock.calls[3] as [string]
+    expect(countUrl).toBe(
+      '/api/notifications/count?where%5BisRead%5D%5Bequals%5D=false&where%5Bstudent%5D%5Bexists%5D=false',
+    )
   })
 
   it('does not PATCH at all when the list is empty', async () => {

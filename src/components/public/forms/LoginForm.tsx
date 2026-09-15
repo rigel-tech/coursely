@@ -45,6 +45,12 @@ export const LoginForm: React.FC = () => {
   })
 
   const onSubmit = async (values: LoginFormValues) => {
+    // `route-guard` bounces a blocked visitor to `/dang-nhap?callbackUrl=<path>`. Fold
+    // it into the submission so a successful login returns there; the server
+    // re-validates it with `safeCallbackUrl`, so a tampered value is harmless.
+    //
+    // The action rethrows anything it has no copy for, so this is the last place a
+    // system failure can still reach the person instead of crashing the page.
     const result = await loginAction({
       ...values,
       callbackUrl: new URLSearchParams(window.location.search).get('callbackUrl'),

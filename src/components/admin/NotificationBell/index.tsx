@@ -39,19 +39,26 @@ export const NotificationBell: React.FC = () => {
   const [count, setCount] = useState(0)
   const [notifications, setNotifications] = useState<AdminNotification[]>([])
 
+  // Staff-only, unread — a student's own unread notification must never keep this badge
+  // above 0, since nothing here ever marks that row read (that is
+  // `student-notifications.ts`'s job, from the student's own session).
+  const refreshCount = useCallback(async () => {
+    try {
+      const res = await requests.get(buildURL(apiRoute, '/notifications/count', ''), {
+        params: { where: { isRead: { equals: false }, student: { exists: false } } },
+      })
+      const data: { totalDocs?: unknown } = await res.json()
+      if (typeof data?.totalDocs === 'number') setCount(data.totalDocs)
+    } catch {
+      // A failed poll stays quiet — the header has nothing useful to say about it.
+    }
+  }, [apiRoute])
+
   useEffect(() => {
     let cancelled = false
 
     const poll = async () => {
-      try {
-        const res = await requests.get(buildURL(apiRoute, '/notifications/count', ''), {
-          params: { where: { isRead: { equals: false } } },
-        })
-        const data: { totalDocs?: unknown } = await res.json()
-        if (!cancelled && typeof data?.totalDocs === 'number') setCount(data.totalDocs)
-      } catch {
-        // A failed poll stays quiet — the header has nothing useful to say about it.
-      }
+      if (!cancelled) await refreshCount()
     }
 
     void poll()
@@ -61,7 +68,7 @@ export const NotificationBell: React.FC = () => {
       cancelled = true
       clearInterval(interval)
     }
-  }, [apiRoute])
+  }, [refreshCount])
 
   const loadList = useCallback(async () => {
     const res = await requests.get(buildURL(apiRoute, '/notifications', ''), {
@@ -76,13 +83,21 @@ export const NotificationBell: React.FC = () => {
     const staffDocs = docs.filter((doc) => !doc.student)
     if (staffDocs.length === 0) return
 
+    // `isRead[equals]=false` first: among the 20 most recent, some staff-facing rows may
+    // already be read — patching those again would only rewrite their `updatedAt` for
+    // nothing.
     const idsQuery = staffDocs.map((doc, i) => `where[id][in][${i}]=${doc.id}`).join('&')
-    await requests.patch(buildURL(apiRoute, '/notifications', `?${idsQuery}`), {
-      body: JSON.stringify({ isRead: true }),
-      headers: { 'Content-Type': 'application/json' },
-    })
-    setCount((prev) => Math.max(0, prev - staffDocs.length))
-  }, [apiRoute])
+    await requests.patch(
+      buildURL(apiRoute, '/notifications', `?where[isRead][equals]=false&${idsQuery}`),
+      {
+        body: JSON.stringify({ isRead: true }),
+        headers: { 'Content-Type': 'application/json' },
+      },
+    )
+    // The server, not a local subtraction, decides the next count — subtracting
+    // `staffDocs.length` would over-count rows among those 20 that were already read.
+    await refreshCount()
+  }, [apiRoute, refreshCount])
 
   return (
     <Popup

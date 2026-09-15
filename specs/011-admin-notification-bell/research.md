@@ -58,10 +58,22 @@ a client component precisely because staff already pass `Notifications.access.re
 
 ## Decision 3 — List + mark-read: fetch the batch, then `PATCH` exactly that batch — never "mark all unread"
 
-**Decision**: On click, `GET {apiRoute}/notifications?where[student][exists]=false&sort=-createdAt&limit=20`
-fetches the 20 most recent staff-facing notifications; if the response's `docs` is non-empty, a
-follow-up `PATCH {apiRoute}/notifications?where[id][in]=<ids>` with body `{ isRead: true }` marks
-exactly those rows read. An empty `docs` list makes no `PATCH` call at all.
+**Decision**: On click, `GET {apiRoute}/notifications?sort=-createdAt&limit=20` fetches the 20
+most recent notifications **across the whole collection** — staff-facing and student-facing
+alike, so staff can see everything happening, not just their own broadcast items — filtered
+client-side to the rows with no `student` for the mark-read step. A follow-up
+`PATCH {apiRoute}/notifications?where[isRead][equals]=false&where[id][in]=<ids>` with body
+`{ isRead: true }` marks exactly that staff-only, still-unread subset read. An empty
+staff-only subset makes no `PATCH` call at all.
+
+> **Amended 2026-09-15**: this decision originally specified a server-side
+> `where[student][exists]=false` on the list `GET` itself (mirroring Decision 2's count
+> query). That was dropped during implementation (commit `dd79dc4`) and never restored —
+> `NotificationBell` filters client-side after fetching instead, confirmed by
+> `tests/unit/components/admin/notification-bell.spec.tsx`'s "fetches the whole collection's
+> list, not just staff-only rows". Recorded here rather than left silently wrong; the
+> `PATCH`'s own `isRead[equals]=false` condition is new in the same amendment (fixed
+> alongside PR #47 review item 2.6 — see `INVARIANTS.md` if this pattern recurs).
 
 **Rationale**: this is the same shape specs/010 already validated and tested for the student side
 (`listAndMarkRecentNotifications` in `src/services/student-notifications.ts`, and
