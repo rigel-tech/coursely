@@ -64,7 +64,6 @@ export const Consultation: Block = {
       type: 'relationship',
       relationTo: 'forms',
       label: { vi: 'Chọn Biểu mẫu (Form)', en: 'Select Form' },
-      required: true,
     },
     {
       name: 'hotline',

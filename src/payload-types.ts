@@ -981,7 +981,7 @@ export interface ConsultationBlock {
       }[]
     | null;
   note?: string | null;
-  form: number | Form;
+  form?: (number | null) | Form;
   hotline?: string | null;
   id?: string | null;
   blockName?: string | null;
