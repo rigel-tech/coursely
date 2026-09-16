@@ -1,18 +1,21 @@
 'use server'
 
 import { getSessionStudent } from '@/lib/auth/session-student'
-import { listAndMarkRecentNotifications } from '@/services/student-notifications'
-import type { Notification } from '@/payload-types'
+import {
+  listAndMarkRecentNotifications,
+  type NotificationsPage,
+} from '@/services/student-notifications'
 
 /**
- * The signed-in student's own recent notifications — fetching them marks that batch read
- * (specs/010-notification-bell, FR-005). A signed-out caller gets an empty list, not an
- * error: this is called directly from `<NotificationBell>`, which never expects to be
- * mounted for a signed-out visitor, but must not throw if it somehow is.
+ * A page of the signed-in student's own recent notifications — fetching a page marks it
+ * read (specs/010-notification-bell, FR-005). `page` lets `<NotificationBell>` load further
+ * pages on scroll. A signed-out caller gets an empty page, not an error: this is called
+ * directly from `<NotificationBell>`, which never expects to be mounted for a signed-out
+ * visitor, but must not throw if it somehow is.
  */
-export async function listNotificationsAction(): Promise<Notification[]> {
+export async function listNotificationsAction(page = 1): Promise<NotificationsPage> {
   const student = await getSessionStudent()
-  if (!student) return []
+  if (!student) return { docs: [], hasNextPage: false }
 
-  return listAndMarkRecentNotifications(student.id)
+  return listAndMarkRecentNotifications(student.id, { page })
 }

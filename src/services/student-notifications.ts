@@ -25,13 +25,19 @@ export async function countUnreadNotifications(studentId: number): Promise<numbe
   return totalDocs
 }
 
+export type NotificationsPage = { docs: Notification[]; hasNextPage: boolean }
+
 /**
- * The most recent notifications for this student, marking exactly the returned batch as
- * read — never every unread one. A student with more than `RECENT_LIMIT` unread
+ * A page of this student's notifications, most recent first, marking exactly the returned
+ * batch as read — never every unread one. A student with more than `RECENT_LIMIT` unread
  * notifications still has some unread after viewing; only what was actually shown is
- * marked (specs/010-notification-bell, FR-005).
+ * marked (specs/010-notification-bell, FR-005). `page` lets the bell load further pages on
+ * scroll instead of being capped at the first `RECENT_LIMIT`.
  */
-export async function listAndMarkRecentNotifications(studentId: number): Promise<Notification[]> {
+export async function listAndMarkRecentNotifications(
+  studentId: number,
+  { page = 1 }: { page?: number } = {},
+): Promise<NotificationsPage> {
   const payload = await getPayload({ config: configPromise })
 
   const result = await payload.find({
@@ -39,6 +45,7 @@ export async function listAndMarkRecentNotifications(studentId: number): Promise
     where: { student: { equals: studentId } },
     sort: '-createdAt',
     limit: RECENT_LIMIT,
+    page,
     depth: 0,
     overrideAccess: true,
   })
@@ -56,5 +63,5 @@ export async function listAndMarkRecentNotifications(studentId: number): Promise
     })
   }
 
-  return result.docs
+  return { docs: result.docs, hasNextPage: result.hasNextPage }
 }

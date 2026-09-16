@@ -101,6 +101,7 @@ function notifyEnrollmentCreated(
 ): void {
   const { title, content } = createStudentEnrolledNotificationTemplate(course.title)
   void createNotification(payload, {
+    audience: 'student',
     studentId,
     type: 'ENROLLMENT_CREATED',
     title,

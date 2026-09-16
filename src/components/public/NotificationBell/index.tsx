@@ -1,6 +1,7 @@
 'use client'
 
 import { Bell } from 'lucide-react'
+import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 import { listNotificationsAction } from '@/actions/student/notifications'
@@ -18,6 +19,9 @@ export function NotificationBell() {
   const [count, setCount] = useState(0)
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<Notification[] | null>(null)
+  const [page, setPage] = useState(1)
+  const [hasNextPage, setHasNextPage] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -76,13 +80,16 @@ export function NotificationBell() {
       // Clear any list left over from the previous open so it never flashes stale content
       // while this fetch is in flight.
       setItems(null)
+      setHasNextPage(false)
       // Fetching the list is what marks it read (FR-005) — fetched fresh on every open,
       // never cached from the last time. Kept outside the `setOpen` updater: React
       // StrictMode invokes a functional updater twice in dev, which would call the action
       // twice for one click.
-      listNotificationsAction()
-        .then((fetched) => {
-          setItems(fetched)
+      listNotificationsAction(1)
+        .then(({ docs, hasNextPage: more }) => {
+          setItems(docs)
+          setPage(1)
+          setHasNextPage(more)
           // The server just marked these read — reflect that now rather than waiting out
           // the rest of the current poll interval.
           setCount(0)
@@ -91,6 +98,29 @@ export function NotificationBell() {
           setItems([])
         })
     }
+  }
+
+  const loadMore = () => {
+    if (isLoadingMore || !hasNextPage) return
+    setIsLoadingMore(true)
+
+    listNotificationsAction(page + 1)
+      .then(({ docs, hasNextPage: more }) => {
+        setItems((prev) => (prev ?? []).concat(docs))
+        setPage((prev) => prev + 1)
+        setHasNextPage(more)
+      })
+      .catch(() => {
+        setHasNextPage(false)
+      })
+      .finally(() => setIsLoadingMore(false))
+  }
+
+  // Fires while scrolling the open list — loads the next page once the reader nears the
+  // bottom, instead of capping the bell at the first page forever.
+  const handleListScroll = (event: React.UIEvent<HTMLUListElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = event.currentTarget
+    if (scrollHeight - scrollTop - clientHeight < 48) loadMore()
   }
 
   return (
@@ -119,13 +149,21 @@ export function NotificationBell() {
               Không có thông báo nào.
             </p>
           ) : (
-            <ul className="max-h-96 divide-y divide-border overflow-y-auto">
+            <ul
+              className="max-h-96 divide-y divide-border overflow-y-auto"
+              onScroll={handleListScroll}
+            >
               {items.map((item) => (
                 <li key={item.id} className="px-4 py-3">
                   <p className="text-sm font-medium text-foreground">{item.title}</p>
                   <p className="mt-0.5 text-sm text-muted-foreground">{item.content}</p>
                 </li>
               ))}
+              {isLoadingMore ? (
+                <li className="px-4 py-3 text-center text-sm text-muted-foreground">
+                  Đang tải thêm...
+                </li>
+              ) : null}
             </ul>
           )}
         </div>

@@ -19,18 +19,30 @@ beforeEach(() => {
 
 describe('listNotificationsAction', () => {
   it('returns the signed-in student’s notifications', async () => {
-    const docs = [{ id: 1, title: 'A' }]
+    const page = { docs: [{ id: 1, title: 'A' }], hasNextPage: false }
     vi.mocked(getSessionStudent).mockResolvedValue({ id: 7 } as never)
-    vi.mocked(listAndMarkRecentNotifications).mockResolvedValue(docs as never)
+    vi.mocked(listAndMarkRecentNotifications).mockResolvedValue(page as never)
 
-    await expect(listNotificationsAction()).resolves.toBe(docs)
-    expect(listAndMarkRecentNotifications).toHaveBeenCalledWith(7)
+    await expect(listNotificationsAction()).resolves.toBe(page)
+    expect(listAndMarkRecentNotifications).toHaveBeenCalledWith(7, { page: 1 })
   })
 
-  it('returns an empty array for a signed-out caller, rather than throwing', async () => {
+  it('passes the requested page through to the service', async () => {
+    vi.mocked(getSessionStudent).mockResolvedValue({ id: 7 } as never)
+    vi.mocked(listAndMarkRecentNotifications).mockResolvedValue({
+      docs: [],
+      hasNextPage: false,
+    } as never)
+
+    await listNotificationsAction(2)
+
+    expect(listAndMarkRecentNotifications).toHaveBeenCalledWith(7, { page: 2 })
+  })
+
+  it('returns an empty page for a signed-out caller, rather than throwing', async () => {
     vi.mocked(getSessionStudent).mockResolvedValue(null)
 
-    await expect(listNotificationsAction()).resolves.toEqual([])
+    await expect(listNotificationsAction()).resolves.toEqual({ docs: [], hasNextPage: false })
     expect(listAndMarkRecentNotifications).not.toHaveBeenCalled()
   })
 })

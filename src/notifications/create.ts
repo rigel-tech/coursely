@@ -9,23 +9,31 @@
 import type { Notification } from '@/payload-types'
 import type { Payload, PayloadRequest } from 'payload'
 
-export type CreateNotificationInput = {
+type CommonFields = {
   content: Notification['content']
   metadata?: Notification['metadata']
   req?: Partial<PayloadRequest>
-  studentId?: number
   title: Notification['title']
   type: Notification['type']
 }
 
+/** `audience` says who this notification is for — never inferred from whether `studentId`
+ * happens to be there. `'student'` requires it; `'staff'` (shown in the admin bell) has no
+ * student to attach. */
+export type CreateNotificationInput =
+  | (CommonFields & { audience: 'student'; studentId: number })
+  | (CommonFields & { audience: 'staff' })
+
 export async function createNotification(
   payload: Payload,
-  { content, metadata, req, studentId, title, type }: CreateNotificationInput,
+  input: CreateNotificationInput,
 ): Promise<void> {
+  const { content, metadata, req, title, type } = input
+
   await payload.create({
     collection: 'notifications',
     data: {
-      ...(studentId !== undefined ? { student: studentId } : {}),
+      ...(input.audience === 'student' ? { student: input.studentId } : {}),
       type,
       title,
       content,

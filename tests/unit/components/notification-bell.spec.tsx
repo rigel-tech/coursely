@@ -87,9 +87,10 @@ describe('NotificationBell — the count (specs/010, User Story 1)', () => {
 describe('NotificationBell — opening the list (specs/010, User Story 2)', () => {
   it('opens the list and shows its contents on click', async () => {
     jsonOnce({ count: 2 })
-    vi.mocked(listNotificationsAction).mockResolvedValue([
-      { id: 1, title: 'Đăng ký khóa học thành công', content: 'Nội dung A' },
-    ] as never)
+    vi.mocked(listNotificationsAction).mockResolvedValue({
+      docs: [{ id: 1, title: 'Đăng ký khóa học thành công', content: 'Nội dung A' }],
+      hasNextPage: false,
+    } as never)
     render(<NotificationBell />)
     await screen.findByText('2')
 
@@ -101,7 +102,7 @@ describe('NotificationBell — opening the list (specs/010, User Story 2)', () =
 
   it('says plainly when there is nothing to show', async () => {
     jsonOnce({ count: 0 })
-    vi.mocked(listNotificationsAction).mockResolvedValue([])
+    vi.mocked(listNotificationsAction).mockResolvedValue({ docs: [], hasNextPage: false } as never)
     render(<NotificationBell />)
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
 
@@ -112,9 +113,10 @@ describe('NotificationBell — opening the list (specs/010, User Story 2)', () =
 
   it('closes when clicking outside the list', async () => {
     jsonOnce({ count: 1 })
-    vi.mocked(listNotificationsAction).mockResolvedValue([
-      { id: 1, title: 'Đăng ký khóa học thành công', content: 'Nội dung A' },
-    ] as never)
+    vi.mocked(listNotificationsAction).mockResolvedValue({
+      docs: [{ id: 1, title: 'Đăng ký khóa học thành công', content: 'Nội dung A' }],
+      hasNextPage: false,
+    } as never)
     render(
       <div>
         <NotificationBell />
@@ -138,7 +140,7 @@ describe('NotificationBell — handleToggle correctness', () => {
     // twice here — a `fetchMock` detail unrelated to what this test is about.
     jsonOnce({ count: 1 })
     jsonOnce({ count: 1 })
-    vi.mocked(listNotificationsAction).mockResolvedValue([])
+    vi.mocked(listNotificationsAction).mockResolvedValue({ docs: [], hasNextPage: false } as never)
     render(
       <StrictMode>
         <NotificationBell />
@@ -166,9 +168,10 @@ describe('NotificationBell — handleToggle correctness', () => {
 
   it('drops the badge to 0 as soon as the list is fetched, without waiting for the next poll', async () => {
     jsonOnce({ count: 3 })
-    vi.mocked(listNotificationsAction).mockResolvedValue([
-      { id: 1, title: 'A', content: 'B' },
-    ] as never)
+    vi.mocked(listNotificationsAction).mockResolvedValue({
+      docs: [{ id: 1, title: 'A', content: 'B' }],
+      hasNextPage: false,
+    } as never)
     render(<NotificationBell />)
     await screen.findByText('3')
 
@@ -179,9 +182,10 @@ describe('NotificationBell — handleToggle correctness', () => {
 
   it('does not show the previous open’s list while a fresh fetch is in flight', async () => {
     jsonOnce({ count: 1 })
-    vi.mocked(listNotificationsAction).mockResolvedValueOnce([
-      { id: 1, title: 'Cũ', content: 'Nội dung cũ' },
-    ] as never)
+    vi.mocked(listNotificationsAction).mockResolvedValueOnce({
+      docs: [{ id: 1, title: 'Cũ', content: 'Nội dung cũ' }],
+      hasNextPage: false,
+    } as never)
     render(<NotificationBell />)
     await screen.findByText('1')
 
@@ -202,8 +206,93 @@ describe('NotificationBell — handleToggle correctness', () => {
     expect(screen.queryByText('Cũ')).toBeNull()
     expect(screen.getByText(/đang tải/i)).toBeTruthy()
 
-    resolveList([{ id: 2, title: 'Mới', content: 'Nội dung mới' }])
+    resolveList({ docs: [{ id: 2, title: 'Mới', content: 'Nội dung mới' }], hasNextPage: false })
     expect(await screen.findByText('Mới')).toBeTruthy()
+  })
+})
+
+/** jsdom never computes real layout — `scrollHeight`/`clientHeight` stay 0 unless stubbed. */
+const stubScrollMetrics = (
+  el: HTMLElement,
+  metrics: { scrollTop: number; scrollHeight: number; clientHeight: number },
+) => {
+  Object.defineProperty(el, 'scrollTop', { configurable: true, value: metrics.scrollTop })
+  Object.defineProperty(el, 'scrollHeight', { configurable: true, value: metrics.scrollHeight })
+  Object.defineProperty(el, 'clientHeight', { configurable: true, value: metrics.clientHeight })
+}
+
+describe('NotificationBell — infinite scroll (loads more past the first page)', () => {
+  it('loads the next page once scrolled near the bottom, and appends it', async () => {
+    jsonOnce({ count: 1 })
+    vi.mocked(listNotificationsAction).mockResolvedValueOnce({
+      docs: [{ id: 1, title: 'A', content: 'Nội dung A' }],
+      hasNextPage: true,
+    } as never)
+    render(<NotificationBell />)
+    await screen.findByText('1')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+    expect(await screen.findByText('A')).toBeTruthy()
+
+    vi.mocked(listNotificationsAction).mockResolvedValueOnce({
+      docs: [{ id: 2, title: 'B', content: 'Nội dung B' }],
+      hasNextPage: false,
+    } as never)
+    const list = screen.getByRole('list')
+    stubScrollMetrics(list, { scrollTop: 100, scrollHeight: 140, clientHeight: 40 })
+    fireEvent.scroll(list)
+
+    expect(await screen.findByText('B')).toBeTruthy()
+    expect(screen.getByText('A')).toBeTruthy()
+    expect(listNotificationsAction).toHaveBeenLastCalledWith(2)
+  })
+
+  it('does not fetch again once there is no further page', async () => {
+    jsonOnce({ count: 1 })
+    vi.mocked(listNotificationsAction).mockResolvedValueOnce({
+      docs: [{ id: 1, title: 'A', content: 'Nội dung A' }],
+      hasNextPage: false,
+    } as never)
+    render(<NotificationBell />)
+    await screen.findByText('1')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+    await screen.findByText('A')
+
+    const list = screen.getByRole('list')
+    stubScrollMetrics(list, { scrollTop: 100, scrollHeight: 140, clientHeight: 40 })
+    fireEvent.scroll(list)
+
+    expect(listNotificationsAction).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not fetch again while still scrolled near the bottom and a load is in flight', async () => {
+    jsonOnce({ count: 1 })
+    vi.mocked(listNotificationsAction).mockResolvedValueOnce({
+      docs: [{ id: 1, title: 'A', content: 'Nội dung A' }],
+      hasNextPage: true,
+    } as never)
+    render(<NotificationBell />)
+    await screen.findByText('1')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+    await screen.findByText('A')
+
+    let resolveNextPage!: (value: unknown) => void
+    vi.mocked(listNotificationsAction).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveNextPage = resolve
+      }) as never,
+    )
+    const list = screen.getByRole('list')
+    stubScrollMetrics(list, { scrollTop: 100, scrollHeight: 140, clientHeight: 40 })
+    fireEvent.scroll(list)
+    fireEvent.scroll(list)
+
+    resolveNextPage({ docs: [{ id: 2, title: 'B', content: 'Nội dung B' }], hasNextPage: false })
+    await screen.findByText('B')
+
+    expect(listNotificationsAction).toHaveBeenCalledTimes(2)
   })
 })
 

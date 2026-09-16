@@ -4,11 +4,12 @@ import { createNotification } from '@/notifications/create'
 import type { Payload } from 'payload'
 
 describe('createNotification', () => {
-  it('includes the student when studentId is given', async () => {
+  it('includes the student when audience is "student"', async () => {
     const create = vi.fn().mockResolvedValue(undefined)
     const payload = { create } as unknown as Payload
 
     await createNotification(payload, {
+      audience: 'student',
       studentId: 7,
       type: 'ENROLLMENT_CREATED',
       title: 'Đăng ký khóa học thành công',
@@ -23,11 +24,12 @@ describe('createNotification', () => {
     )
   })
 
-  it('omits the student key entirely when studentId is not given', async () => {
+  it('omits the student key entirely when audience is "staff"', async () => {
     const create = vi.fn().mockResolvedValue(undefined)
     const payload = { create } as unknown as Payload
 
     await createNotification(payload, {
+      audience: 'staff',
       type: 'ACCOUNT_CREATED',
       title: 'Có người dùng đăng ký tài khoản mới',
       content: 'Nội dung',

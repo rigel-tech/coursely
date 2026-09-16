@@ -125,7 +125,10 @@ function notifyAccountCreated(
     student.fullName,
     student.email,
   )
-  void createNotification(payload, { type: 'ACCOUNT_CREATED', title, content }).catch((err) =>
-    payload.logger.error({ err }, 'ACCOUNT_CREATED notification failed'),
-  )
+  void createNotification(payload, {
+    audience: 'staff',
+    type: 'ACCOUNT_CREATED',
+    title,
+    content,
+  }).catch((err) => payload.logger.error({ err }, 'ACCOUNT_CREATED notification failed'))
 }
