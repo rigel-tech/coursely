@@ -26,7 +26,8 @@
     "test": "pnpm run test:unit && pnpm run test:int && pnpm run test:e2e",
     "test:unit": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts tests/unit",
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts --no-file-parallelism tests/int",
-    "test:e2e": "cross-env NODE_OPTIONS=--no-deprecation playwright test --config=playwright.config.ts"
+    "test:e2e": "cross-env NODE_OPTIONS=--no-deprecation playwright test --config=playwright.config.ts",
+    "test:smoke": "cross-env NODE_OPTIONS=--no-deprecation playwright test tests/e2e/frontend.spec.ts --config=playwright.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

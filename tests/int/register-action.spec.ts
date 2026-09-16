@@ -246,12 +246,12 @@ describe('registerAction — DISABLED email', () => {
   })
 })
 
-describe('registerAction — transaction atomicity', () => {
-  // The failure now leaves by `throw` instead of coming back as `AUTH_003`: an error
-  // nobody wrote copy for is a bug, and returning "please try again" buried it. The form
-  // catches this and shows its system-failure banner.
-  it('rolls the student back when the notification write fails, and rethrows', async () => {
-    const email = uniqueEmail('rollback')
+describe('registerAction — the welcome notification is not required to succeed', () => {
+  // The notification write is no longer part of the student-create transaction (it fires
+  // after that write succeeds, fire-and-forget) — a failure there is logged, not thrown,
+  // and does not roll the student back.
+  it('creates the student and returns success even when the notification write fails', async () => {
+    const email = uniqueEmail('notif-fail')
     const realCreate = payload.create.bind(payload)
     vi.spyOn(payload, 'create').mockImplementation(
       async (args: Parameters<typeof payload.create>[0]) => {
@@ -260,14 +260,14 @@ describe('registerAction — transaction atomicity', () => {
       },
     )
 
-    await expect(run(validForm(email))).rejects.toThrow('boom')
+    await expect(run(validForm(email))).resolves.toEqual({ status: 'success' })
 
     vi.restoreAllMocks()
     const { totalDocs } = await payload.count({
       collection: 'students',
       where: { email: { equals: email } },
     })
-    expect(totalDocs).toBe(0)
+    expect(totalDocs).toBe(1)
   })
 })
 
