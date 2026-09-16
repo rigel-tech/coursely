@@ -16,6 +16,7 @@ import { Label } from '@/components/public/ui/label'
 import { Modal } from '@/components/public/ui/modal'
 import {
   enrollmentProfileSchema,
+  isCompleteEnrollmentPhone,
   type EnrollmentProfileValues,
 } from '@/lib/validation/enrollment-profile-schema'
 import type { Course, Student } from '@/payload-types'
@@ -54,9 +55,7 @@ export function CourseRegistrationForm({
   // no separate "Chỉnh sửa" step (unlike /tai-khoan's ProfileForm). A validly-formatted but
   // factually wrong value is not reachable from here; that stays /tai-khoan's job.
   const hasFullName = Boolean(fullName?.trim())
-  const hasValidPhone = Boolean(
-    phone && enrollmentProfileSchema.shape.phone.safeParse(phone).success,
-  )
+  const hasValidPhone = isCompleteEnrollmentPhone(phone)
 
   const {
     formState: { errors, isSubmitting },

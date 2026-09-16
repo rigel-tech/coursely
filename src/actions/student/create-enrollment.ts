@@ -10,11 +10,11 @@ import {
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
 import { enrollmentProfileSchema } from '@/lib/validation/enrollment-profile-schema'
-import type {
-  CreateEnrollmentInput,
-  CreateEnrollmentState,
-} from '@/lib/constants/create-enrollment-state'
-import { createEnrollmentSchema } from '@/lib/constants/create-enrollment-state'
+import type { CreateEnrollmentState } from '@/lib/constants/create-enrollment-state'
+import {
+  createEnrollmentSchema,
+  type CreateEnrollmentInput,
+} from '@/lib/validation/create-enrollment-schema'
 import type { Student } from '@/payload-types'
 
 export type { CreateEnrollmentInput, CreateEnrollmentState }
@@ -48,7 +48,7 @@ export async function createEnrollmentAction(
 ): Promise<CreateEnrollmentState> {
   const parsed = createEnrollmentSchema.safeParse(input)
   if (!parsed.success) {
-    return { status: 'error', message: 'Khóa học không hợp lệ.' }
+    return { status: 'error', message: parsed.error.issues[0].message }
   }
 
   const student = await getSessionStudent()

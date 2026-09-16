@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { getPayload, ValidationError } from 'payload'
+import { getPayload } from 'payload'
 import { asPayload } from '../helpers/payload-stub'
 import {
   createStudentEnrollment,
@@ -30,9 +30,9 @@ const publishedCourse = {
 }
 
 /**
- * A `payload` stand-in with a published, open-for-registration course, no existing
- * enrollment, and no `db` transaction plumbing. `find` is routed by `collection` so a
- * course lookup and an enrollment lookup can be stubbed independently.
+ * A `payload` stand-in with a published, open-for-registration course and no existing
+ * enrollment. `find` is routed by `collection` so a course lookup and an enrollment lookup
+ * can be stubbed independently.
  */
 type FindMock = (args: { collection: string }) => Promise<{ docs: unknown[] }>
 
@@ -46,11 +46,6 @@ const payloadStub = (overrides: {
 
   return {
     create: overrides.create ?? vi.fn().mockResolvedValue({ id: 31 }),
-    db: {
-      beginTransaction: vi.fn().mockResolvedValue(undefined),
-      commitTransaction: vi.fn(),
-      rollbackTransaction: vi.fn(),
-    },
     find: vi.fn((args: { collection: string }) =>
       args.collection === 'courses' ? courseFind(args) : enrollmentFind(args),
     ),
@@ -152,34 +147,6 @@ describe('createStudentEnrollment — the duplicate guard', () => {
         }),
       }),
     )
-  })
-
-  it('runs the pre-check inside the same transaction as the insert', async () => {
-    const enrollmentFind = vi.fn().mockResolvedValue({ docs: [] })
-    const stub = payloadStub({ enrollmentFind })
-    stub.db.beginTransaction = vi.fn().mockResolvedValue('txn-1')
-    vi.mocked(getPayload).mockResolvedValue(asPayload(stub))
-
-    await createStudentEnrollment({ courseId: 12, student: activeStudent })
-
-    expect(enrollmentFind).toHaveBeenCalledWith(
-      expect.objectContaining({ req: { transactionID: 'txn-1' } }),
-    )
-  })
-
-  it('treats a database-level unique violation the same as the pre-check catching it', async () => {
-    // The race the pre-check cannot close on its own (FR-002): two requests both see no
-    // existing enrollment, both proceed to create — the partial unique index is what
-    // actually stops the second one, and Payload's Postgres adapter surfaces that as a
-    // ValidationError, not the raw driver error (see research.md Decision 2).
-    const create = vi
-      .fn()
-      .mockRejectedValue(new ValidationError({ collection: 'enrollments', errors: [] }))
-    vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ create })))
-
-    await expect(
-      createStudentEnrollment({ courseId: 12, student: activeStudent }),
-    ).rejects.toBeInstanceOf(EnrollmentAlreadyExists)
   })
 })
 

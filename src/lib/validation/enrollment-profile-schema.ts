@@ -22,3 +22,12 @@ export const enrollmentProfileSchema = z.object({
     .refine((val) => VIETNAM_PHONE_REGEX.test(val), { message: PHONE_INVALID_MESSAGE }),
 })
 export type EnrollmentProfileValues = z.infer<typeof enrollmentProfileSchema>
+
+/**
+ * True when `phone` already satisfies this schema — used to decide whether the
+ * registration form shows it as read-only text or as an editable input, not for
+ * submit-time validation (that stays `zodResolver`'s job).
+ */
+export function isCompleteEnrollmentPhone(phone: string | null | undefined): boolean {
+  return Boolean(phone && enrollmentProfileSchema.shape.phone.safeParse(phone).success)
+}

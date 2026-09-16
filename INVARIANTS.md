@@ -670,45 +670,57 @@ invisible to it, because there is nothing to dangle.
 
 ## Data integrity
 
-### A `ValidationError` from creating an `Enrollment` is read as "already enrolled"
+### A race between two concurrent enrollment submissions no longer gets "already enrolled" — it gets a generic failure
 
-**Rule** — `processEnrollmentTransaction` in `src/services/student-enrollment.ts` wraps
-only the `payload.create({ collection: 'enrollments', ... })` call in a narrow `try/catch`
-that turns any `ValidationError` it throws into `EnrollmentAlreadyExists`. That catch exists
-because the `Enrollments` collection has no `unique: true` field of its own today — the
-partial unique index added via `afterSchemaInit` in `src/payload.config.ts`
-(`enrollments_active_student_course_idx`, `WHERE enrollment_status <> 'CANCELLED'`) is the
-only thing that can make this specific `payload.create` call throw a `ValidationError`, so
-the catch has nothing else to mean.
+**Rule** — `checkExistingEnrollment` in `src/services/student-enrollment.ts` is the only
+duplicate check `createStudentEnrollment` makes: a `payload.find` immediately before
+`payload.create`, no transaction around either, no `try/catch` translating a
+database-level rejection into `EnrollmentAlreadyExists`. Removed 2026-09-16 — the
+transaction and the catch existed to keep the enrollment insert and the now-decoupled
+`ENROLLMENT_CREATED` notification insert atomic together; once the notification moved
+out (see the notification-decoupling entry), neither had a reason left to stay.
 
-**Why it breaks silently** — Payload's Postgres adapter intercepts a raw `23505`
-(unique_violation) inside `payload.create`/upsert and converts it to `ValidationError`
-_before_ application code ever sees it (`@payloadcms/drizzle`'s `handleUpsertError`); the
-original driver error, with its constraint name, is not preserved on what gets thrown. If a
-future change adds `unique: true` to any other field on `Enrollments`, a violation of _that_
-constraint throws the exact same `ValidationError` shape and this catch will misreport it as
-"you are already enrolled in this course" — wrong message, and the real problem (a broken
-unique field) hidden behind copy that describes something else entirely. Nothing here would
-error, warn, or fail a type check; the tests that pass today would keep passing, because
-none of them add such a field.
+A genuine race (two submissions both pass the pre-check before either writes) still cannot
+double-insert — the partial unique index (`enrollments_active_student_course_idx`,
+`WHERE enrollment_status <> 'CANCELLED'`, added via `afterSchemaInit` in
+`src/payload.config.ts`) still rejects the second `payload.create` at the database level.
+But that `ValidationError` is no longer caught here: it falls through
+`createEnrollmentAction`'s `instanceof` chain (none of its classes match a raw
+`ValidationError`) and the student sees the generic "Không thể đăng ký khóa học. Vui lòng
+thử lại." fallback instead of "Bạn đã đăng ký khóa học này rồi."
 
-A second, separate way this breaks silently: `afterSchemaInit` is what dev/test's
-drizzle-push reads, but prod runs `prodMigrations` instead — this index also has to exist
-as a hand-written migration (`20260914_130000_add_enrollment_active_guard`) for prod to
-ever get it. The two are two independent definitions of the same index with nothing that
-checks they match. Edit the `WHERE` clause or the columns in one and not the other, and
-`pnpm test:int` (drizzle-push) keeps passing while prod either never gets the guard or gets
-a different one — no error, no failed migration, just a duplicate-enrollment guard that
-silently doesn't match between environments.
+**Why it breaks silently** — `checkExistingEnrollment`'s own code and comment read as a
+complete guard; nothing there hints that the same race it cannot close (FR-002) used to be
+caught one call below and no longer is. Data integrity is still fine (the unique index
+still blocks the duplicate row) — what silently regressed is only the message a student in
+that rare race sees. Re-adding a second write after the enrollment insert (e.g. restoring
+the notification to this same call) would silently resurrect the old reason to wrap both in
+a transaction — see `specs/007-student-enrollment/research.md` Decision 2 for the mechanism
+this replaced before reaching for that fix without first checking whether the new write
+actually needs the atomicity back.
 
-**Where** — `src/services/student-enrollment.ts` (`processEnrollmentTransaction`'s inner
-`try/catch`), `src/payload.config.ts` (`afterSchemaInit`, the index this catch assumes is
-the only source of the error), `src/migrations/20260914_130000_add_enrollment_active_guard.ts`
-(the hand-written prod copy of the same index — change one, change both), `src/lib/errors/enrollment.ts`
-(`EnrollmentAlreadyExists`). Adding a `unique: true` field to `Enrollments` must narrow this
-catch at the same time — e.g. by checking `error.errors[0]?.path` for the new field's name
-before assuming it is this guard. Design rationale:
-`specs/007-student-enrollment/research.md` Decision 2.
+**Where** — `src/services/student-enrollment.ts` (`checkExistingEnrollment`,
+`createEnrollment`), `src/actions/student/create-enrollment.ts` (`createEnrollmentAction`'s
+`instanceof` chain — a raw `ValidationError` falls through it to the generic fallback),
+`src/lib/errors/enrollment.ts` (`EnrollmentAlreadyExists`, now only ever thrown by the
+pre-check).
+
+### The duplicate-enrollment partial unique index is defined twice — keep both in sync
+
+**Rule** — `afterSchemaInit` in `src/payload.config.ts` is what dev/test's drizzle-push
+reads, but prod runs `prodMigrations` instead — the same partial unique index
+(`enrollments_active_student_course_idx`) also has to exist as a hand-written migration
+(`src/migrations/20260914_130000_add_enrollment_active_guard.ts`) for prod to ever get it.
+The two are independent definitions with nothing that checks they match.
+
+**Why it breaks silently** — edit the `WHERE` clause or the columns in one and not the
+other, and `pnpm test:int` (drizzle-push) keeps passing while prod either never gets the
+guard or gets a different one — no error, no failed migration, just a duplicate-enrollment
+guard that silently doesn't match between environments.
+
+**Where** — `src/payload.config.ts` (`afterSchemaInit`),
+`src/migrations/20260914_130000_add_enrollment_active_guard.ts` (the hand-written prod copy
+of the same index — change one, change both).
 
 ### `find`'s `limit: 0` is not a cheap count — it disables pagination and returns every row
 

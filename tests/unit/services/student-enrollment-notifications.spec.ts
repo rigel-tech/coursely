@@ -19,11 +19,6 @@ describe('student enrollment notifications', () => {
     const student = { id: 7, status: 'ACTIVE', email: 'student@example.com' } as Student
     vi.mocked(getPayload).mockResolvedValue({
       create,
-      db: {
-        beginTransaction: vi.fn().mockResolvedValue(undefined),
-        commitTransaction: vi.fn(),
-        rollbackTransaction: vi.fn(),
-      },
       find: vi.fn((args: { collection: string }) =>
         args.collection === 'courses'
           ? Promise.resolve({ docs: [{ id: 12, title: 'Frontend cơ bản' }] })
@@ -49,5 +44,33 @@ describe('student enrollment notifications', () => {
       to: 'student@example.com',
       courseTitle: 'Frontend cơ bản',
     })
+  })
+
+  it('creates the enrollment even when the notification write fails, and logs the failure', async () => {
+    const create = vi
+      .fn()
+      .mockResolvedValueOnce({ id: 31 })
+      .mockRejectedValueOnce(new Error('notifications insert failed'))
+    const logger = { error: vi.fn() }
+    const student = { id: 7, status: 'ACTIVE', email: 'student@example.com' } as Student
+    vi.mocked(getPayload).mockResolvedValue({
+      create,
+      find: vi.fn((args: { collection: string }) =>
+        args.collection === 'courses'
+          ? Promise.resolve({ docs: [{ id: 12, title: 'Frontend cơ bản' }] })
+          : Promise.resolve({ docs: [] }),
+      ),
+      logger,
+    } as never)
+
+    await expect(createStudentEnrollment({ courseId: 12, student })).resolves.toBeUndefined()
+
+    // Flushes the fire-and-forget notification write's rejection handler.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      expect.stringContaining('ENROLLMENT_CREATED notification'),
+    )
   })
 })

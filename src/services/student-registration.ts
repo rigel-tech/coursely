@@ -1,9 +1,9 @@
 /**
  * Registration domain logic (§5.1 steps 3–7). No HTTP concerns here — the caller
  * owns the `pending_email` cookie and the redirect. This module owns: email
- * normalisation, the branch on any existing account, the student +
- * account-created-notification transaction, and issuing / emailing the OTP after
- * that transaction commits.
+ * normalisation, the branch on any existing account, creating the student, firing
+ * the account-created notification once that write succeeds, and issuing / emailing
+ * the OTP after.
  *
  * Nothing about the request is recorded. The IP and user agent used to be written onto
  * the welcome notification; registering an account never read them back, so they were
@@ -13,22 +13,23 @@
  * flood of accounts is the OTP: an unverified student is `PENDING_VERIFICATION`
  * and cannot sign in, and the resend cooldown bounds the mail that leaves.
  */
-import { getPayload, type Payload, type PayloadRequest } from 'payload'
+import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
 import type { Student } from '@/payload-types'
 import type { RegisterInput } from '@/lib/validation/register-schema'
 import { sendDuplicateAttemptEmail } from '@/email/send'
 import { createNotification } from '@/notifications/create'
-import { accountCreatedNotification } from '@/notifications/templates/account-created'
+import { createStudentRegisteredNotificationTemplate } from '@/notifications/templates/account-created'
 import { sendVerificationOtp, type VerificationOtpMode } from '@/services/student-verification-otp'
 
 export type RegisterResult = { ok: true; email: string } | { ok: false; reason: 'duplicate-email' }
 
 /**
  * Runs a self-registration attempt. On success returns the normalised email for the
- * caller's cookie. Throws on an unexpected failure — the student/notification write is
- * rolled back before it propagates.
+ * caller's cookie. Throws on an unexpected failure from creating the student; the welcome
+ * notification is never the cause, since it only fires after that write succeeds (see
+ * `notifyAccountCreated`).
  */
 export async function registerStudent(input: RegisterInput): Promise<RegisterResult> {
   // §5.1 step 3 — normalise
@@ -68,7 +69,7 @@ async function applyRegistration(
   data: RegisterInput,
 ): Promise<ApplyRegistrationOutcome> {
   if (!existing) {
-    await createStudentWithAccountCreatedNotification(payload, data)
+    await createStudentAccount(payload, data)
     return { kind: 'otp', mode: 'initial' }
   }
 
@@ -95,30 +96,36 @@ async function applyRegistration(
   return { kind: 'noop' }
 }
 
-/** §5.1 step 5 — student + account-created notification, atomically. */
-async function createStudentWithAccountCreatedNotification(
+/** §5.1 step 5 — creates the student. The welcome notification is a consequence of this,
+ * not a condition for it — see `notifyAccountCreated` below. */
+async function createStudentAccount(payload: Payload, data: RegisterInput): Promise<void> {
+  const student = await payload.create({
+    collection: 'students',
+    data: {
+      email: data.email,
+      password: data.password,
+      fullName: data.fullName,
+      phone: data.phone,
+      status: 'PENDING_VERIFICATION',
+    },
+  })
+
+  notifyAccountCreated(payload, student)
+}
+
+/**
+ * Fired after the student is created, never as part of that write — a notification is a
+ * consequence of the new account, not a condition for it.
+ */
+function notifyAccountCreated(
   payload: Payload,
-  data: RegisterInput,
-): Promise<void> {
-  const transactionID = (await payload.db.beginTransaction()) ?? undefined
-  const req: Partial<PayloadRequest> = { transactionID }
-  try {
-    const student = await payload.create({
-      collection: 'students',
-      data: {
-        email: data.email,
-        password: data.password,
-        fullName: data.fullName,
-        phone: data.phone,
-        status: 'PENDING_VERIFICATION',
-      },
-      req,
-    })
-    const { title, content } = accountCreatedNotification(student.fullName, student.email)
-    await createNotification(payload, { type: 'ACCOUNT_CREATED', title, content, req })
-    if (transactionID) await payload.db.commitTransaction(transactionID)
-  } catch (err) {
-    if (transactionID) await payload.db.rollbackTransaction(transactionID)
-    throw err
-  }
+  student: Pick<Student, 'fullName' | 'email'>,
+): void {
+  const { title, content } = createStudentRegisteredNotificationTemplate(
+    student.fullName,
+    student.email,
+  )
+  void createNotification(payload, { type: 'ACCOUNT_CREATED', title, content }).catch((err) =>
+    payload.logger.error({ err }, 'ACCOUNT_CREATED notification failed'),
+  )
 }

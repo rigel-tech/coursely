@@ -1,5 +1,5 @@
 import configPromise from '@payload-config'
-import { getPayload, ValidationError, type Payload, type PayloadRequest } from 'payload'
+import { getPayload, type Payload } from 'payload'
 import { sendEnrollmentConfirmationEmail } from '@/email/send'
 import {
   CourseNotFound,
@@ -8,7 +8,7 @@ import {
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
 import { createNotification } from '@/notifications/create'
-import { enrollmentCreatedNotification } from '@/notifications/templates/enrollment-created'
+import { createStudentEnrolledNotificationTemplate } from '@/notifications/templates/enrollment-created'
 import type { Course, Enrollment, Student } from '@/payload-types'
 
 /**
@@ -53,20 +53,17 @@ async function validateCourseForEnrollment(payload: Payload, courseId: number): 
 }
 
 /**
- * Fast, specific path for the ordinary (non-racing) case — FR-002/FR-008. This check is
- * not itself the guard: two of these can both pass before either write lands, which is
- * exactly why the partial unique index in `payload.config.ts`'s `afterSchemaInit` exists
- * as the actual backstop (caught below, in `processEnrollmentTransaction`). CANCELLED is
- * excluded here to match that index's `WHERE` clause — a cancelled enrollment must not
- * block re-registration.
+ * The only duplicate check this flow makes — FR-002/FR-008. It does not close the race
+ * where two submissions both pass this check before either write lands (see the
+ * INVARIANTS.md entry this simplification added); the partial unique index in
+ * `payload.config.ts`'s `afterSchemaInit` still stops a double-insert at the database
+ * level, but that rejection is no longer translated into a friendly refusal here. CANCELLED
+ * is excluded to match that index's `WHERE` clause — a cancelled enrollment must not block
+ * re-registration.
  */
 async function checkExistingEnrollment(
   payload: Payload,
-  {
-    studentId,
-    courseId,
-    req,
-  }: { studentId: number; courseId: number; req: Partial<PayloadRequest> },
+  { studentId, courseId }: { studentId: number; courseId: number },
 ): Promise<void> {
   const existing = await payload.find({
     collection: 'enrollments',
@@ -79,7 +76,6 @@ async function checkExistingEnrollment(
     },
     limit: 1,
     overrideAccess: true,
-    req,
   })
 
   if (existing.docs.length > 0) {
@@ -87,54 +83,44 @@ async function checkExistingEnrollment(
   }
 }
 
-async function processEnrollmentTransaction(
+async function createEnrollment(
   payload: Payload,
   { studentId, course }: { studentId: number; course: Course },
 ): Promise<void> {
-  const transactionID = (await payload.db.beginTransaction()) ?? undefined
-  const req: Partial<PayloadRequest> = { transactionID }
+  await checkExistingEnrollment(payload, { studentId, courseId: course.id })
 
-  try {
-    // Same transaction as everything below — the pre-check's own read is not the race
-    // guard (the partial unique index is), but running it outside the transaction that
-    // is about to write serves no purpose either.
-    await checkExistingEnrollment(payload, { studentId, courseId: course.id, req })
+  await payload.create({
+    collection: 'enrollments',
+    data: {
+      student: studentId,
+      course: course.id,
+      registrationSource: 'SELF_REGISTRATION',
+      enrollmentStatus: 'NEW',
+      paymentStatus: 'UNPAID',
+      registeredAt: new Date().toISOString(),
+    },
+    draft: false,
+    overrideAccess: true,
+  })
+}
 
-    try {
-      await payload.create({
-        collection: 'enrollments',
-        data: {
-          student: studentId,
-          course: course.id,
-          registrationSource: 'SELF_REGISTRATION',
-          enrollmentStatus: 'NEW',
-          paymentStatus: 'UNPAID',
-          registeredAt: new Date().toISOString(),
-        },
-        draft: false,
-        overrideAccess: true,
-        req,
-      })
-    } catch (error) {
-      if (error instanceof ValidationError) throw new EnrollmentAlreadyExists()
-      throw error
-    }
-
-    const { title, content } = enrollmentCreatedNotification(course.title)
-    await createNotification(payload, {
-      studentId,
-      type: 'ENROLLMENT_CREATED',
-      title,
-      content,
-      metadata: { course: course.id },
-      req,
-    })
-
-    if (transactionID) await payload.db.commitTransaction(transactionID)
-  } catch (error) {
-    if (transactionID) await payload.db.rollbackTransaction(transactionID)
-    throw error
-  }
+/**
+ * Fired after the enrollment is created, never as part of that write — a notification is a
+ * consequence of the enrollment, not a condition for it (mirrors the confirmation email
+ * below, which has always worked this way).
+ */
+function notifyEnrollmentCreated(
+  payload: Payload,
+  { studentId, course }: { studentId: number; course: Course },
+): void {
+  const { title, content } = createStudentEnrolledNotificationTemplate(course.title)
+  void createNotification(payload, {
+    studentId,
+    type: 'ENROLLMENT_CREATED',
+    title,
+    content,
+    metadata: { course: course.id },
+  }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CREATED notification failed'))
 }
 
 /**
@@ -187,8 +173,9 @@ export async function createStudentEnrollment({
   const payload = await getPayload({ config: configPromise })
   const course = await validateCourseForEnrollment(payload, courseId)
 
-  await processEnrollmentTransaction(payload, { studentId: student.id, course })
+  await createEnrollment(payload, { studentId: student.id, course })
 
+  notifyEnrollmentCreated(payload, { studentId: student.id, course })
   void sendEnrollmentConfirmationEmail(payload, {
     to: student.email,
     courseTitle: course.title,
