@@ -8,6 +8,17 @@ vi.mock('@/actions/student/login', () => ({
   loginAction: (...args: unknown[]) => loginAction(...args),
 }))
 
+let currentSearchParams = new URLSearchParams()
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => currentSearchParams,
+}))
+
+const startGoogleAuthAction = vi.fn()
+vi.mock('@/actions/student/google-auth', () => ({
+  startGoogleAuthAction: (...args: unknown[]) => startGoogleAuthAction(...args),
+}))
+
 const { LoginForm } = await import('@/components/public/forms/LoginForm')
 
 const assign = vi.fn()
@@ -15,8 +26,10 @@ const replace = vi.fn()
 
 beforeEach(() => {
   loginAction.mockReset()
+  startGoogleAuthAction.mockReset()
   assign.mockReset()
   replace.mockReset()
+  currentSearchParams = new URLSearchParams()
   // jsdom's window.location.assign/replace is non-configurable, so shadow the whole object.
   vi.stubGlobal('location', { assign, replace, href: 'http://localhost/' })
 })
@@ -152,5 +165,26 @@ describe('LoginForm', () => {
 
     expect(await screen.findByText('Vui lòng nhập email')).toBeTruthy()
     expect(loginAction).not.toHaveBeenCalled()
+  })
+
+  it('displays google auth error alert when error query param is present', async () => {
+    currentSearchParams = new URLSearchParams('error=invalid_state')
+    render(React.createElement(LoginForm))
+
+    expect(
+      await screen.findByText('Phiên xác thực đã hết hạn hoặc không hợp lệ. Vui lòng thử lại.'),
+    ).toBeTruthy()
+  })
+
+  it('triggers startGoogleAuthAction when clicking google login button', async () => {
+    startGoogleAuthAction.mockResolvedValue(undefined)
+    render(React.createElement(LoginForm))
+
+    const googleBtn = screen.getByRole('button', { name: /tiếp tục với google/i })
+    fireEvent.click(googleBtn)
+
+    await waitFor(() => {
+      expect(startGoogleAuthAction).toHaveBeenCalledTimes(1)
+    })
   })
 })

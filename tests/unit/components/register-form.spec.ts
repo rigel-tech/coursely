@@ -8,14 +8,19 @@ vi.mock('@/actions/student/register', () => ({
   registerAction: (...args: unknown[]) => registerAction(...args),
 }))
 
+let currentSearchParams = new URLSearchParams()
 const push = vi.fn()
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+  useSearchParams: () => currentSearchParams,
+}))
 
 const { RegisterForm } = await import('@/components/public/forms/RegisterForm')
 
 beforeEach(() => {
   registerAction.mockReset()
   push.mockReset()
+  currentSearchParams = new URLSearchParams()
 })
 
 afterEach(cleanup)
@@ -137,5 +142,16 @@ describe('RegisterForm', () => {
 
     expect(await screen.findByText('Mật khẩu tối thiểu 8 ký tự, gồm cả chữ và số')).toBeTruthy()
     expect(registerAction).not.toHaveBeenCalled()
+  })
+
+  it('displays google auth error banner when error query param is present', async () => {
+    currentSearchParams = new URLSearchParams('error=account_disabled')
+    render(React.createElement(RegisterForm))
+
+    expect(
+      await screen.findByText(
+        'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.',
+      ),
+    ).toBeTruthy()
   })
 })
