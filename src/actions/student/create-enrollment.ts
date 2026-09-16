@@ -1,7 +1,8 @@
 'use server'
 
+import configPromise from '@payload-config'
+import { getPayload } from 'payload'
 import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
-import { updateStudentProfile } from '@/services/student-profile'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import {
   CourseNotFound,
@@ -9,7 +10,6 @@ import {
   RegistrationClosed,
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
-import { enrollmentProfileSchema } from '@/lib/validation/enrollment-profile-schema'
 import type { CreateEnrollmentState } from '@/lib/constants/create-enrollment-state'
 import {
   createEnrollmentSchema,
@@ -19,78 +19,51 @@ import type { Student } from '@/payload-types'
 
 export type { CreateEnrollmentInput, CreateEnrollmentState }
 
-const PROFILE_INCOMPLETE_MESSAGE =
-  'Vui lòng bổ sung đầy đủ họ và tên, số điện thoại trước khi đăng ký khóa học.'
-
-// Copy for every standing that cannot enrol. Typed as `Student['status']` minus `ACTIVE`
-// so adding a status to the collection stops compiling here until someone writes its
-// message — otherwise a new status silently inherits whatever branch it happens to fall
-// into, and the account is refused with another standing's reason.
 const STANDING_REFUSAL: Record<Exclude<Student['status'], 'ACTIVE'>, string> = {
   PENDING_VERIFICATION:
     'Tài khoản chưa xác thực email. Vui lòng xác thực trước khi đăng ký khóa học.',
   DISABLED: 'Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ trung tâm để được hỗ trợ.',
 }
 
-/**
- * Creates an enrollment for the signed-in student and selected course.
- *
- * The sign-in check lives here rather than in the button that opens the form: a screen
- * deciding in advance whether to offer registration is a guess the server has to re-check
- * anyway, and the guess is what a caller skipping the UI walks straight past.
- *
- * Order matters. A malformed course id is rejected before any lookup; being signed out
- * outranks anything about the course itself, so a visitor is never told a deadline passed
- * on a course they have not proven they may see.
- */
 export async function createEnrollmentAction(
   input: CreateEnrollmentInput,
 ): Promise<CreateEnrollmentState> {
-  const parsed = createEnrollmentSchema.safeParse(input)
-  if (!parsed.success) {
-    return { status: 'error', message: parsed.error.issues[0].message }
+  // A malformed course id is rejected before any lookup — it needs no session to know it's
+  // wrong. fullName/phone are validated only once a session is confirmed, below: a
+  // signed-out visitor's blank profile fields must still reach the sign-in redirect
+  // instead of this schema's "required" errors.
+  const courseId = createEnrollmentSchema.shape.courseId.safeParse(input.courseId)
+  if (!courseId.success) {
+    const message = courseId.error.issues.map((issue) => issue.message).join(' ')
+    return { status: 'error', message }
   }
 
   const student = await getSessionStudent()
-  if (!student) return requireLogin(parsed.data.courseId)
+  if (!student) return requireLogin(courseId.data)
 
-  // Default-deny: anything that is not ACTIVE is refused, and told why. Sending these
-  // accounts to sign-in would loop — signing in again changes no account's standing.
+  const parsed = createEnrollmentSchema.safeParse(input)
+  if (!parsed.success) {
+    const message = parsed.error.issues.map((issue) => issue.message).join(' ')
+    return { status: 'error', message }
+  }
+
   if (student.status !== 'ACTIVE') {
     return { status: 'error', message: STANDING_REFUSAL[student.status] }
   }
 
-  // Checked only once a signed-in, ACTIVE student is confirmed — never ahead of the two
-  // checks above, or a signed-out visitor's empty fields would be misread as an
-  // incomplete profile instead of sending them to sign in (research.md Decision 1).
-  const profile = enrollmentProfileSchema.safeParse({
-    fullName: input.fullName,
-    phone: input.phone,
-  })
-
-  if (!profile.success) {
-    return { status: 'error', message: PROFILE_INCOMPLETE_MESSAGE }
+  if (parsed.data.fullName !== student.fullName || parsed.data.phone !== student.phone) {
+    const payload = await getPayload({ config: configPromise })
+    await payload.update({
+      collection: 'students',
+      id: student.id,
+      data: { fullName: parsed.data.fullName, phone: parsed.data.phone },
+      overrideAccess: true,
+    })
   }
 
-  const profileChanged =
-    profile.data.fullName !== student.fullName || profile.data.phone !== student.phone
-
   try {
-    // Saved before attempting the enrollment, and not part of its transaction, so a
-    // correction survives a refusal for an unrelated reason below (FR-005). Skipped when
-    // nothing changed, so reviewing an already-complete profile costs no write.
-    if (profileChanged) {
-      await updateStudentProfile({
-        studentId: student.id,
-        fullName: profile.data.fullName,
-        phone: profile.data.phone,
-      })
-    }
     await createStudentEnrollment({ courseId: parsed.data.courseId, student })
   } catch (error) {
-    // Every refusal this flow distinguishes (specs/007-student-enrollment, Stories 3–4).
-    // Anything else is rethrown — an error nobody wrote a message for is a bug, not a
-    // "please try again" to hide it behind (mirrors loginAction's instanceof chain).
     if (
       error instanceof EnrollmentAlreadyExists ||
       error instanceof CourseNotFound ||
@@ -105,10 +78,6 @@ export async function createEnrollmentAction(
   return { status: 'success', message: 'Đăng ký khóa học thành công.' }
 }
 
-// The return path is built from the course id, never taken from the caller — a
-// caller-supplied destination is the open redirect this avoids. `/khoa-hoc/<slug>` is the
-// course page's public URL; the `/courses/<slug>` folder path reaches the same page but is
-// not a URL to hand anyone.
 async function requireLogin(courseId: number): Promise<CreateEnrollmentState> {
   const slug = await findCourseSlug(courseId)
   const callbackUrl = slug ? `/khoa-hoc/${slug}` : '/khoa-hoc'

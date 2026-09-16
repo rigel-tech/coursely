@@ -10,15 +10,7 @@ vi.mock('@/actions/student/create-enrollment', () => ({
 import { createEnrollmentAction } from '@/actions/student/create-enrollment'
 
 const assign = vi.fn()
-const clickSubmit = () => fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
-/** Validation runs through zodResolver asynchronously, so the modal appears a tick later. */
-const confirmInModal = async () =>
-  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đăng ký' }))
-/** Opens the confirm modal and confirms — the full path to an actual submission. */
-const submit = async () => {
-  clickSubmit()
-  await confirmInModal()
-}
+const submit = () => fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
 
 /** A profile already complete — the shape most tests here render with. */
 const completeProfile = { fullName: 'Nguyễn Văn A', phone: '0987654321' }
@@ -38,34 +30,32 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('CourseRegistrationForm', () => {
-  it('reads the dynamic course data through react-hook-form submission', async () => {
+describe('CourseRegistrationForm — submits directly, no confirmation step', () => {
+  it('calls the action with the course id and the form values on submit', async () => {
     vi.mocked(createEnrollmentAction).mockResolvedValue({
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
     })
     render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
-    await submit()
+    submit()
 
     await waitFor(() =>
       expect(createEnrollmentAction).toHaveBeenCalledWith({ courseId: 12, ...completeProfile }),
     )
   })
 
-  it('hard-navigates to redirectTo when the server sends one', async () => {
+  it('never renders a confirmation modal', async () => {
     vi.mocked(createEnrollmentAction).mockResolvedValue({
-      status: 'error',
-      message: 'Vui lòng đăng nhập để đăng ký khóa học.',
-      redirectTo: '/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend',
+      status: 'success',
+      message: 'Đăng ký khóa học thành công.',
     })
     render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
-    await submit()
+    submit()
 
-    await waitFor(() =>
-      expect(assign).toHaveBeenCalledWith('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend'),
-    )
+    await waitFor(() => expect(createEnrollmentAction).toHaveBeenCalled())
+    expect(screen.queryByRole('button', { name: 'Xác nhận đăng ký' })).toBeNull()
   })
 
   it('calls onSuccess and shows the message when the registration succeeds', async () => {
@@ -82,7 +72,7 @@ describe('CourseRegistrationForm', () => {
       />,
     )
 
-    await submit()
+    submit()
 
     expect(await screen.findByText('Đăng ký khóa học thành công.')).toBeTruthy()
     expect(onSuccess).toHaveBeenCalledTimes(1)
@@ -103,11 +93,70 @@ describe('CourseRegistrationForm', () => {
       />,
     )
 
-    await submit()
+    submit()
 
     expect(await screen.findByText('Thời hạn đăng ký khóa học này đã kết thúc.')).toBeTruthy()
     expect(onSuccess).not.toHaveBeenCalled()
     expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('hard-navigates to redirectTo when the server sends one', async () => {
+    vi.mocked(createEnrollmentAction).mockResolvedValue({
+      status: 'error',
+      message: 'Vui lòng đăng nhập để đăng ký khóa học.',
+      redirectTo: '/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend',
+    })
+    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
+
+    submit()
+
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend'),
+    )
+  })
+})
+
+describe('CourseRegistrationForm — user info is always editable (item 2)', () => {
+  it('renders full name and phone as inputs even when the profile is already complete', () => {
+    render(
+      <CourseRegistrationForm
+        course={baseCourse}
+        profile={{ email: 'student@example.com', ...completeProfile }}
+      />,
+    )
+
+    expect(screen.getByLabelText('Họ và tên')).toHaveProperty('value', 'Nguyễn Văn A')
+    expect(screen.getByLabelText('Số điện thoại')).toHaveProperty('value', '0987654321')
+    expect(screen.getByText('student@example.com')).toBeTruthy()
+  })
+
+  it('submits whatever the student edits the prefilled values to', async () => {
+    vi.mocked(createEnrollmentAction).mockResolvedValue({
+      status: 'success',
+      message: 'Đăng ký khóa học thành công.',
+    })
+    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
+
+    fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'Trần Thị B' } })
+    fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0912345678' } })
+    submit()
+
+    await waitFor(() =>
+      expect(createEnrollmentAction).toHaveBeenCalledWith({
+        courseId: 12,
+        fullName: 'Trần Thị B',
+        phone: '0912345678',
+      }),
+    )
+  })
+
+  it('rejects submission client-side when full name is blank, without calling the action', async () => {
+    render(<CourseRegistrationForm course={baseCourse} profile={{ phone: '0987654321' }} />)
+
+    submit()
+
+    expect(await screen.findByText('Vui lòng nhập họ và tên.')).toBeTruthy()
+    expect(createEnrollmentAction).not.toHaveBeenCalled()
   })
 })
 
@@ -120,7 +169,7 @@ describe('CourseRegistrationForm — no profile at all (signed-out visitor)', ()
     })
     render(<CourseRegistrationForm course={baseCourse} />)
 
-    await submit()
+    submit()
 
     await waitFor(() =>
       expect(createEnrollmentAction).toHaveBeenCalledWith({
@@ -130,141 +179,5 @@ describe('CourseRegistrationForm — no profile at all (signed-out visitor)', ()
       }),
     )
     expect(assign).toHaveBeenCalledWith('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend')
-  })
-})
-
-describe('CourseRegistrationForm — reviewing an already-complete profile (specs/009)', () => {
-  it('shows full name, phone and email as plain text — none of them an input', () => {
-    render(
-      <CourseRegistrationForm
-        course={baseCourse}
-        profile={{ email: 'student@example.com', ...completeProfile }}
-      />,
-    )
-
-    expect(screen.getByText('Nguyễn Văn A')).toBeTruthy()
-    expect(screen.getByText('0987654321')).toBeTruthy()
-    expect(screen.getByText('student@example.com')).toBeTruthy()
-    expect(screen.queryByRole('textbox')).toBeNull()
-  })
-
-  it('still submits the complete values via hidden fields', async () => {
-    vi.mocked(createEnrollmentAction).mockResolvedValue({
-      status: 'success',
-      message: 'Đăng ký khóa học thành công.',
-    })
-    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
-
-    await submit()
-
-    await waitFor(() =>
-      expect(createEnrollmentAction).toHaveBeenCalledWith({ courseId: 12, ...completeProfile }),
-    )
-  })
-})
-
-describe('CourseRegistrationForm — a field that is missing or invalid becomes editable (specs/009)', () => {
-  it('shows an input for a blank full name while phone stays plain text', () => {
-    render(<CourseRegistrationForm course={baseCourse} profile={{ phone: '0987654321' }} />)
-
-    expect(screen.getByLabelText('Họ và tên')).toBeTruthy()
-    expect(screen.getByText('0987654321')).toBeTruthy()
-  })
-
-  it('shows an input for an invalidly-formatted phone even though it is not blank', () => {
-    render(
-      <CourseRegistrationForm
-        course={baseCourse}
-        profile={{ fullName: 'Nguyễn Văn A', phone: '123456' }}
-      />,
-    )
-
-    expect(screen.getByText('Nguyễn Văn A')).toBeTruthy()
-    expect(screen.getByLabelText('Số điện thoại')).toBeTruthy()
-  })
-
-  it('rejects submission client-side when full name is blank, without calling the action', async () => {
-    render(<CourseRegistrationForm course={baseCourse} profile={{ phone: '0987654321' }} />)
-
-    clickSubmit()
-
-    expect(await screen.findByText('Vui lòng nhập họ và tên.')).toBeTruthy()
-    expect(createEnrollmentAction).not.toHaveBeenCalled()
-  })
-
-  it('sends the values the student just typed into the missing fields', async () => {
-    vi.mocked(createEnrollmentAction).mockResolvedValue({
-      status: 'success',
-      message: 'Đăng ký khóa học thành công.',
-    })
-    render(<CourseRegistrationForm course={baseCourse} />)
-
-    fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'Trần Thị B' } })
-    fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0912345678' } })
-    await submit()
-
-    await waitFor(() =>
-      expect(createEnrollmentAction).toHaveBeenCalledWith({
-        courseId: 12,
-        fullName: 'Trần Thị B',
-        phone: '0912345678',
-      }),
-    )
-  })
-})
-
-describe('CourseRegistrationForm — confirmation modal', () => {
-  it('opens a confirmation modal instead of submitting immediately', async () => {
-    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
-
-    clickSubmit()
-
-    expect(await screen.findByRole('button', { name: 'Xác nhận đăng ký' })).toBeTruthy()
-    expect(createEnrollmentAction).not.toHaveBeenCalled()
-  })
-
-  it('confirming in the modal submits the registration', async () => {
-    vi.mocked(createEnrollmentAction).mockResolvedValue({
-      status: 'success',
-      message: 'Đăng ký khóa học thành công.',
-    })
-    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
-
-    clickSubmit()
-    await confirmInModal()
-
-    await waitFor(() =>
-      expect(createEnrollmentAction).toHaveBeenCalledWith({ courseId: 12, ...completeProfile }),
-    )
-  })
-
-  it('cancelling the modal does not submit', async () => {
-    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
-
-    clickSubmit()
-    fireEvent.click(await screen.findByRole('button', { name: 'Hủy' }))
-
-    expect(screen.queryByRole('button', { name: 'Xác nhận đăng ký' })).toBeNull()
-    expect(createEnrollmentAction).not.toHaveBeenCalled()
-  })
-
-  it('shows course and student details for review before confirming', async () => {
-    const registrationEndAt = '2026-12-31T00:00:00.000Z'
-    render(
-      <CourseRegistrationForm
-        course={{ ...baseCourse, duration: '8 tuần', courseType: 'OFFLINE', registrationEndAt }}
-        profile={{ email: 'student@example.com', ...completeProfile }}
-      />,
-    )
-
-    clickSubmit()
-    await screen.findByRole('button', { name: 'Xác nhận đăng ký' })
-
-    expect(screen.getByText('8 tuần')).toBeTruthy()
-    expect(screen.getByText('Lớp học Offline')).toBeTruthy()
-    expect(screen.getByText(new Date(registrationEndAt).toLocaleDateString('vi-VN'))).toBeTruthy()
-    expect(screen.getAllByText(completeProfile.fullName).length).toBeGreaterThan(1)
-    expect(screen.getAllByText(completeProfile.phone).length).toBeGreaterThan(1)
-    expect(screen.getAllByText('student@example.com').length).toBeGreaterThan(1)
   })
 })

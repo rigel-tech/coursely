@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { profileSchema } from '@/lib/validation/profile-schema'
-import { enrollmentProfileSchema } from '@/lib/validation/enrollment-profile-schema'
 
 describe('profileSchema', () => {
   it('accepts a valid full name and phone number', () => {
@@ -37,40 +36,5 @@ describe('profileSchema', () => {
       expect(res.data.fullName).toBe('  Nguyễn Văn A  ')
       expect(res.data.phone).toBe('')
     }
-  })
-})
-
-describe('enrollmentProfileSchema', () => {
-  it('accepts a valid full name and phone number', () => {
-    expect(
-      enrollmentProfileSchema.safeParse({ fullName: 'Nguyễn Văn A', phone: '0987654321' }).success,
-    ).toBe(true)
-  })
-
-  it('rejects a blank full name', () => {
-    expect(enrollmentProfileSchema.safeParse({ fullName: '', phone: '0987654321' }).success).toBe(
-      false,
-    )
-  })
-
-  it('rejects a blank phone', () => {
-    expect(enrollmentProfileSchema.safeParse({ fullName: 'Nguyễn Văn A', phone: '' }).success).toBe(
-      false,
-    )
-  })
-
-  it('rejects a malformed phone the same way the lenient schema does', () => {
-    expect(
-      enrollmentProfileSchema.safeParse({ fullName: 'Nguyễn Văn A', phone: '123456' }).success,
-    ).toBe(false)
-  })
-
-  it('trims the full name — unlike the lenient schema', () => {
-    const res = enrollmentProfileSchema.safeParse({
-      fullName: '  Nguyễn Văn A  ',
-      phone: '0987654321',
-    })
-    expect(res.success).toBe(true)
-    if (res.success) expect(res.data.fullName).toBe('Nguyễn Văn A')
   })
 })

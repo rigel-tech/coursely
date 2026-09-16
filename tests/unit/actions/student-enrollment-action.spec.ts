@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { getPayload } from 'payload'
+
 import type { Student } from '@/payload-types'
 
 import {
@@ -12,30 +14,33 @@ import {
   RegistrationClosed,
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
+import { asPayload } from '../helpers/payload-stub'
 
 /** `redirectTo` only exists on the `'error'` branch of the discriminated union. */
 const redirectTo = (result: CreateEnrollmentState) =>
   result.status === 'error' ? result.redirectTo : undefined
 
-// Both dependencies reach for the Payload config, which a unit test has no business
-// booting. Mocking them leaves exactly what this action is: the decision about who may
+// This dependency reaches for the Payload config, which a unit test has no business
+// booting. Mocking it leaves exactly what this action is: the decision about who may
 // enrol and where an unauthenticated visitor is sent.
 vi.mock('@/services/student-enrollment', () => ({
   createStudentEnrollment: vi.fn(),
   findCourseSlug: vi.fn(),
 }))
 
-vi.mock('@/services/student-profile', () => ({
-  updateStudentProfile: vi.fn(),
-}))
-
 vi.mock('@/lib/auth/session-student', () => ({
   getSessionStudent: vi.fn(),
 }))
 
+vi.mock('payload', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('payload')>()),
+  getPayload: vi.fn(),
+}))
+
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
-import { updateStudentProfile } from '@/services/student-profile'
+
+const updateStudentProfile = vi.fn()
 
 /** Only the fields the action reads. The rest of `Student` is irrelevant to this decision. */
 const studentWith = (
@@ -48,7 +53,8 @@ const validProfile = { fullName: 'Nguyễn Văn A', phone: '0987654321' }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(updateStudentProfile).mockResolvedValue(studentWith('ACTIVE'))
+  updateStudentProfile.mockResolvedValue(studentWith('ACTIVE'))
+  vi.mocked(getPayload).mockResolvedValue(asPayload({ update: updateStudentProfile }))
 })
 
 describe('createEnrollmentAction — the sign-in gate', () => {
@@ -56,7 +62,7 @@ describe('createEnrollmentAction — the sign-in gate', () => {
     vi.mocked(getSessionStudent).mockResolvedValue(null)
     vi.mocked(findCourseSlug).mockResolvedValue('frontend')
 
-    const result = await createEnrollmentAction({ courseId: 12 })
+    const result = await createEnrollmentAction({ courseId: 12, fullName: '', phone: '' })
 
     expect(redirectTo(result)).toBe('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend')
     expect(createStudentEnrollment).not.toHaveBeenCalled()
@@ -66,7 +72,7 @@ describe('createEnrollmentAction — the sign-in gate', () => {
     vi.mocked(getSessionStudent).mockResolvedValue(null)
     vi.mocked(findCourseSlug).mockResolvedValue('frontend')
 
-    await createEnrollmentAction({ courseId: 12 })
+    await createEnrollmentAction({ courseId: 12, fullName: '', phone: '' })
 
     expect(findCourseSlug).toHaveBeenCalledWith(12)
   })
@@ -75,8 +81,9 @@ describe('createEnrollmentAction — the sign-in gate', () => {
     vi.mocked(getSessionStudent).mockResolvedValue(null)
     vi.mocked(findCourseSlug).mockResolvedValue('frontend')
 
-    // No fullName/phone sent at all — must not be misread as "profile incomplete".
-    const result = await createEnrollmentAction({ courseId: 12 })
+    // Blank fullName/phone — a signed-out visitor's form has no profile to send — must not
+    // be misread as "profile incomplete".
+    const result = await createEnrollmentAction({ courseId: 12, fullName: '', phone: '' })
 
     expect(redirectTo(result)).toBeDefined()
     expect(updateStudentProfile).not.toHaveBeenCalled()
@@ -236,7 +243,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
     vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
     const callOrder: string[] = []
-    vi.mocked(updateStudentProfile).mockImplementation(async () => {
+    updateStudentProfile.mockImplementation(async () => {
       callOrder.push('updateStudentProfile')
       return studentWith('ACTIVE')
     })
@@ -247,9 +254,10 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
     await createEnrollmentAction({ courseId: 12, ...validProfile })
 
     expect(updateStudentProfile).toHaveBeenCalledWith({
-      studentId: 7,
-      fullName: 'Nguyễn Văn A',
-      phone: '0987654321',
+      collection: 'students',
+      id: 7,
+      data: { fullName: 'Nguyễn Văn A', phone: '0987654321' },
+      overrideAccess: true,
     })
     expect(callOrder).toEqual(['updateStudentProfile', 'createStudentEnrollment'])
   })
@@ -261,9 +269,10 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
 
     expect(updateStudentProfile).toHaveBeenCalledWith({
-      studentId: 7,
-      fullName: 'Nguyễn Văn A',
-      phone: '0987654321',
+      collection: 'students',
+      id: 7,
+      data: { fullName: 'Nguyễn Văn A', phone: '0987654321' },
+      overrideAccess: true,
     })
     expect(result.message).toBe('Bạn đã đăng ký khóa học này rồi.')
   })
@@ -298,13 +307,14 @@ describe('createEnrollmentAction — skips the profile write when nothing change
     await createEnrollmentAction({ courseId: 12, fullName: 'Trần Thị B', phone: '0912345678' })
 
     expect(updateStudentProfile).toHaveBeenCalledWith({
-      studentId: 7,
-      fullName: 'Trần Thị B',
-      phone: '0912345678',
+      collection: 'students',
+      id: 7,
+      data: { fullName: 'Trần Thị B', phone: '0912345678' },
+      overrideAccess: true,
     })
   })
 
-  it('still calls updateStudentProfile when only the phone differs', async () => {
+  it('still calls updateStudentProfile with both fields when only the phone differs', async () => {
     const student = studentWith('ACTIVE', validProfile)
     vi.mocked(getSessionStudent).mockResolvedValue(student)
     vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
@@ -316,13 +326,14 @@ describe('createEnrollmentAction — skips the profile write when nothing change
     })
 
     expect(updateStudentProfile).toHaveBeenCalledWith({
-      studentId: 7,
-      fullName: validProfile.fullName,
-      phone: '0912345678',
+      collection: 'students',
+      id: 7,
+      data: { fullName: validProfile.fullName, phone: '0912345678' },
+      overrideAccess: true,
     })
   })
 
-  it('still calls updateStudentProfile when only the full name differs', async () => {
+  it('still calls updateStudentProfile with both fields when only the full name differs', async () => {
     const student = studentWith('ACTIVE', validProfile)
     vi.mocked(getSessionStudent).mockResolvedValue(student)
     vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
@@ -334,9 +345,10 @@ describe('createEnrollmentAction — skips the profile write when nothing change
     })
 
     expect(updateStudentProfile).toHaveBeenCalledWith({
-      studentId: 7,
-      fullName: 'Trần Thị B',
-      phone: validProfile.phone,
+      collection: 'students',
+      id: 7,
+      data: { fullName: 'Trần Thị B', phone: validProfile.phone },
+      overrideAccess: true,
     })
   })
 })

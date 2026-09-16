@@ -63,13 +63,12 @@ describe('CourseRegistrationCTA', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đăng ký' }))
 
     await waitFor(() => expect(screen.getByText('Mới đăng ký')).toBeTruthy())
     expect(screen.queryByRole('button', { name: 'Gửi đăng ký' })).toBeNull()
   })
 
-  it('passes the student profile fields through to the registration form (specs/009)', () => {
+  it('passes the student profile fields through to the registration form as prefilled inputs (specs/009)', () => {
     render(
       <CourseRegistrationCTA
         course={baseCourse}
@@ -77,8 +76,8 @@ describe('CourseRegistrationCTA', () => {
       />,
     )
 
-    expect(screen.getByText('Nguyễn Văn A')).toBeTruthy()
-    expect(screen.getByText('0987654321')).toBeTruthy()
+    expect(screen.getByLabelText('Họ và tên')).toHaveProperty('value', 'Nguyễn Văn A')
+    expect(screen.getByLabelText('Số điện thoại')).toHaveProperty('value', '0987654321')
     expect(screen.getByText('a@b.com')).toBeTruthy()
   })
 })

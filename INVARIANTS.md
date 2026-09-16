@@ -349,12 +349,13 @@ chain falls back into if it throws a plain `Error` instead of one of these class
 `try/catch`, one `instanceof` branch per class in `src/lib/errors/enrollment.ts`),
 `src/services/student-enrollment.ts` (`validateCourseForEnrollment`, throwing the typed
 classes instead of a plain `Error`),
-`src/components/public/forms/CourseRegistrationForm.tsx` (`submitEnrollment`'s `.catch()`,
+`src/components/public/forms/CourseRegistrationForm.tsx` (`onSubmit`'s `.catch()`,
 unchanged — it is the reason the action-level fix was necessary, not itself where the fix
 lives). The same shape this repo already gets right elsewhere is what the fix copies:
-`createEnrollmentAction`'s own `STANDING_REFUSAL`/`PROFILE_INCOMPLETE_MESSAGE` branches, and
-`loginAction`'s `instanceof` chain against `src/lib/errors/auth.ts`, both _return_ their
-refusal instead of throwing it.
+`createEnrollmentAction`'s own `STANDING_REFUSAL` branch and `loginAction`'s `instanceof`
+chain against `src/lib/errors/auth.ts`, both _return_ their refusal instead of throwing it.
+(`PROFILE_INCOMPLETE_MESSAGE` no longer exists — profile completeness is now enforced by
+`createEnrollmentSchema` itself, not a separate branch here.)
 
 ## Routing
 
@@ -721,6 +722,28 @@ guard that silently doesn't match between environments.
 **Where** — `src/payload.config.ts` (`afterSchemaInit`),
 `src/migrations/20260914_130000_add_enrollment_active_guard.ts` (the hand-written prod copy
 of the same index — change one, change both).
+
+### `updateStudentProfile` no longer covers the enrollment-time profile write — `createEnrollmentAction` writes directly
+
+**Rule** — Two independent call sites write a student's `fullName`/`phone`:
+`updateStudentProfile` (`src/services/student-profile.ts`), used by `/tai-khoan`'s
+`updateProfileAction` (via `updateStudentProfileWithAvatar`), and `createEnrollmentAction`
+(`src/actions/student/create-enrollment.ts`), which calls `payload.update` on the
+`students` collection directly instead of going through the service. A change made only to
+`updateStudentProfile` — a new hook, a transaction wrap, an audit log, an extra field —
+does not reach the enrollment-time write.
+
+**Why it breaks silently** — both paths call `payload.update` on the same collection with
+the same shape (`{ fullName, phone }`), so a manual test of either flow looks identical;
+only a change that assumes both paths share one implementation exposes the split, and only
+in the flow nobody re-tested. `updateStudentProfile`'s own JSDoc used to claim it was
+shared by both call sites, so reading that function gave no hint the enrollment flow had
+diverged.
+
+**Where** — `src/actions/student/create-enrollment.ts` (`createEnrollmentAction`, builds
+`profileChanges` from only the fields that differ from the session's student, then calls
+`payload.update` itself), `src/services/student-profile.ts` (`updateStudentProfile`, the
+other path — its own JSDoc no longer claims to cover enrollment).
 
 ### `find`'s `limit: 0` is not a cheap count — it disables pagination and returns every row
 

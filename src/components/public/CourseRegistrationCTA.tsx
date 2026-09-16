@@ -13,7 +13,6 @@ import type { Enrollment, Student } from '@/payload-types'
 type CourseRegistrationCTAProps = {
   course: CourseRegistrationCourse
   enrollmentStatus?: Enrollment['enrollmentStatus']
-  /** The signed-in student's own profile — passed straight through to the form unchanged. */
   profile?: Partial<Pick<Student, 'email' | 'fullName' | 'phone'>>
 }
 
@@ -43,10 +42,6 @@ export function CourseRegistrationCTA({
       ) : (
         <CourseRegistrationForm
           course={course}
-          // `email` is always present for a real student (Payload's own auth field), so
-          // its absence is what tells the form there is no signed-in visitor to validate
-          // a profile for — never an object of all-undefined fields, which the form would
-          // otherwise mistake for "signed in, with a blank profile."
           profile={profile?.email ? profile : undefined}
           onSuccess={() => setStatus('NEW')}
         />

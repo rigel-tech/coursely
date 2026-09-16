@@ -7,10 +7,11 @@ type ProfileFields = { studentId: number; fullName?: string; phone: string | nul
 
 /**
  * The one write for a student's own `fullName`/`phone` (and, from the account page, its
- * `avatar`). Shared by registration-time enrollment (specs/009) and `/tai-khoan`'s own
- * profile edit (`updateProfileAction`) — `options.req` lets the latter join its own
- * transaction, and `options.avatarMediaId` lets it set a freshly-uploaded avatar in the
- * same write instead of a second one.
+ * `avatar`). Used by `/tai-khoan`'s own profile edit (`updateProfileAction`, via
+ * `updateStudentProfileWithAvatar` below) — `options.req` lets it join its own transaction,
+ * and `options.avatarMediaId` lets it set a freshly-uploaded avatar in the same write
+ * instead of a second one. `createEnrollmentAction` does **not** go through this function —
+ * it calls `payload.update` on `students` directly (see INVARIANTS.md, Data integrity).
  */
 export async function updateStudentProfile({
   studentId,

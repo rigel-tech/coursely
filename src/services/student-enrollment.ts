@@ -52,15 +52,6 @@ async function validateCourseForEnrollment(payload: Payload, courseId: number): 
   return course
 }
 
-/**
- * The only duplicate check this flow makes — FR-002/FR-008. It does not close the race
- * where two submissions both pass this check before either write lands (see the
- * INVARIANTS.md entry this simplification added); the partial unique index in
- * `payload.config.ts`'s `afterSchemaInit` still stops a double-insert at the database
- * level, but that rejection is no longer translated into a friendly refusal here. CANCELLED
- * is excluded to match that index's `WHERE` clause — a cancelled enrollment must not block
- * re-registration.
- */
 async function checkExistingEnrollment(
   payload: Payload,
   { studentId, courseId }: { studentId: number; courseId: number },
@@ -104,14 +95,9 @@ async function createEnrollment(
   })
 }
 
-/**
- * Fired after the enrollment is created, never as part of that write — a notification is a
- * consequence of the enrollment, not a condition for it (mirrors the confirmation email
- * below, which has always worked this way).
- */
 function notifyEnrollmentCreated(
   payload: Payload,
-  { studentId, course }: { studentId: number; course: Course },
+  { studentId, studentEmail, course }: { studentId: number; studentEmail: string; course: Course },
 ): void {
   const { title, content } = createStudentEnrolledNotificationTemplate(course.title)
   void createNotification(payload, {
@@ -121,6 +107,11 @@ function notifyEnrollmentCreated(
     content,
     metadata: { course: course.id },
   }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CREATED notification failed'))
+
+  void sendEnrollmentConfirmationEmail(payload, {
+    to: studentEmail,
+    courseTitle: course.title,
+  }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CONFIRMATION email failed'))
 }
 
 /**
@@ -175,9 +166,5 @@ export async function createStudentEnrollment({
 
   await createEnrollment(payload, { studentId: student.id, course })
 
-  notifyEnrollmentCreated(payload, { studentId: student.id, course })
-  void sendEnrollmentConfirmationEmail(payload, {
-    to: student.email,
-    courseTitle: course.title,
-  }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CONFIRMATION email failed'))
+  notifyEnrollmentCreated(payload, { studentId: student.id, studentEmail: student.email, course })
 }
