@@ -23,6 +23,7 @@ import { CourseRegistrationCTA } from '@/components/public/CourseRegistrationCTA
 import { LivePreviewListener } from '@/components/public/LivePreviewListener'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { getActiveEnrollmentStatus } from '@/services/student-enrollment'
+import { COURSE_TYPE_LABEL } from '@/components/public/course-type-label'
 import type { Course, CourseObjective, CoursePhase } from '@/payload-types'
 
 export async function generateStaticParams() {
@@ -255,7 +256,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                     <GraduationCap className="size-4" /> Hình thức:
                   </span>
                   <span className="text-foreground font-semibold">
-                    {isMoodle ? 'Moodle E-Learning' : 'Lớp học Offline'}
+                    {COURSE_TYPE_LABEL[course.courseType]}
                   </span>
                 </div>
 

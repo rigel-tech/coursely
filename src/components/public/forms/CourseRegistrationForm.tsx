@@ -10,6 +10,7 @@ import {
 } from '@/actions/student/create-enrollment'
 import { Button } from '@/components/public/ui/button'
 import { COURSE_TYPE_LABEL } from '@/components/public/course-type-label'
+import { FormField } from '@/components/public/forms/field'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
 import { Modal } from '@/components/public/ui/modal'
@@ -119,58 +120,42 @@ export function CourseRegistrationForm({
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={hasFullName ? undefined : 'registration-fullName'}>Họ và tên</Label>
+        <FormField
+          error={hasFullName ? undefined : errors.fullName?.message}
+          htmlFor="registration-fullName"
+          label="Họ và tên"
+        >
           {hasFullName ? (
             // `shouldUnregister` defaults to `false`, so `register('fullName')`'s
             // `defaultValues` entry still reaches `handleSubmit` without a control on the
             // page for it — no hidden input needed to carry it through.
             <p className="text-muted-foreground text-sm">{fullName}</p>
           ) : (
-            <>
-              <Input
-                id="registration-fullName"
-                aria-invalid={errors.fullName ? true : undefined}
-                aria-describedby={errors.fullName ? 'registration-fullName-error' : undefined}
-                {...register('fullName')}
-              />
-              {errors.fullName ? (
-                <p
-                  id="registration-fullName-error"
-                  role="alert"
-                  className="text-error-foreground text-xs font-medium"
-                >
-                  {errors.fullName.message}
-                </p>
-              ) : null}
-            </>
+            <Input
+              id="registration-fullName"
+              aria-invalid={errors.fullName ? true : undefined}
+              aria-describedby={errors.fullName ? 'registration-fullName-error' : undefined}
+              {...register('fullName')}
+            />
           )}
-        </div>
+        </FormField>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={hasValidPhone ? undefined : 'registration-phone'}>Số điện thoại</Label>
+        <FormField
+          error={hasValidPhone ? undefined : errors.phone?.message}
+          htmlFor="registration-phone"
+          label="Số điện thoại"
+        >
           {hasValidPhone ? (
             <p className="text-muted-foreground text-sm">{phone}</p>
           ) : (
-            <>
-              <Input
-                id="registration-phone"
-                aria-invalid={errors.phone ? true : undefined}
-                aria-describedby={errors.phone ? 'registration-phone-error' : undefined}
-                {...register('phone')}
-              />
-              {errors.phone ? (
-                <p
-                  id="registration-phone-error"
-                  role="alert"
-                  className="text-error-foreground text-xs font-medium"
-                >
-                  {errors.phone.message}
-                </p>
-              ) : null}
-            </>
+            <Input
+              id="registration-phone"
+              aria-invalid={errors.phone ? true : undefined}
+              aria-describedby={errors.phone ? 'registration-phone-error' : undefined}
+              {...register('phone')}
+            />
           )}
-        </div>
+        </FormField>
 
         {message ? (
           <p
