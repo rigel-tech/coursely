@@ -11,7 +11,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // `RegisterForm` (public/forms/) calls `useRouter()` — outside a real Next.js app router,
 // as this render is, that throws "invariant expected app router to be mounted".
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}))
 
 import { ComponentGallery } from '@/app/(frontend)/components/page.client'
 
