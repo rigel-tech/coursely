@@ -18,7 +18,7 @@ export async function up({ db, payload: _payload, req: _req }: MigrateUpArgs): P
 /**
  * Restoring `NOT NULL` fails the instant any row has `student_id IS NULL` — which is true
  * for every `ACCOUNT_CREATED` row from the moment this migration's `up()` ran, and for any
- * new one created since (`accountCreatedNotification` never sets a student). Checked
+ * new one created since (`createStudentRegisteredNotificationTemplate` never sets a student). Checked
  * explicitly rather than left to Postgres's own constraint-violation error, which names the
  * column, not the reason.
  */

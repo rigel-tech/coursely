@@ -1,5 +1,5 @@
 /** Copy for the `ACCOUNT_CREATED` notification — mirrors `src/email/templates/`'s shape. */
-export function accountCreatedNotification(
+export function createStudentRegisteredNotificationTemplate(
   fullName: string | null | undefined,
   email: string,
 ): { title: string; content: string } {

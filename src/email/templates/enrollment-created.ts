@@ -4,7 +4,7 @@ import type { EmailBody } from './verify-otp'
 const escapeHtml = (value: string): string =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-export function enrollmentCreatedEmail(courseTitle: string): EmailBody {
+export function createEnrollmentCreatedEmailTemplate(courseTitle: string): EmailBody {
   return {
     subject: 'Đăng ký khóa học thành công | Coursely',
     text: `Bạn đã đăng ký khóa học "${courseTitle}" thành công. Đơn đăng ký đang chờ trung tâm xác nhận.`,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { duplicateRegisterAttemptEmail } from '@/email/templates/duplicate-register-attempt'
-import { enrollmentCreatedEmail } from '@/email/templates/enrollment-created'
+import { createEnrollmentCreatedEmailTemplate } from '@/email/templates/enrollment-created'
 import { resetPasswordEmail } from '@/email/templates/reset-password'
 import { verifyOtpEmail } from '@/email/templates/verify-otp'
 import { getServerSideURL } from '@/utilities/getURL'
@@ -35,9 +35,11 @@ describe('resetPasswordEmail', () => {
   })
 })
 
-describe('enrollmentCreatedEmail', () => {
+describe('createEnrollmentCreatedEmailTemplate', () => {
   it('includes the course title in the confirmation email', () => {
-    const { subject, html, text } = enrollmentCreatedEmail('Giao tiếp cho người đi làm')
+    const { subject, html, text } = createEnrollmentCreatedEmailTemplate(
+      'Giao tiếp cho người đi làm',
+    )
 
     expect(subject.trim()).not.toBe('')
     expect(html).toContain('Giao tiếp cho người đi làm')
@@ -45,7 +47,7 @@ describe('enrollmentCreatedEmail', () => {
   })
 
   it('escapes a course title containing < and & so it cannot break the HTML markup', () => {
-    const { html } = enrollmentCreatedEmail('Toán <cao cấp> & Vật lý')
+    const { html } = createEnrollmentCreatedEmailTemplate('Toán <cao cấp> & Vật lý')
 
     expect(html).not.toContain('<cao cấp>')
     expect(html).toContain('&lt;cao cấp&gt;')
@@ -53,7 +55,7 @@ describe('enrollmentCreatedEmail', () => {
   })
 
   it('leaves the plain-text body with the title exactly as given, unescaped', () => {
-    const { text } = enrollmentCreatedEmail('Toán <cao cấp> & Vật lý')
+    const { text } = createEnrollmentCreatedEmailTemplate('Toán <cao cấp> & Vật lý')
 
     expect(text).toContain('Toán <cao cấp> & Vật lý')
   })

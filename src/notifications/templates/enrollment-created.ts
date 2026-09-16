@@ -1,5 +1,5 @@
 /** Copy for the `ENROLLMENT_CREATED` notification — mirrors `src/email/templates/`'s shape. */
-export function enrollmentCreatedNotification(courseTitle: string): {
+export function createStudentEnrolledNotificationTemplate(courseTitle: string): {
   title: string
   content: string
 } {
