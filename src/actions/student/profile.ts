@@ -61,12 +61,51 @@ export async function updateProfileAction(formData: FormData): Promise<ProfileSt
     }
   }
 
-  await updateStudentProfileWithAvatar({
-    studentId: student.id,
-    fullName,
-    phone,
-    avatarFile: avatar,
-  })
+  const payload = await getPayload({ config: configPromise })
+  const transactionID = (await payload.db.beginTransaction()) ?? undefined
+  const req: Partial<PayloadRequest> = { transactionID }
+  try {
+    let avatarMediaId: number | undefined
+    const oldAvatarId =
+      typeof student.avatar === 'object' && student.avatar !== null
+        ? student.avatar?.id
+        : student.avatar
+    if (avatarFile instanceof File && avatarFile.size > 0) {
+      const mediaDoc = await payload.create({
+        collection: 'media',
+        data: { alt: `Ảnh đại diện của ${fullName || 'học viên'}` },
+        file: {
+          data: Buffer.from(await avatarFile.arrayBuffer()),
+          mimetype: avatarFile.type,
+          name: avatarFile.name,
+          size: avatarFile.size,
+        },
+        overrideAccess: true,
+        req,
+      })
+      avatarMediaId = mediaDoc.id
+    }
+    await payload.update({
+      collection: 'students',
+      id: student.id,
+      data: { fullName, phone, ...(avatarMediaId ? { avatar: avatarMediaId } : {}) },
+      overrideAccess: true,
+      req,
+    })
+
+    if (avatarMediaId && oldAvatarId && oldAvatarId !== avatarMediaId) {
+      await payload.delete({
+        collection: 'media',
+        id: oldAvatarId,
+        overrideAccess: true,
+        req,
+      })
+    }
+    if (transactionID) await payload.db.commitTransaction(transactionID)
+  } catch (error) {
+    if (transactionID) await payload.db.rollbackTransaction(transactionID)
+    throw error
+  }
 
   revalidatePath('/tai-khoan')
 

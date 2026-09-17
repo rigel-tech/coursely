@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import React from 'react'
+import React, { Suspense } from 'react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/public/ui/card'
 import { LoginForm } from '../../../../components/public/forms/LoginForm'
@@ -19,7 +19,9 @@ export default function LoginPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <LoginForm />
+          <Suspense fallback={null}>
+            <LoginForm />
+          </Suspense>
         </CardContent>
       </Card>
     </main>
