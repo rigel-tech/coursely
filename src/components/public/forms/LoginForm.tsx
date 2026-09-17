@@ -96,12 +96,7 @@ export const LoginForm: React.FC = () => {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="login-password">Mật khẩu</Label>
-          <Link href="/quen-mat-khau" className="text-xs text-link hover:underline font-medium">
-            Quên mật khẩu?
-          </Link>
-        </div>
+        <Label htmlFor="login-password">Mật khẩu</Label>
         <Input
           id="login-password"
           type="password"
@@ -119,6 +114,11 @@ export const LoginForm: React.FC = () => {
             {errors.password.message}
           </p>
         )}
+      </div>
+      <div className="flex items-center justify-end">
+        <Link href="/quen-mat-khau" className="text-xs text-link hover:underline font-medium">
+          Quên mật khẩu?
+        </Link>
       </div>
 
       {displayErrorMessage ? (
