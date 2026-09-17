@@ -29,21 +29,41 @@ const FORM_FIELDS = [
   {
     blockType: 'select',
     name: 'course',
-    label: 'Khóa học quan tâm',
+    label: 'Khóa học / Chủ đề quan tâm',
     defaultValue: '',
     width: 50,
     required: false,
     options: [
-      { label: 'Tiếng Anh Giao Tiếp Doanh Nghiệp', value: 'Tiếng Anh Giao Tiếp Doanh Nghiệp' },
-      { label: 'Luyện thi IELTS Cấp Tốc', value: 'Luyện thi IELTS Cấp Tốc' },
-      { label: 'Kỹ Năng Thuyết Trình & Phỏng Vấn', value: 'Kỹ Năng Thuyết Trình & Phỏng Vấn' },
-      { label: 'Tiếng Anh Thương Mại & Đàm Phán', value: 'Tiếng Anh Thương Mại & Đàm Phán' },
+      {
+        label: 'Chuyển Đổi Số Toàn Diện Cho Doanh Nghiệp',
+        value: 'Chuyển Đổi Số Toàn Diện Cho Doanh Nghiệp',
+      },
+      {
+        label: 'Ứng Dụng GenAI & ChatGPT Tối Ưu Hiệu Suất',
+        value: 'Ứng Dụng GenAI & ChatGPT Tối Ưu Hiệu Suất',
+      },
+      {
+        label: 'Tự Động Hóa Quy Trình Với No-Code / Zapier',
+        value: 'Tự Động Hóa Quy Trình Với No-Code / Zapier',
+      },
+      {
+        label: 'Phân Tích Dữ Liệu Kinh Doanh (Power BI & SQL)',
+        value: 'Phân Tích Dữ Liệu Kinh Doanh (Power BI & SQL)',
+      },
+      {
+        label: 'Quản Trị Dự Án Số & Tư Duy Agile/Scrum',
+        value: 'Quản Trị Dự Án Số & Tư Duy Agile/Scrum',
+      },
+      {
+        label: 'Bảo Mật Thông Tin & Quản Trị Rủi Ro Dữ Liệu',
+        value: 'Bảo Mật Thông Tin & Quản Trị Rủi Ro Dữ Liệu',
+      },
     ],
   },
   {
     blockType: 'select',
     name: 'time',
-    label: 'Thời gian học mong muốn',
+    label: 'Hình thức & Thời gian học mong muốn',
     defaultValue: '',
     width: 50,
     required: false,
@@ -51,13 +71,17 @@ const FORM_FIELDS = [
       { label: 'Tối 2-4-6 (19h30–21h00)', value: 'Tối 2-4-6 (19h30–21h00)' },
       { label: 'Tối 3-5-7 (19h30–21h00)', value: 'Tối 3-5-7 (19h30–21h00)' },
       { label: 'Cuối tuần Thứ 7 & CN', value: 'Cuối tuần Thứ 7 & CN' },
+      {
+        label: 'Đào tạo In-house theo yêu cầu doanh nghiệp',
+        value: 'Đào tạo In-house theo yêu cầu doanh nghiệp',
+      },
       { label: 'Linh hoạt theo lịch cá nhân', value: 'Linh hoạt theo lịch cá nhân' },
     ],
   },
   {
     blockType: 'textarea',
     name: 'message',
-    label: 'Mục tiêu học tập của bạn',
+    label: 'Nhu cầu chuyển đổi số hoặc mục tiêu đào tạo của bạn',
     defaultValue: '',
     width: 100,
     required: false,
@@ -65,7 +89,7 @@ const FORM_FIELDS = [
   {
     blockType: 'checkbox',
     name: 'agreement',
-    label: 'Tôi đồng ý để SpeakEdge liên hệ tư vấn theo Chính sách bảo mật.',
+    label: 'Tôi đồng ý để Coursely liên hệ tư vấn theo Chính sách bảo mật.',
     width: 100,
     required: false,
   },
@@ -74,7 +98,7 @@ const FORM_FIELDS = [
 async function getOrCreateConsultationForm(payload: Payload): Promise<string | number> {
   const existingForms = await payload.find({
     collection: 'forms',
-    where: { title: { equals: 'Đăng ký tư vấn miễn phí' } },
+    where: { title: { equals: 'Đăng ký tư vấn chuyển đổi số' } },
     limit: 1,
   })
 
@@ -86,14 +110,14 @@ async function getOrCreateConsultationForm(payload: Payload): Promise<string | n
   const confirmationMessage = lexicalDoc([
     heading('Đăng ký tư vấn thành công!', 'h3'),
     paragraph(
-      'Cảm ơn bạn đã quan tâm. Chuyên viên học vụ của SpeakEdge sẽ liên hệ lại với bạn trong vòng 24 giờ làm việc.',
+      'Cảm ơn bạn đã quan tâm. Chuyên viên tư vấn giải pháp của Coursely sẽ liên hệ lại với bạn trong vòng 24 giờ làm việc.',
     ),
   ])
 
   const form = await payload.create({
     collection: 'forms',
     data: {
-      title: 'Đăng ký tư vấn miễn phí',
+      title: 'Đăng ký tư vấn chuyển đổi số',
       fields: FORM_FIELDS as any,
       submitButtonLabel: 'Gửi yêu cầu tư vấn ngay',
       confirmationType: 'message',
@@ -120,23 +144,23 @@ export async function seedHome(payload: Payload): Promise<number | undefined> {
   }
 
   const heroRichText = lexicalDoc([
-    heading('Nâng tầm sự nghiệp cùng SpeakEdge — Anh ngữ công sở chuẩn thực chiến', 'h1'),
+    heading('Đột phá năng suất & Chuyển đổi số toàn diện cùng Coursely', 'h1'),
     paragraph(
-      'Đột phá kỹ năng giao tiếp tiếng Anh trong môi trường làm việc quốc tế. Học cùng chuyên gia với lộ trình tinh gọn, ứng dụng ngay vào công việc thực tế.',
+      'Nâng tầm năng lực quản trị, tự động hóa quy trình và làm chủ công nghệ GenAI & Phân tích dữ liệu thực chiến cùng các chuyên gia hàng đầu.',
     ),
   ])
 
   const ctaRichText = lexicalDoc([
-    heading('Sẵn sàng bứt phá sự nghiệp ngay hôm nay?', 'h3'),
+    heading('Sẵn sàng bứt phá chuyển đổi số ngay hôm nay?', 'h3'),
     paragraph(
-      'Khám phá ngay các khóa học được thiết kế chuyên biệt cho người đi làm và doanh nghiệp.',
+      'Khám phá ngay các khóa học chuyên sâu được thiết kế tối ưu cho cá nhân và doanh nghiệp trong kỷ nguyên số.',
     ),
   ])
 
   const heroImageId = await getOrCreateMedia(
     payload,
     'public/images/hero-home.jpg',
-    'SpeakEdge Business English Training',
+    'Coursely Digital Transformation Academy',
   )
 
   const ctaLink = {
@@ -151,15 +175,15 @@ export async function seedHome(payload: Payload): Promise<number | undefined> {
   const consultationBlock = {
     blockType: 'consultation',
     badge: 'ĐĂNG KÝ TƯ VẤN',
-    title: 'Nhận lộ trình học riêng trong 24 giờ',
+    title: 'Nhận lộ trình chuyển đổi số & đào tạo trong 24 giờ',
     description:
-      'Để lại thông tin, chuyên viên học vụ sẽ gọi lại, kiểm tra trình độ nói miễn phí 15 phút và đề xuất khóa học phù hợp.',
+      'Để lại thông tin, chuyên viên sẽ liên hệ khảo sát nhu cầu, đánh giá mức độ sẵn sàng số hóa và đề xuất chương trình đào tạo tối ưu.',
     steps: [
-      { text: 'Kiểm tra trình độ nói miễn phí với giảng viên' },
-      { text: 'Nhận lộ trình & lịch lớp phù hợp giờ làm của bạn' },
-      { text: 'Học thử 1 buổi trước khi quyết định đăng ký' },
+      { text: 'Khảo sát & đánh giá mức độ sẵn sàng chuyển đổi số' },
+      { text: 'Thiết kế lộ trình đào tạo thực chiến theo nghiệp vụ thực tế' },
+      { text: 'Tham gia workshop trải nghiệm thực hành trước khi triển khai chính thức' },
     ],
-    note: 'Trung tâm không thu học phí trực tuyến. Học phí được xác nhận và thanh toán tại quầy học vụ sau khi bạn chốt lớp.',
+    note: 'Học phí và ưu đãi đào tạo doanh nghiệp được tư vấn và xác nhận chi tiết sau khi thống nhất lộ trình.',
     form: formId,
     hotline: '1900 6789',
   }
@@ -196,9 +220,9 @@ export async function seedHome(payload: Payload): Promise<number | undefined> {
         },
       ],
       meta: {
-        title: 'SpeakEdge — Nền tảng Đào tạo Tiếng Anh Công Sở & Doanh Nghiệp',
+        title: 'Coursely — Nền tảng Đào tạo Số hóa & Chuyển đổi số Doanh nghiệp',
         description:
-          'Học tiếng Anh công sở thực chiến, nâng tầm kỹ năng giao tiếp, thuyết trình và đàm phán quốc tế.',
+          'Đào tạo chuyển đổi số, GenAI, tự động hóa quy trình No-Code và phân tích dữ liệu kinh doanh thực chiến.',
       },
     } as any,
   })

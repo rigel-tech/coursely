@@ -2,86 +2,81 @@ import type { Payload } from 'payload'
 import { getOrCreateMedia } from './lexical'
 
 const CATEGORIES = [
-  { title: 'Tiếng Anh Giao Tiếp', slug: 'tieng-anh-giao-tiep' },
-  { title: 'Luyện Thi Chứng Chỉ', slug: 'luyen-thi-chung-chi' },
-  { title: 'Tiếng Anh Chuyên Ngành', slug: 'tieng-anh-chuyen-nganh' },
+  { title: 'Chuyển Đổi Số & Chiến Lược', slug: 'chuyen-doi-so-chien-luoc' },
+  { title: 'Trí Tuệ Nhân Tạo (AI) & Tự Động Hóa', slug: 'ai-tu-dong-hoa' },
+  { title: 'Phân Tích Dữ Liệu & Ra Quyết Định', slug: 'phan-tich-du-lieu' },
 ]
 
 const COURSES = [
   {
-    title: 'Tiếng Anh Giao Tiếp Doanh Nghiệp (Business English)',
-    slug: 'tieng-anh-giao-tiep-doanh-nghiep',
+    title: 'Chuyển Đổi Số Toàn Diện Cho Doanh Nghiệp (Digital Transformation Strategy)',
+    slug: 'chuyen-doi-so-toan-dien-doanh-nghiep',
     shortDescription:
-      'Lộ trình thực chiến giúp bạn tự tin họp hành, viết email chuyên nghiệp và đàm phán với đối tác quốc tế.',
+      'Lộ trình xây dựng chiến lược chuyển đổi số, tối ưu hóa quy trình vận hành và xây dựng văn hóa số thích ứng nhanh trong doanh nghiệp.',
     duration: '8 tuần (24 buổi)',
     courseType: 'OFFLINE',
-    catSlug: 'tieng-anh-giao-tiep',
-    imagePath: 'public/images/course-business-english.jpg',
-    tags: [{ tag: 'Giao tiếp' }, { tag: 'Doanh nghiệp' }, { tag: 'Thực chiến' }],
+    catSlug: 'chuyen-doi-so-chien-luoc',
+    imagePath: 'public/images/course-digital-transformation.jpg',
+    tags: [{ tag: 'Chiến lược số' }, { tag: 'Chuyển đổi số' }, { tag: 'Doanh nghiệp' }],
   },
   {
-    title: 'Luyện Thi IELTS Cấp Tốc Cho Người Đi Làm',
-    slug: 'luyen-thi-ielts-cap-toc',
+    title: 'Ứng Dụng GenAI & ChatGPT Tối Ưu Hiệu Suất Làm Việc',
+    slug: 'ung-dung-genai-chatgpt-hieu-suat',
     shortDescription:
-      'Phương pháp học tập trọng tâm, tối ưu hóa thời gian với mục tiêu nâng từ 1.0–1.5 band score trong 3 tháng.',
-    duration: '12 tuần (36 buổi)',
-    courseType: 'OFFLINE',
-    catSlug: 'luyen-thi-chung-chi',
-    imagePath: 'public/images/course-ielts.jpg',
-    tags: [{ tag: 'IELTS' }, { tag: 'Cấp tốc' }, { tag: 'Band 6.5+' }],
-  },
-  {
-    title: 'Kỹ Năng Thuyết Trình & Phỏng Vấn Tiếng Anh',
-    slug: 'ky-nang-thuyet-trinh-phong-van',
-    shortDescription:
-      'Trang bị kỹ năng trả lời phỏng vấn xuất sắc vào các tập đoàn đa quốc gia và làm chủ sân khấu thuyết trình.',
+      'Làm chủ các công cụ AI thế hệ mới (ChatGPT, Claude, Midjourney) để tự động hóa soạn thảo, phân tích tài liệu và bứt phá năng suất cá nhân & đội ngũ.',
     duration: '6 tuần (18 buổi)',
     courseType: 'OFFLINE',
-    catSlug: 'tieng-anh-chuyen-nganh',
-    imagePath: 'public/images/course-presentation.jpg',
-    tags: [{ tag: 'Thuyết trình' }, { tag: 'Phỏng vấn' }, { tag: 'Soft skills' }],
+    catSlug: 'ai-tu-dong-hoa',
+    imagePath: 'public/images/course-genai.jpg',
+    tags: [{ tag: 'GenAI' }, { tag: 'ChatGPT' }, { tag: 'Năng suất' }],
   },
   {
-    title: 'Tiếng Anh Thương Mại & Đàm Phán Hợp Đồng',
-    slug: 'tieng-anh-thuong-mai-dam-phan',
+    title: 'Tự Động Hóa Quy Trình Nghiệp Vụ Với No-Code / Zapier / Make',
+    slug: 'tu-dong-hoa-quy-trinh-no-code',
     shortDescription:
-      'Nắm vững thuật ngữ tài chính–thương mại quốc tế, kỹ thuật thương lượng và soạn thảo hợp đồng chuẩn mực.',
+      'Thiết kế và triển khai các luồng tự động hóa tích hợp CRM, ERP, Marketing và Email mà không cần viết mã lập trình phức tạp.',
+    duration: '8 tuần (24 buổi)',
+    courseType: 'OFFLINE',
+    catSlug: 'ai-tu-dong-hoa',
+    imagePath: 'public/images/course-automation.jpg',
+    tags: [{ tag: 'Tự động hóa' }, { tag: 'No-Code' }, { tag: 'Zapier' }],
+  },
+  {
+    title: 'Phân Tích Dữ Liệu Kinh Doanh Thực Chiến Với Power BI & SQL',
+    slug: 'phan-tich-du-lieu-power-bi-sql',
+    shortDescription:
+      'Khai phá sức mạnh dữ liệu kinh doanh, xây dựng Dashboard quản trị trực quan và đưa ra quyết định chiến lược dựa trên dữ liệu (Data-driven).',
     duration: '10 tuần (30 buổi)',
     courseType: 'OFFLINE',
-    catSlug: 'tieng-anh-chuyen-nganh',
-    imagePath: 'public/images/course-negotiation.jpg',
-    tags: [{ tag: 'Thương mại' }, { tag: 'Đàm phán' }, { tag: 'Hợp đồng' }],
+    catSlug: 'phan-tich-du-lieu',
+    imagePath: 'public/images/course-data-analytics.jpg',
+    tags: [{ tag: 'Power BI' }, { tag: 'SQL' }, { tag: 'Data Analytics' }],
   },
   {
-    title: 'Luyện Thi TOEIC 750+ Tinh Gọn Cho Người Bận Rộn',
-    slug: 'luyện-thi-toeic-750-tinh-gon',
+    title: 'Quản Trị Dự Án Số & Tư Duy Agile/Scrum Cho Nhà Quản Lý',
+    slug: 'quan-tri-du-an-so-agile-scrum',
     shortDescription:
-      'Chiến thuật làm bài độc quyền, luyện đề chuyên sâu giúp đạt mục tiêu 750+ TOEIC nhanh chóng.',
-    duration: '8 tuần (24 buổi)',
-    courseType: 'OFFLINE',
-    catSlug: 'luyen-thi-chung-chi',
-    imagePath: 'public/images/course-toeic.jpg',
-    tags: [{ tag: 'TOEIC' }, { tag: '750+' }, { tag: 'Cấp tốc' }],
-  },
-  {
-    title: 'Tiếng Anh Phản Xạ & Viết Email Chuẩn Quốc Tế',
-    slug: 'tieng-anh-phan-xa-viet-email',
-    shortDescription:
-      'Xóa bỏ thói quen dịch nhẩm, làm chủ kỹ thuật phản xạ tự nhiên và soạn thảo email công việc chuyên nghiệp.',
+      'Nắm vững phương pháp quản trị dự án công nghệ hiện đại, nâng cao tính linh hoạt của đội ngũ và tăng tốc độ đưa sản phẩm/dịch vụ ra thị trường.',
     duration: '6 tuần (18 buổi)',
     courseType: 'OFFLINE',
-    catSlug: 'tieng-anh-giao-tiep',
-    imagePath: 'public/images/course-email-reflex.jpg',
-    tags: [{ tag: 'Phản xạ' }, { tag: 'Email' }, { tag: 'Giao tiếp' }],
+    catSlug: 'chuyen-doi-so-chien-luoc',
+    imagePath: 'public/images/course-agile.jpg',
+    tags: [{ tag: 'Agile' }, { tag: 'Scrum' }, { tag: 'Quản trị dự án' }],
+  },
+  {
+    title: 'Bảo Mật Thông Tin & Quản Trị Rủi Ro Dữ Liệu Doanh Nghiệp',
+    slug: 'bao-mat-thong-tin-quan-tri-rui-ro',
+    shortDescription:
+      'Nhận diện lỗ hổng an ninh thông tin, phòng chống tấn công mạng và thiết lập quy trình bảo vệ dữ liệu chuẩn an toàn quốc tế.',
+    duration: '6 tuần (18 buổi)',
+    courseType: 'OFFLINE',
+    catSlug: 'phan-tich-du-lieu',
+    imagePath: 'public/images/course-cybersecurity.jpg',
+    tags: [{ tag: 'Bảo mật' }, { tag: 'An ninh mạng' }, { tag: 'Quản trị rủi ro' }],
   },
 ]
 
 export async function seedCourses(payload: Payload) {
-  const existingCourses = await payload.find({ collection: 'courses', limit: 1 })
-  if (existingCourses.totalDocs >= 6) {
-    return payload.logger.info(`Đã có ${existingCourses.totalDocs} khóa học.`)
-  }
-
   const catIds: Record<string, string | number> = {}
   await Promise.all(
     CATEGORIES.map(async (cat) => {
