@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import Link from 'next/link'
 
 import {
   createEnrollmentAction,
@@ -18,7 +19,7 @@ import {
 } from '@/lib/validation/create-enrollment-schema'
 import type { Course, Student } from '@/payload-types'
 
-export type CourseRegistrationCourse = Pick<Course, 'id' | 'title'>
+export type CourseRegistrationCourse = Pick<Course, 'id' | 'title' | 'slug'>
 
 export function CourseRegistrationForm({
   course,
@@ -37,9 +38,23 @@ export function CourseRegistrationForm({
     handleSubmit,
     register,
   } = useForm<Required<CreateEnrollmentInput>>({
-    resolver: profile ? zodResolver(createEnrollmentSchema) : undefined,
+    resolver: zodResolver(createEnrollmentSchema),
     defaultValues: { courseId: course.id, fullName: fullName ?? '', phone: phone ?? '' },
   })
+
+  if (!profile) {
+    const callbackUrl = `/khoa-hoc/${course.slug}`
+    return (
+      <div className="mt-6 flex flex-col gap-4">
+        <p className="text-muted-foreground text-sm">Vui lòng đăng nhập để đăng ký khóa học.</p>
+        <Button asChild>
+          <Link href={`/dang-nhap?callbackUrl=${encodeURIComponent(callbackUrl)}`}>
+            Đăng nhập để đăng ký
+          </Link>
+        </Button>
+      </div>
+    )
+  }
 
   const onSubmit = async (values: Required<CreateEnrollmentInput>) => {
     const result = await createEnrollmentAction(values).catch((): CreateEnrollmentState => ({

@@ -10,7 +10,7 @@ vi.mock('@/actions/student/create-enrollment', () => ({
 import { createEnrollmentAction } from '@/actions/student/create-enrollment'
 
 const fetchSpy = vi.spyOn(global, 'fetch')
-const baseCourse = { id: 12, title: 'Frontend' }
+const baseCourse = { id: 12, title: 'Frontend', slug: 'frontend' }
 
 beforeEach(() => {
   vi.mocked(createEnrollmentAction).mockReset()
@@ -22,11 +22,23 @@ afterEach(() => {
 })
 
 describe('CourseRegistrationCTA', () => {
-  it('renders the registration form directly — the gate is the server action, not a client check', () => {
-    render(<CourseRegistrationCTA course={baseCourse} />)
+  it('renders the registration form directly for a signed-in profile, with no client fetch', () => {
+    render(
+      <CourseRegistrationCTA
+        course={baseCourse}
+        profile={{ fullName: 'Nguyễn Văn A', phone: '0987654321' }}
+      />,
+    )
 
     expect(screen.getByRole('button', { name: 'Gửi đăng ký' })).toBeTruthy()
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('shows the sign-in call to action, not the registration form, with no profile at all', () => {
+    render(<CourseRegistrationCTA course={baseCourse} />)
+
+    expect(screen.getByRole('link', { name: 'Đăng nhập để đăng ký' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Gửi đăng ký' })).toBeNull()
   })
 
   it('shows the existing enrollment status instead of the registration form', () => {

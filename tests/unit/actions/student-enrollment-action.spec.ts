@@ -22,10 +22,9 @@ const redirectTo = (result: CreateEnrollmentState) =>
 
 // This dependency reaches for the Payload config, which a unit test has no business
 // booting. Mocking it leaves exactly what this action is: the decision about who may
-// enrol and where an unauthenticated visitor is sent.
+// enrol.
 vi.mock('@/services/student-enrollment', () => ({
   createStudentEnrollment: vi.fn(),
-  findCourseSlug: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/session-student', () => ({
@@ -38,7 +37,7 @@ vi.mock('payload', async (importOriginal) => ({
 }))
 
 import { getSessionStudent } from '@/lib/auth/session-student'
-import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
+import { createStudentEnrollment } from '@/services/student-enrollment'
 
 const updateStudentProfile = vi.fn()
 
@@ -58,34 +57,30 @@ beforeEach(() => {
 })
 
 describe('createEnrollmentAction — the sign-in gate', () => {
-  it('sends a signed-out visitor to sign-in and enrols nobody', async () => {
+  it('refuses a signed-out visitor and enrols nobody', async () => {
     vi.mocked(getSessionStudent).mockResolvedValue(null)
-    vi.mocked(findCourseSlug).mockResolvedValue('frontend')
 
-    const result = await createEnrollmentAction({ courseId: 12, fullName: '', phone: '' })
+    const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
 
-    expect(redirectTo(result)).toBe('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend')
+    expect(result).toEqual({
+      status: 'error',
+      message: 'Không tìm thấy học sinh trong phiên. Người dùng phải đăng nhập để đăng ký.',
+    })
+    expect(redirectTo(result)).toBeUndefined()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 
-  it('builds the return path from the course id, never from the caller', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(null)
-    vi.mocked(findCourseSlug).mockResolvedValue('frontend')
-
-    await createEnrollmentAction({ courseId: 12, fullName: '', phone: '' })
-
-    expect(findCourseSlug).toHaveBeenCalledWith(12)
-  })
-
-  it('never reaches the profile check for a signed-out visitor with no profile fields', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(null)
-    vi.mocked(findCourseSlug).mockResolvedValue('frontend')
-
-    // Blank fullName/phone — a signed-out visitor's form has no profile to send — must not
-    // be misread as "profile incomplete".
+  it('rejects blank profile fields before ever checking who is signed in', async () => {
+    // The client (CourseRegistrationForm) never sends this — it redirects to sign-in
+    // itself when it has no profile. This covers a caller that skips the UI.
     const result = await createEnrollmentAction({ courseId: 12, fullName: '', phone: '' })
 
-    expect(redirectTo(result)).toBeDefined()
+    expect(result).toEqual({
+      status: 'error',
+      message:
+        'Vui lòng nhập họ và tên. Vui lòng nhập số điện thoại. Số điện thoại không hợp lệ (10 chữ số, ví dụ 0912345678)',
+    })
+    expect(getSessionStudent).not.toHaveBeenCalled()
     expect(updateStudentProfile).not.toHaveBeenCalled()
   })
 })

@@ -42,7 +42,7 @@ export function CourseRegistrationCTA({
       ) : (
         <CourseRegistrationForm
           course={course}
-          profile={profile?.email ? profile : undefined}
+          profile={profile}
           onSuccess={() => setStatus('NEW')}
         />
       )}

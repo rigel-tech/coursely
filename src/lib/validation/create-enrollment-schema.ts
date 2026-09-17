@@ -1,14 +1,6 @@
 import { z } from 'zod'
 import { VIETNAM_PHONE_REGEX } from './profile-schema'
 
-/**
- * The Server Action's parameters are data sent by the client, not a value this module
- * constructed — `fullName`/`phone` are optional (a signed-out visitor's form has no
- * profile to send, and must still reach the sign-in redirect rather than a "profile
- * incomplete" refusal, specs/007-student-enrollment research.md Decision 5), but
- * `courseId` still needs its own runtime check the same way: nothing stops a caller from
- * sending a `courseId` that is not a number at all.
- */
 const PHONE_INVALID_MESSAGE = 'Số điện thoại không hợp lệ (10 chữ số, ví dụ 0912345678)'
 
 export const createEnrollmentSchema = z.object({

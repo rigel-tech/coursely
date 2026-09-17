@@ -2,7 +2,7 @@
 
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
-import { createStudentEnrollment, findCourseSlug } from '@/services/student-enrollment'
+import { createStudentEnrollment } from '@/services/student-enrollment'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import {
   CourseNotFound,
@@ -28,41 +28,37 @@ const STANDING_REFUSAL: Record<Exclude<Student['status'], 'ACTIVE'>, string> = {
 export async function createEnrollmentAction(
   input: CreateEnrollmentInput,
 ): Promise<CreateEnrollmentState> {
-  // A malformed course id is rejected before any lookup — it needs no session to know it's
-  // wrong. fullName/phone are validated only once a session is confirmed, below: a
-  // signed-out visitor's blank profile fields must still reach the sign-in redirect
-  // instead of this schema's "required" errors.
-  const courseId = createEnrollmentSchema.shape.courseId.safeParse(input.courseId)
-  if (!courseId.success) {
-    const message = courseId.error.issues.map((issue) => issue.message).join(' ')
-    return { status: 'error', message }
-  }
-
-  const student = await getSessionStudent()
-  if (!student) return requireLogin(courseId.data)
-
   const parsed = createEnrollmentSchema.safeParse(input)
   if (!parsed.success) {
-    const message = parsed.error.issues.map((issue) => issue.message).join(' ')
-    return { status: 'error', message }
+    const error = parsed.error.issues.map((issue) => issue.message).join(' ')
+    return { status: 'error', message: error }
+  }
+
+  const { courseId, fullName, phone } = parsed.data
+  const student = await getSessionStudent()
+  if (!student) {
+    return {
+      status: 'error',
+      message: 'Không tìm thấy học sinh trong phiên. Người dùng phải đăng nhập để đăng ký.',
+    }
   }
 
   if (student.status !== 'ACTIVE') {
     return { status: 'error', message: STANDING_REFUSAL[student.status] }
   }
 
-  if (parsed.data.fullName !== student.fullName || parsed.data.phone !== student.phone) {
+  if (fullName !== student.fullName || phone !== student.phone) {
     const payload = await getPayload({ config: configPromise })
     await payload.update({
       collection: 'students',
       id: student.id,
-      data: { fullName: parsed.data.fullName, phone: parsed.data.phone },
+      data: { fullName, phone },
       overrideAccess: true,
     })
   }
 
   try {
-    await createStudentEnrollment({ courseId: parsed.data.courseId, student })
+    await createStudentEnrollment({ courseId, student })
   } catch (error) {
     if (
       error instanceof EnrollmentAlreadyExists ||
@@ -76,15 +72,4 @@ export async function createEnrollmentAction(
   }
 
   return { status: 'success', message: 'Đăng ký khóa học thành công.' }
-}
-
-async function requireLogin(courseId: number): Promise<CreateEnrollmentState> {
-  const slug = await findCourseSlug(courseId)
-  const callbackUrl = slug ? `/khoa-hoc/${slug}` : '/khoa-hoc'
-
-  return {
-    status: 'error',
-    message: 'Vui lòng đăng nhập để đăng ký khóa học.',
-    redirectTo: `/dang-nhap?callbackUrl=${encodeURIComponent(callbackUrl)}`,
-  }
 }

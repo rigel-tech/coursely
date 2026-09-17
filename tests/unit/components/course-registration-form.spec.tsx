@@ -16,7 +16,7 @@ const submit = () => fireEvent.click(screen.getByRole('button', { name: 'Gửi �
 const completeProfile = { fullName: 'Nguyễn Văn A', phone: '0987654321' }
 
 /** The course shape most tests here render with. */
-const baseCourse = { id: 12, title: 'Frontend' }
+const baseCourse = { id: 12, title: 'Frontend', slug: 'frontend' }
 
 beforeEach(() => {
   vi.mocked(createEnrollmentAction).mockReset()
@@ -161,23 +161,20 @@ describe('CourseRegistrationForm — user info is always editable (item 2)', () 
 })
 
 describe('CourseRegistrationForm — no profile at all (signed-out visitor)', () => {
-  it('does not block submission client-side, and reaches the sign-in redirect', async () => {
-    vi.mocked(createEnrollmentAction).mockResolvedValue({
-      status: 'error',
-      message: 'Vui lòng đăng nhập để đăng ký khóa học.',
-      redirectTo: '/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend',
-    })
+  it('shows a sign-in call to action instead of the profile inputs, and never calls the action', () => {
     render(<CourseRegistrationForm course={baseCourse} />)
 
-    submit()
+    expect(screen.queryByLabelText('Họ và tên')).toBeNull()
+    expect(screen.queryByLabelText('Số điện thoại')).toBeNull()
+    expect(createEnrollmentAction).not.toHaveBeenCalled()
+  })
 
-    await waitFor(() =>
-      expect(createEnrollmentAction).toHaveBeenCalledWith({
-        courseId: 12,
-        fullName: '',
-        phone: '',
-      }),
+  it('links straight to sign-in with a callback built from the course slug, not the server', () => {
+    render(<CourseRegistrationForm course={baseCourse} />)
+
+    const link = screen.getByRole('link', { name: 'Đăng nhập để đăng ký' })
+    expect(new URL(link.getAttribute('href')!, 'http://localhost').search).toBe(
+      '?callbackUrl=%2Fkhoa-hoc%2Ffrontend',
     )
-    expect(assign).toHaveBeenCalledWith('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend')
   })
 })

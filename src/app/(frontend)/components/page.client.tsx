@@ -524,7 +524,13 @@ const READY_FORMS: Entry[] = [
     note: 'Form đăng ký khóa học, nhận dữ liệu khóa học động qua react-hook-form.',
     preview: (
       <div className="max-w-sm">
-        <CourseRegistrationForm course={{ id: 1, title: 'Giao tiếp cho người đi làm' }} />
+        <CourseRegistrationForm
+          course={{
+            id: 1,
+            title: 'Giao tiếp cho người đi làm',
+            slug: 'giao-tiep-cho-nguoi-di-lam',
+          }}
+        />
       </div>
     ),
   },
