@@ -6,7 +6,10 @@ import configPromise from '@payload-config'
 let payload: Payload
 let staffUserId: number
 let studentId: number
+let studentOtherId: number
 let mediaId: number
+let courseId: number
+let enrollmentId: number
 const madePayments: number[] = []
 const madeStaff: number[] = []
 const madeStudents: number[] = []
@@ -59,6 +62,18 @@ beforeAll(async () => {
   studentId = student.id as number
   madeStudents.push(studentId)
 
+  const studentOther = await payload.create({
+    collection: 'students',
+    data: {
+      email: uniqueEmail('pay-student-other'),
+      password: 'Secret123',
+      status: 'ACTIVE',
+      fullName: 'Trần Thị B',
+    },
+  })
+  studentOtherId = studentOther.id as number
+  madeStudents.push(studentOtherId)
+
   const media = await payload.create({
     collection: 'media',
     data: { alt: 'Ảnh bằng chứng thanh toán' },
@@ -71,12 +86,26 @@ beforeAll(async () => {
   })
   mediaId = media.id as number
   madeMedia.push(mediaId)
+
+  const course = await payload.create({
+    collection: 'courses',
+    data: { title: 'Course for payments int test', courseType: 'OFFLINE' },
+  } as Parameters<Payload['create']>[0])
+  courseId = course.id as number
+
+  const enrollment = await payload.create({
+    collection: 'enrollments',
+    data: { student: studentId, course: courseId },
+  } as Parameters<Payload['create']>[0])
+  enrollmentId = enrollment.id as number
 })
 
 afterAll(async () => {
   for (const id of madePayments.splice(0)) {
     await payload.delete({ collection: 'payments', id }).catch(() => {})
   }
+  await payload.delete({ collection: 'enrollments', id: enrollmentId }).catch(() => {})
+  await payload.delete({ collection: 'courses', id: courseId }).catch(() => {})
   for (const id of madeStaff) await payload.delete({ collection: 'users', id }).catch(() => {})
   for (const id of madeStudents)
     await payload.delete({ collection: 'students', id }).catch(() => {})
@@ -84,7 +113,7 @@ afterAll(async () => {
 })
 
 const baseData = (): LooseData => ({
-  enrollmentId: 1,
+  enrollmentId,
   studentId,
   amount: 500000,
   paymentMethod: 'CASH',
@@ -101,8 +130,8 @@ describe('payments collection — required fields', () => {
     expect(doc.updatedAt).toBeTruthy()
   })
 
-  it('rejects a create missing any required field', async () => {
-    for (const key of ['enrollmentId', 'studentId', 'amount', 'paymentMethod']) {
+  it('rejects a create missing any required field that is not auto-derived', async () => {
+    for (const key of ['enrollmentId', 'amount', 'paymentMethod']) {
       const data = baseData()
       delete data[key]
       await expect(createPayment(data)).rejects.toThrow()
@@ -162,8 +191,41 @@ describe('payments collection — studentId relationship', () => {
   })
 })
 
+describe('payments collection — studentId is auto-set from the enrollment, read-only', () => {
+  it('auto-fills studentId to the enrollment’s own student when omitted', async () => {
+    const data = baseData()
+    delete data.studentId
+    const doc = await createPayment(data)
+    madePayments.push(doc.id)
+    expect(relId(doc.studentId)).toBe(studentId)
+  })
+
+  it('overrides an explicitly supplied studentId that does not match the enrollment', async () => {
+    const doc = await createPayment({ ...baseData(), studentId: studentOtherId })
+    madePayments.push(doc.id)
+    expect(relId(doc.studentId)).toBe(studentId)
+    expect(relId(doc.studentId)).not.toBe(studentOtherId)
+  })
+})
+
+describe('payments collection — enrollmentId relationship', () => {
+  it('creates a payment whose enrollmentId resolves to the real enrollment', async () => {
+    const doc = await createPayment(baseData())
+    madePayments.push(doc.id)
+    expect(relId(doc.enrollmentId)).toBe(enrollmentId)
+
+    const populated = await payload.findByID({ collection: 'payments', id: doc.id, depth: 1 })
+    const populatedEnrollment = populated.enrollmentId as unknown as { id: number }
+    expect(populatedEnrollment.id).toBe(enrollmentId)
+  })
+
+  it('rejects an enrollmentId that does not reference a real enrollment', async () => {
+    await expect(createPayment({ ...baseData(), enrollmentId: 999999999 })).rejects.toThrow()
+  })
+})
+
 describe('payments collection — admin list resolves relations at depth 0', () => {
-  it('still returns studentId and userId as populated objects when fetched at depth: 0', async () => {
+  it('still returns studentId, userId, and enrollmentId as populated objects when fetched at depth: 0', async () => {
     const staff = await payload.findByID({ collection: 'users', id: staffUserId })
     const doc = await createPaymentAs(staff, baseData())
     madePayments.push(doc.id)
@@ -171,10 +233,12 @@ describe('payments collection — admin list resolves relations at depth 0', () 
     const listRow = await payload.findByID({ collection: 'payments', id: doc.id, depth: 0 })
     const rowStudent = listRow.studentId as unknown as { id: number; email: string }
     const rowUser = listRow.userId as unknown as { id: number; email: string }
+    const rowEnrollment = listRow.enrollmentId as unknown as { id: number }
     expect(rowStudent.id).toBe(studentId)
     expect(rowStudent.email).toBeTruthy()
     expect(rowUser.id).toBe(staffUserId)
     expect(rowUser.email).toBeTruthy()
+    expect(rowEnrollment.id).toBe(enrollmentId)
   })
 })
 

@@ -30,8 +30,17 @@ describe('Enrollments collection fields', () => {
         'classAssignedAt',
         'cancelledAt',
         'createdBy',
+        'payments',
       ]),
     )
+  })
+
+  it('exposes payments as a join field back to the payments collection', () => {
+    expect(field('payments')).toMatchObject({
+      type: 'join',
+      collection: 'payments',
+      on: 'enrollmentId',
+    })
   })
 
   it('requires the student and course relationships', () => {

@@ -302,8 +302,10 @@ depth) because those paths really do populate.
 **Where** — `node_modules/@payloadcms/next/dist/views/List/index.js` (`depth: 0` in the list's
 `req.payload.find` call — not project code, so it cannot be patched, only worked around).
 Fixed for this collection by `src/collections/Payments/hooks/populatePaymentRelations.ts`
-(`afterRead`, mirrors `src/collections/Posts/hooks/populateAuthors.ts`), consumed by
-`src/collections/Payments/components/StudentCell.tsx` and `RecorderCell.tsx`.
+(`afterRead`, mirrors `src/collections/Posts/hooks/populateAuthors.ts`), which resolves
+`studentId`, `userId`, and `enrollmentId` alike. `studentId`/`userId` are consumed by
+`src/collections/Payments/components/StudentCell.tsx` and `RecorderCell.tsx`; `enrollmentId`
+has no dedicated `Cell` yet and renders via Payload's default relationship display.
 
 ## Server actions
 

@@ -4,6 +4,7 @@ import { authenticated } from '../../access/authenticated'
 import { populatePaymentRelations } from './hooks/populatePaymentRelations'
 import { setPaymentDate } from './hooks/setPaymentDate'
 import { setRecordedByUser } from './hooks/setRecordedByUser'
+import { setStudentFromEnrollment } from './hooks/setStudentFromEnrollment'
 
 export const validatePaymentAmount: Validate<number> = (value) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return 'Số tiền là bắt buộc.'
@@ -36,15 +37,23 @@ export const Payments: CollectionConfig = {
     ],
   },
   hooks: {
-    beforeChange: [setPaymentDate, setRecordedByUser],
+    beforeChange: [setPaymentDate, setRecordedByUser, setStudentFromEnrollment],
     afterRead: [populatePaymentRelations],
   },
   fields: [
     {
       name: 'enrollmentId',
-      type: 'number',
+      type: 'relationship',
+      relationTo: 'enrollments',
       label: { vi: 'Mã đơn đăng ký', en: 'Enrollment ID' },
       required: true,
+      admin: {
+        readOnly: true,
+        description: {
+          vi: 'Được điền sẵn từ đơn đăng ký đang xem, không chọn tay được.',
+          en: 'Pre-filled from the enrollment being viewed — not manually selectable.',
+        },
+      },
     },
     {
       name: 'studentId',
@@ -53,6 +62,11 @@ export const Payments: CollectionConfig = {
       label: { vi: 'Học viên', en: 'Student' },
       required: true,
       admin: {
+        readOnly: true,
+        description: {
+          vi: 'Tự động lấy theo học viên của đơn đăng ký, không chọn tay được.',
+          en: 'Automatically taken from the enrollment’s own student — not manually selectable.',
+        },
         components: {
           Cell: '@/collections/Payments/components/StudentCell#StudentCell',
         },

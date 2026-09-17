@@ -97,6 +97,9 @@ export interface Config {
       objectives: 'course-objectives';
       phases: 'course-phases';
     };
+    enrollments: {
+      payments: 'payments';
+    };
     'payload-folders': {
       documentsAndFolders: 'payload-folders' | 'media';
     };
@@ -526,6 +529,11 @@ export interface Enrollment {
   class?: (number | null) | Class;
   enrollmentStatus: 'NEW' | 'CONFIRMED' | 'ATTENDED' | 'COMPLETED' | 'CANCELLED';
   paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
+  payments?: {
+    docs?: (number | Payment)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   registrationSource: 'SELF_REGISTRATION' | 'ADMIN_CREATED';
   registeredAt: string;
   confirmedAt?: string | null;
@@ -541,7 +549,13 @@ export interface Enrollment {
  */
 export interface Payment {
   id: number;
-  enrollmentId: number;
+  /**
+   * Pre-filled from the enrollment being viewed — not manually selectable.
+   */
+  enrollmentId: number | Enrollment;
+  /**
+   * Automatically taken from the enrollment’s own student — not manually selectable.
+   */
   studentId: number | Student;
   amount: number;
   paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CARD' | 'OTHER';
@@ -1462,6 +1476,7 @@ export interface EnrollmentsSelect<T extends boolean = true> {
   class?: T;
   enrollmentStatus?: T;
   paymentStatus?: T;
+  payments?: T;
   registrationSource?: T;
   registeredAt?: T;
   confirmedAt?: T;

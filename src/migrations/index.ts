@@ -7,6 +7,7 @@ import * as migration_20260910_062709_add_site_settings_global from './20260910_
 import * as migration_20260910_131500_rename_notifications_user_to_student from './20260910_131500_rename_notifications_user_to_student'
 import * as migration_20260912_000000_drop_students_is_walk_in from './20260912_000000_drop_students_is_walk_in'
 import * as migration_20260915_220048_add_payments_collection from './20260915_220048_add_payments_collection'
+import * as migration_20260917_150000_convert_payments_enrollment_id_to_relationship from './20260917_150000_convert_payments_enrollment_id_to_relationship'
 
 export const migrations = [
   {
@@ -73,5 +74,10 @@ export const migrations = [
     up: migration_20260915_220048_add_payments_collection.up,
     down: migration_20260915_220048_add_payments_collection.down,
     name: '20260915_220048_add_payments_collection',
+  },
+  {
+    up: migration_20260917_150000_convert_payments_enrollment_id_to_relationship.up,
+    down: migration_20260917_150000_convert_payments_enrollment_id_to_relationship.down,
+    name: '20260917_150000_convert_payments_enrollment_id_to_relationship',
   },
 ]

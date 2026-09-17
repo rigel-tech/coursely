@@ -75,6 +75,13 @@ export const Enrollments: CollectionConfig<'enrollments'> = {
       ],
     },
     {
+      name: 'payments',
+      type: 'join',
+      collection: 'payments',
+      on: 'enrollmentId',
+      label: { vi: 'Thanh toán', en: 'Payments' },
+    },
+    {
       name: 'registrationSource',
       type: 'select',
       label: { vi: 'Nguồn đăng ký', en: 'Registration Source' },

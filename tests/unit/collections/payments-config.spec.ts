@@ -50,9 +50,17 @@ describe('Payments fields', () => {
     }
   })
 
-  it('types enrollmentId as a plain number, not a relationship', () => {
-    const f = field(Payments.fields, 'enrollmentId') as { type?: string } | undefined
-    expect(f?.type).toBe('number')
+  it('types enrollmentId as a relationship to enrollments', () => {
+    const f = field(Payments.fields, 'enrollmentId') as Extract<Field, { type: 'relationship' }>
+    expect(f?.type).toBe('relationship')
+    expect(f?.relationTo).toBe('enrollments')
+    expect(f?.required).toBe(true)
+  })
+
+  it('types enrollmentId as read-only — staff never pick or change it by hand', () => {
+    const f = field(Payments.fields, 'enrollmentId') as
+      { admin?: { readOnly?: boolean } } | undefined
+    expect(f?.admin?.readOnly).toBe(true)
   })
 
   it('types studentId as a relationship to students', () => {
@@ -60,6 +68,11 @@ describe('Payments fields', () => {
     expect(f?.type).toBe('relationship')
     expect(f?.relationTo).toBe('students')
     expect(f?.required).toBe(true)
+  })
+
+  it('types studentId as read-only — auto-set from the enrollment, staff never pick or change it by hand', () => {
+    const f = field(Payments.fields, 'studentId') as { admin?: { readOnly?: boolean } } | undefined
+    expect(f?.admin?.readOnly).toBe(true)
   })
 
   it('types userId as a relationship to users', () => {
