@@ -66,6 +66,7 @@ describe('CourseRegistration', () => {
     vi.mocked(createEnrollmentAction).mockResolvedValue({
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
+      enrollmentId: 31,
     })
     render(
       <CourseRegistration
@@ -78,6 +79,24 @@ describe('CourseRegistration', () => {
 
     await waitFor(() => expect(screen.getByText('Mới đăng ký')).toBeTruthy())
     expect(screen.queryByRole('button', { name: 'Gửi đăng ký' })).toBeNull()
+  })
+
+  it('shows the cancel button right after a successful registration, no reload needed', async () => {
+    vi.mocked(createEnrollmentAction).mockResolvedValue({
+      status: 'success',
+      message: 'Đăng ký khóa học thành công.',
+      enrollmentId: 31,
+    })
+    render(
+      <CourseRegistration
+        course={baseCourse}
+        profile={{ fullName: 'Nguyễn Văn A', phone: '0987654321' }}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi đăng ký' }))
+
+    expect(await screen.findByRole('button', { name: 'Hủy đăng ký' })).toBeTruthy()
   })
 
   it('passes the student profile fields through to the registration form as prefilled inputs (specs/009)', () => {

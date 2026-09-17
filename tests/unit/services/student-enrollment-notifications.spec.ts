@@ -63,7 +63,7 @@ describe('student enrollment notifications', () => {
       logger,
     } as never)
 
-    await expect(createStudentEnrollment({ courseId: 12, student })).resolves.toBeUndefined()
+    await expect(createStudentEnrollment({ courseId: 12, student })).resolves.toBe(31)
 
     // Flushes the fire-and-forget notification write's rejection handler.
     await new Promise((resolve) => setTimeout(resolve, 0))

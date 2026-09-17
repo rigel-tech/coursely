@@ -11,6 +11,7 @@ import * as migration_20260914_130000_add_enrollment_active_guard from './202609
 import * as migration_20260914_140000_make_notification_student_optional from './20260914_140000_make_notification_student_optional'
 import * as migration_20260915_064125 from './20260915_064125'
 import * as migration_20260917_070000_add_notifications_user_field from './20260917_070000_add_notifications_user_field'
+import * as migration_20260917_210000_add_enrollment_cancelled_notification_type from './20260917_210000_add_enrollment_cancelled_notification_type'
 
 export const migrations = [
   {
@@ -77,5 +78,10 @@ export const migrations = [
     up: migration_20260917_070000_add_notifications_user_field.up,
     down: migration_20260917_070000_add_notifications_user_field.down,
     name: '20260917_070000_add_notifications_user_field',
+  },
+  {
+    up: migration_20260917_210000_add_enrollment_cancelled_notification_type.up,
+    down: migration_20260917_210000_add_enrollment_cancelled_notification_type.down,
+    name: '20260917_210000_add_enrollment_cancelled_notification_type',
   },
 ]

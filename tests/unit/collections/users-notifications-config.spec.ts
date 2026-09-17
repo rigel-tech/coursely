@@ -79,4 +79,16 @@ describe('Notifications collection config', () => {
     const isRead = field(Notifications.fields, 'isRead') as Extract<Field, { type: 'checkbox' }>
     expect(isRead.defaultValue).toBe(false)
   })
+
+  it('carries an ENROLLMENT_CANCELLED option on the type field, bilingual label', () => {
+    const type = field(Notifications.fields, 'type') as Extract<Field, { type: 'select' }>
+    const option = type.options.find((o) =>
+      typeof o === 'string' ? o === 'ENROLLMENT_CANCELLED' : o.value === 'ENROLLMENT_CANCELLED',
+    )
+    expect(option).toBeTruthy()
+    expect(typeof option).not.toBe('string')
+    const label = (option as { label: unknown }).label as Record<string, string>
+    expect(label.vi).toBeTruthy()
+    expect(label.en).toBeTruthy()
+  })
 })

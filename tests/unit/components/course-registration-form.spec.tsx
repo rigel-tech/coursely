@@ -35,6 +35,7 @@ describe('CourseRegistrationForm — submits directly, no confirmation step', ()
     vi.mocked(createEnrollmentAction).mockResolvedValue({
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
+      enrollmentId: 31,
     })
     render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
@@ -49,6 +50,7 @@ describe('CourseRegistrationForm — submits directly, no confirmation step', ()
     vi.mocked(createEnrollmentAction).mockResolvedValue({
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
+      enrollmentId: 31,
     })
     render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
@@ -63,6 +65,7 @@ describe('CourseRegistrationForm — submits directly, no confirmation step', ()
     vi.mocked(createEnrollmentAction).mockResolvedValue({
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
+      enrollmentId: 31,
     })
     render(
       <CourseRegistrationForm
@@ -119,6 +122,7 @@ describe('CourseRegistrationForm — user info is always editable (item 2)', () 
     vi.mocked(createEnrollmentAction).mockResolvedValue({
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
+      enrollmentId: 31,
     })
     render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
 
