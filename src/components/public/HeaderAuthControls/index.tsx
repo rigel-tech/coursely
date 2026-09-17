@@ -1,12 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { Bell } from 'lucide-react'
 import * as React from 'react'
 import { useEffect, useState } from 'react'
 
 import { Avatar } from '@/components/public/ui/avatar'
 import { Button } from '@/components/public/ui/button'
+import { NotificationBell } from '@/components/public/NotificationBell'
 import { ThemeToggle } from '@/components/public/ThemeToggle'
 
 /**
@@ -53,16 +53,7 @@ export const HeaderAuthControls: React.FC = () => {
 
       {authenticated === true ? (
         <div className="flex items-center gap-2.5">
-          {/* Notification bell */}
-          <button
-            type="button"
-            className="relative size-9 rounded-full border border-border/60 bg-muted/40 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Thông báo"
-            title="Thông báo"
-          >
-            <Bell className="size-4" />
-            <span className="absolute top-2 right-2 size-2 bg-brand-accent rounded-full ring-2 ring-background" />
-          </button>
+          <NotificationBell />
 
           {/* User profile pill */}
           <Link

@@ -58,6 +58,7 @@ describe('HeaderAuthControls', () => {
 
   it('swaps to the account control when the check reports authenticated', async () => {
     jsonOnce({ authenticated: true })
+    jsonOnce({ count: 0 })
     render(React.createElement(HeaderAuthControls))
 
     await waitFor(() => expect(account()).toBeTruthy())
@@ -65,11 +66,22 @@ describe('HeaderAuthControls', () => {
     expect(register()).toBeNull()
   })
 
-  it('calls the status endpoint exactly once', async () => {
+  it('calls the status endpoint once, and — once authenticated — the notification count endpoint once', async () => {
     jsonOnce({ authenticated: true })
+    jsonOnce({ count: 0 })
     render(React.createElement(HeaderAuthControls))
 
     await waitFor(() => expect(account()).toBeTruthy())
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(fetchMock).toHaveBeenCalledWith('/next/auth-status')
+    expect(fetchMock).toHaveBeenCalledWith('/next/notifications-count')
+  })
+
+  it('never calls the notification count endpoint when not authenticated', async () => {
+    jsonOnce({ authenticated: false })
+    render(React.createElement(HeaderAuthControls))
+
+    await waitFor(() => expect(signIn()).toBeTruthy())
+    expect(fetchMock).not.toHaveBeenCalledWith('/next/notifications-count')
   })
 })

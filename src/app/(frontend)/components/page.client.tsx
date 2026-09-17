@@ -14,8 +14,8 @@ import { SpotlightTeacher } from '@/components/design/blocks/spotlight-teacher'
 import { Stats } from '@/components/design/blocks/stats'
 import { ClassAssignForm } from '@/components/design/forms/class-assign-form'
 import { CourseForm } from '@/components/design/forms/course-form'
-import { LoginForm as StagedLoginForm } from '@/components/design/forms/login-form'
 import { FormField } from '@/components/public/forms/field'
+import { CourseRegistrationForm } from '@/components/public/forms/CourseRegistrationForm'
 import { ForgotPasswordForm } from '@/components/public/forms/ForgotPasswordForm'
 import { LoginForm } from '@/components/public/forms/LoginForm'
 import { OtpForm } from '@/components/public/forms/OtpForm'
@@ -24,7 +24,7 @@ import { RegisterForm } from '@/components/public/forms/RegisterForm'
 import { ResetPasswordForm } from '@/components/public/forms/ResetPasswordForm'
 import { Avatar } from '@/components/public/ui/avatar'
 import { EmptyState } from '@/components/public/ui/empty-state'
-import { Modal } from '@/components/design/ui/modal'
+import { Modal } from '@/components/public/ui/modal'
 import { Tabs } from '@/components/design/ui/tabs'
 import { Badge } from '@/components/public/ui/badge'
 import { Button } from '@/components/public/ui/button'
@@ -355,8 +355,8 @@ const PRIMITIVES: Entry[] = [
 const STAGED_UI: Entry[] = [
   {
     name: 'Modal',
-    path: '@/components/design/ui/modal',
-    origin: 'design',
+    path: '@/components/public/ui/modal',
+    origin: 'public',
     note: 'Radix lo focus trap, Esc và khoá cuộn — bấm nút để mở.',
     preview: (
       <Modal
@@ -518,10 +518,27 @@ const READY_FORMS: Entry[] = [
     ),
   },
   {
+    name: 'CourseRegistrationForm',
+    path: '@/components/public/forms/CourseRegistrationForm',
+    origin: 'public',
+    note: 'Form đăng ký khóa học, nhận dữ liệu khóa học động qua react-hook-form.',
+    preview: (
+      <div className="max-w-sm">
+        <CourseRegistrationForm
+          course={{
+            id: 1,
+            title: 'Giao tiếp cho người đi làm',
+            slug: 'giao-tiep-cho-nguoi-di-lam',
+          }}
+        />
+      </div>
+    ),
+  },
+  {
     name: 'LoginForm',
     path: '@/components/public/forms/LoginForm',
     origin: 'public',
-    note: 'Trang /dang-nhap. Gọi loginAction trực tiếp — không nhận onSubmit như bản đang chờ.',
+    note: 'Trang /dang-nhap. Gọi loginAction trực tiếp.',
     preview: (
       <div className="max-w-sm">
         <LoginForm />
@@ -574,17 +591,11 @@ const READY_FORMS: Entry[] = [
   },
 ]
 
+// Holds only a form with no real page built yet. A form promoted out of here (built
+// directly into its real route, like LoginForm at /dang-nhap) must be removed from this
+// list in the same change — left in, the gallery shows two versions with nothing telling
+// a reader which one is current.
 const STAGED_FORMS: Entry[] = [
-  {
-    name: 'LoginForm',
-    path: '@/components/design/forms/login-form',
-    origin: 'design',
-    preview: (
-      <div className="max-w-sm">
-        <StagedLoginForm onSubmit={noop} />
-      </div>
-    ),
-  },
   {
     name: 'CourseForm',
     path: '@/components/design/forms/course-form',

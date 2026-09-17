@@ -19,8 +19,12 @@ import {
   Layers,
 } from 'lucide-react'
 import PageClient from './page.client'
+import { CourseRegistration } from '@/components/public/CourseRegistration'
 import { LivePreviewListener } from '@/components/public/LivePreviewListener'
-import type { Course, CourseObjective, CoursePhase } from '@/payload-types'
+import { getSessionStudent } from '@/lib/auth/session-student'
+import { getActiveEnrollmentStatus } from '@/services/student-enrollment'
+import { COURSE_TYPE_LABEL } from '@/components/public/course-type-label'
+import type { Course } from '@/payload-types'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
@@ -57,6 +61,10 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
   }
 
   const payload = await getPayload({ config: configPromise })
+  const student = await getSessionStudent()
+  const enrollmentStatus = student
+    ? await getActiveEnrollmentStatus(payload, { studentId: student.id, courseId: course.id })
+    : undefined
 
   // Lấy danh sách mục tiêu khóa học (Course Objectives)
   const objectivesRes = await payload.find({
@@ -71,7 +79,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
       },
     },
   })
-  const objectives = objectivesRes.docs as CourseObjective[]
+  const objectives = objectivesRes.docs
 
   // Lấy lộ trình các giai đoạn học tập (Course Phases)
   const phasesRes = await payload.find({
@@ -86,7 +94,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
       },
     },
   })
-  const phases = phasesRes.docs as CoursePhase[]
+  const phases = phasesRes.docs
 
   const img = typeof course.image === 'object' && course.image !== null ? course.image : null
   const metaImg =
@@ -248,7 +256,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                     <GraduationCap className="size-4" /> Hình thức:
                   </span>
                   <span className="text-foreground font-semibold">
-                    {isMoodle ? 'Moodle E-Learning' : 'Lớp học Offline'}
+                    {COURSE_TYPE_LABEL[course.courseType]}
                   </span>
                 </div>
 
@@ -293,9 +301,15 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                     </a>
                   </Button>
                 ) : (
-                  <Button asChild className="w-full text-base py-6 font-semibold" size="lg">
-                    <Link href="/register">Đăng ký tham gia ngay</Link>
-                  </Button>
+                  <CourseRegistration
+                    course={{ id: course.id, title: course.title, slug: course.slug }}
+                    enrollmentStatus={enrollmentStatus}
+                    profile={
+                      student
+                        ? { email: student.email, fullName: student.fullName, phone: student.phone }
+                        : undefined
+                    }
+                  />
                 )}
               </div>
             </div>

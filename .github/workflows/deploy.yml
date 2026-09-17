@@ -118,7 +118,7 @@ jobs:
       - name: Run Migrations
         run: pnpm payload migrate
       - name: Run E2E Smoke Test
-        run: pnpm test:smoke
+        run: pnpm test:e2e
 
   build-and-push:
     needs: [verify, integration-tests, e2e-smoke]

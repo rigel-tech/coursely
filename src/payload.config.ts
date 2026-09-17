@@ -1,4 +1,6 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
+import { sql } from '@payloadcms/db-postgres/drizzle'
+import { uniqueIndex } from '@payloadcms/db-postgres/drizzle/pg-core'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import sharp from 'sharp'
 import path from 'path'
@@ -10,6 +12,7 @@ import { Classes } from './collections/Classes'
 import { CourseObjectives } from './collections/CourseObjectives'
 import { CoursePhases } from './collections/CoursePhases'
 import { Courses } from './collections/Courses'
+import { Enrollments } from './collections/Enrollments'
 import { Media } from './collections/Media'
 import { Notifications } from './collections/Notifications'
 import { Pages } from './collections/Pages'
@@ -44,6 +47,7 @@ export default buildConfig({
         Logo: '@/components/admin/Graphics/Logo#Logo',
         Icon: '@/components/admin/Graphics/Icon#Icon',
       },
+      actions: ['@/components/admin/NotificationBell#NotificationBell'],
     },
     importMap: {
       baseDir: path.resolve(dirname),
@@ -79,6 +83,27 @@ export default buildConfig({
       connectionString: process.env.DATABASE_URL || '',
     },
     prodMigrations: migrations,
+    // A student may hold at most one *active* enrollment per course — CANCELLED does not
+    // count (specs/007-student-enrollment, Story 3). A plain compound-unique index can't
+    // express that exception; a partial index can. This is what dev/test's drizzle-push
+    // creates; prod instead applies the hand-written
+    // `20260914_130000_add_enrollment_active_guard` migration, which must define the same
+    // index. `src/services/student-enrollment.ts`'s `checkExistingEnrollment` only mirrors
+    // this for a fast, specific message — it is not itself the guard (see INVARIANTS.md).
+    afterSchemaInit: [
+      ({ extendTable, schema }) => {
+        extendTable({
+          table: schema.tables.enrollments,
+          extraConfig: (table) => ({
+            enrollmentsActiveStudentCourseIdx: uniqueIndex('enrollments_active_student_course_idx')
+              .on(table.student, table.course)
+              .where(sql`${table.enrollmentStatus} <> 'CANCELLED'`),
+          }),
+        })
+
+        return schema
+      },
+    ],
   }),
   email: nodemailerAdapter({
     defaultFromAddress: process.env.SMTP_FROM_ADDRESS,
@@ -102,6 +127,7 @@ export default buildConfig({
     Students,
     Courses,
     Classes,
+    Enrollments,
     CoursePhases,
     CourseObjectives,
     Categories,

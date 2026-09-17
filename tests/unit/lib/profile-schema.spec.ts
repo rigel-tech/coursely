@@ -12,6 +12,10 @@ describe('profileSchema', () => {
     expect(profileSchema.safeParse({ fullName: 'Trần Thị B', phone: '' }).success).toBe(true)
   })
 
+  it('accepts a blank full name', () => {
+    expect(profileSchema.safeParse({ fullName: '', phone: '' }).success).toBe(true)
+  })
+
   it('rejects a full name exceeding 255 characters', () => {
     expect(
       profileSchema.safeParse({ fullName: 'A'.repeat(256), phone: '0912345678' }).success,
