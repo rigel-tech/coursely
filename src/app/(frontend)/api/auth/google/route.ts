@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { exchangeCodeForGoogleTokens, fetchGoogleUserInfo } from '@/lib/auth/google-oauth'
 import { handleGoogleStudentAuth } from '@/services/student-google-auth'
 import { setSessionCookies } from '@/lib/auth/session-cookies'
-import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_TTL_SEC } from '@/lib/constants/auth'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -49,22 +48,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (outcome.kind === 'requires_otp') {
-      const response = sendPopupResponse(
-        'OTP',
-        { email: outcome.email, redirectTo: '/xac-thuc-otp' },
-        `${origin}/xac-thuc-otp`,
-      )
-      response.cookies.set(PENDING_EMAIL_COOKIE, outcome.email, {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        maxAge: PENDING_EMAIL_TTL_SEC,
-        secure: process.env.NODE_ENV === 'production',
-      })
-      return response
-    }
-
     const destination = callbackUrl.startsWith('/') ? callbackUrl : '/tai-khoan'
     const response = sendPopupResponse(
       'SUCCESS',
@@ -79,7 +62,6 @@ export async function GET(request: NextRequest) {
 
     return response
   } catch (err) {
-    console.error('Lỗi trong luồng Google OAuth Callback:', err)
     return sendPopupResponse(
       'ERROR',
       { error: 'google_auth_failed' },
@@ -95,7 +77,7 @@ function cleanupOAuthCookies(response: NextResponse) {
 }
 
 function sendPopupResponse(
-  type: 'SUCCESS' | 'ERROR' | 'OTP',
+  type: 'SUCCESS' | 'ERROR',
   data: Record<string, string>,
   fallbackUrl: string,
 ) {
