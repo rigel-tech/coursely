@@ -13,37 +13,37 @@ export async function seedAbout(payload: Payload): Promise<number | undefined> {
   }
 
   const heroRichText = lexicalDoc([
-    heading('Kiến tạo tương lai với kỹ năng thực chiến cùng SpeakEdge', 'h1'),
+    heading('Tiên phong kiến tạo nguồn nhân lực số thực chiến cùng Coursely', 'h1'),
     paragraph(
-      'SpeakEdge là nền tảng đào tạo tiếng Anh công sở hàng đầu, kết nối học viên với các chuyên gia đầu ngành thông qua lộ trình học tinh gọn và môi trường thực chiến quốc tế.',
+      'Coursely là hệ sinh thái đào tạo chuyển đổi số hàng đầu, đồng hành cùng cá nhân và doanh nghiệp làm chủ công nghệ mới, tối ưu hóa quy trình và bứt phá năng suất trong kỷ nguyên số.',
     ),
   ])
 
   const col1 = lexicalDoc([
-    heading('Câu chuyện của SpeakEdge', 'h3'),
+    heading('Câu chuyện của Coursely', 'h3'),
     paragraph(
-      'Được thành lập với mục tiêu xóa bỏ rào cản ngôn ngữ nơi công sở, SpeakEdge mang đến môi trường học tập linh hoạt, hiện đại và chuẩn quốc tế.',
+      'Ra đời với sứ mệnh thu hẹp khoảng cách giữa lý thuyết công nghệ và thực tiễn vận hành doanh nghiệp, Coursely mang đến các chương trình đào tạo chuyển đổi số, GenAI và dữ liệu chuẩn thực chiến.',
     ),
     heading('Sứ mệnh của chúng tôi:', 'h4'),
     list([
-      'Cung cấp các chương trình đào tạo bám sát thực tế giao tiếp doanh nghiệp.',
-      'Giúp học viên làm chủ kỹ năng thuyết trình, đàm phán và viết email chuyên nghiệp.',
-      'Đồng hành và hỗ trợ giải đáp 1:1 trong suốt quá trình học tập.',
+      'Cung cấp các chương trình đào tạo số hóa bám sát thực tiễn vận hành doanh nghiệp.',
+      'Trang bị kỹ năng làm chủ AI, phân tích dữ liệu và tự động hóa quy trình nghiệp vụ.',
+      'Đồng hành và tư vấn chuyển đổi số 1:1 cùng đội ngũ chuyên gia đầu ngành.',
     ]),
   ])
 
   const col2 = lexicalDoc([
     heading('Tầm nhìn & Giá trị cốt lõi', 'h3'),
     paragraph(
-      'Chúng tôi hướng tới trở thành hệ sinh thái học tập số hàng đầu khu vực, nơi bất kỳ ai cũng có thể nâng tầm sự nghiệp một cách bền vững.',
+      'Trở thành học viện chuyển đổi số và công nghệ ứng dụng uy tín hàng đầu khu vực, thúc đẩy làn sóng đổi mới sáng tạo và tối ưu hóa vận hành cho hàng ngàn doanh nghiệp.',
     ),
     heading('4 Giá trị cốt lõi:', 'h4'),
     list(
       [
-        'Thực chiến đi đầu: Học từ tình huống thật, ứng dụng ngay vào công việc.',
-        'Giảng viên chuyên gia: Đội ngũ Mentor từ các tập đoàn đa quốc gia.',
-        'Học tập linh hoạt: Lịch học phù hợp tối đa với người đi làm bận rộn.',
-        'Cam kết chất lượng: Hỗ trợ trọn đời và mở rộng cơ hội thăng tiến.',
+        'Thực chiến đi đầu: 100% tình huống và dự án dựa trên bài toán kinh doanh thật.',
+        'Chuyên gia dẫn dắt: Đội ngũ Giảng viên là các Giám đốc Công nghệ, Trưởng bộ phận Dữ liệu & AI.',
+        'Học tập linh hoạt: Kết hợp workshop trực tiếp và hệ thống học liệu số hỗ trợ liên tục.',
+        'Cam kết tạo giá trị: Đo lường hiệu quả chuyển đổi số và nâng cao năng suất rõ rệt sau khóa học.',
       ],
       'number',
     ),
@@ -52,7 +52,7 @@ export async function seedAbout(payload: Payload): Promise<number | undefined> {
   const heroImageId = await getOrCreateMedia(
     payload,
     'public/images/hero-about.jpg',
-    'SpeakEdge Academy Classroom',
+    'Coursely Digital Skills Academy',
   )
 
   const col = (richText: unknown) => ({
@@ -85,8 +85,8 @@ export async function seedAbout(payload: Payload): Promise<number | undefined> {
         {
           blockType: 'cta',
           richText: lexicalDoc([
-            heading('Sẵn sàng bứt phá sự nghiệp cùng SpeakEdge?', 'h3'),
-            paragraph('Khám phá ngay các khóa học chất lượng cao.'),
+            heading('Sẵn sàng bứt phá sự nghiệp và chuyển đổi số cùng Coursely?', 'h3'),
+            paragraph('Khám phá ngay các khóa học chất lượng cao được thiết kế thực chiến.'),
           ]),
           links: [
             {
@@ -101,8 +101,9 @@ export async function seedAbout(payload: Payload): Promise<number | undefined> {
         },
       ],
       meta: {
-        title: 'Giới thiệu về SpeakEdge — Nền tảng Đào tạo Tiếng Anh Thực Chiến',
-        description: 'Tìm hiểu về sứ mệnh, tầm nhìn và đội ngũ giảng viên tại SpeakEdge.',
+        title: 'Giới thiệu về Coursely — Nền tảng Đào tạo Chuyển đổi số & AI Thực Chiến',
+        description:
+          'Tìm hiểu về sứ mệnh, tầm nhìn và đội ngũ chuyên gia chuyển đổi số tại Coursely.',
       },
     } as any,
   })

@@ -38,11 +38,20 @@ export async function getOrCreateMedia(
     limit: 1,
   })
 
+  const filePath = path.resolve(process.cwd(), relativePath)
+
   if (existing.docs.length > 0) {
+    const destPath = path.resolve(process.cwd(), 'public/media', filename)
+    if (!fs.existsSync(destPath) && fs.existsSync(filePath)) {
+      try {
+        fs.copyFileSync(filePath, destPath)
+      } catch {
+        // ignore
+      }
+    }
     return existing.docs[0].id
   }
 
-  const filePath = path.resolve(process.cwd(), relativePath)
   if (fs.existsSync(filePath)) {
     try {
       const created = await payload.create({

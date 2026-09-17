@@ -21,6 +21,28 @@ export interface GoogleTokens {
   refresh_token?: string
 }
 
+export function resolveOAuthOrigin(headers: Headers, fallbackOrigin?: string): string {
+  const envUrl = process.env.NEXT_PUBLIC_SERVER_URL?.replace(/\/$/, '')
+  if (envUrl && !envUrl.includes('localhost')) {
+    return envUrl
+  }
+
+  const proto =
+    headers.get('x-forwarded-proto') ||
+    (headers.get('referer')?.startsWith('https') ? 'https' : 'https')
+  const host = headers.get('x-forwarded-host') || headers.get('host')
+  if (host) {
+    return `${proto}://${host}`
+  }
+
+  const originHeader = headers.get('origin')?.replace(/\/$/, '')
+  if (originHeader) {
+    return originHeader
+  }
+
+  return fallbackOrigin?.replace(/\/$/, '') || envUrl || 'http://localhost:3000'
+}
+
 export function getGoogleOAuthConfig(redirectUri: string) {
   const clientId = process.env.GOOGLE_CLIENT_ID
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET
