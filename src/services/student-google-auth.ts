@@ -103,6 +103,19 @@ async function createActiveGoogleStudent(
       req,
     })
 
+    await payload.create({
+      collection: 'notifications',
+      data: {
+        student: student.id,
+        type: 'ACCOUNT_CREATED',
+        title: 'Chào mừng bạn đến với Coursely',
+        content: 'Tài khoản của bạn đã được liên kết và kích hoạt thành công qua Google.',
+        isRead: false,
+      },
+      overrideAccess: true,
+      req,
+    })
+
     if (transactionID) await payload.db.commitTransaction(transactionID)
     return student
   } catch (err) {
