@@ -19,7 +19,6 @@ import configPromise from '@payload-config'
 import type { Student } from '@/payload-types'
 import type { RegisterInput } from '@/lib/validation/register-schema'
 import { sendDuplicateAttemptEmail } from '@/email/send'
-import { createNotification } from '@/notifications/create'
 import { createStudentRegisteredNotificationTemplate } from '@/notifications/templates/account-created'
 import { sendVerificationOtp, type VerificationOtpMode } from '@/services/student-verification-otp'
 
@@ -115,7 +114,10 @@ async function createStudentAccount(payload: Payload, data: RegisterInput): Prom
 
 /**
  * Fired after the student is created, never as part of that write — a notification is a
- * consequence of the new account, not a condition for it.
+ * consequence of the new account, not a condition for it. Staff-facing and broadcast
+ * (specs/011): self-registration has no staff actor to assign it to, so this writes
+ * directly rather than through `notifications/create.ts`'s per-target functions, neither
+ * of which fits a notification with no target.
  */
 function notifyAccountCreated(
   payload: Payload,
@@ -125,10 +127,11 @@ function notifyAccountCreated(
     student.fullName,
     student.email,
   )
-  void createNotification(payload, {
-    audience: 'staff',
-    type: 'ACCOUNT_CREATED',
-    title,
-    content,
-  }).catch((err) => payload.logger.error({ err }, 'ACCOUNT_CREATED notification failed'))
+  void payload
+    .create({
+      collection: 'notifications',
+      data: { type: 'ACCOUNT_CREATED', title, content, isRead: false },
+      overrideAccess: true,
+    })
+    .catch((err) => payload.logger.error({ err }, 'ACCOUNT_CREATED notification failed'))
 }

@@ -49,14 +49,21 @@ describe('Notifications collection config', () => {
     )
   })
 
-  it('relates to a student when present — absent means staff-facing, never a user relation', () => {
+  it('relates to a student when present — absent means staff-facing', () => {
     const student = field(Notifications.fields, 'student') as Extract<
       Field,
       { type: 'relationship' }
     >
 
     expect(student.relationTo).toBe('students')
-    expect(names).not.toContain('user')
+  })
+
+  it('also relates to a staff user, mirroring the student relationship', () => {
+    const user = field(Notifications.fields, 'user') as Extract<Field, { type: 'relationship' }>
+
+    expect(user.relationTo).toBe('users')
+    expect(user.required).not.toBe(true)
+    expect(user.index).toBe(true)
   })
 
   it('requires title and content, but not student — its absence is what makes a notification staff-facing', () => {

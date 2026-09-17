@@ -163,6 +163,30 @@ filter), pinned by `tests/unit/components/admin/notification-bell.spec.tsx` § "
 the rows without a student as read". `src/services/student-notifications.ts` is the reader
 this protects.
 
+### `notifications.user` scopes nothing — it is a bare FK, not a per-user notification channel
+
+**Rule** — Setting `notifications.user` on a row does not restrict who can read it, does not
+exclude it from the staff broadcast list, and does not make that notification private to
+that one staff member. `Notifications.access` stays `authenticated` (staff-only, broadcast
+to every signed-in staff member) regardless of whether `user` is set. Building "this
+notification belongs to this one staff member" — a per-staff inbox, a "mine" filter, a read
+receipt scoped to them — needs the same treatment `student-notifications.ts` gives
+`student`: an explicit, separately-scoped query, and a corresponding change to what the
+admin bell treats as broadcast vs personal. Neither exists yet; today `user` is only a
+reference.
+
+**Why it breaks silently** — the field reads exactly like `student`, which _does_ gate a
+student's own list (`student-notifications.ts`'s `where: { student: { equals: studentId }
+}`). Setting `user` on a notification meant to be private to one staff member compiles,
+saves, and looks right in the admin UI — every staff member still sees it in the shared
+bell (`NotificationBell`'s `loadList` fetches the whole collection with no `user` filter),
+and nothing errors to say the "privacy" never happened.
+
+**Where** — `src/collections/Notifications/index.ts` (`user` field, the module banner
+stating it plays no part in audience determination), `src/components/admin/NotificationBell/index.tsx`
+(`loadList`, fetches every row regardless of `user`), `src/access/authenticated.ts`
+(`Notifications.access`, unchanged).
+
 ## Cache invalidation
 
 ### Every `revalidateTag(X)` must match an `unstable_cache` tag `X` character for character

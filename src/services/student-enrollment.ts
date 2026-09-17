@@ -7,7 +7,7 @@ import {
   RegistrationClosed,
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
-import { createNotification } from '@/notifications/create'
+import { createStudentNotification } from '@/notifications/create'
 import { createStudentEnrolledNotificationTemplate } from '@/notifications/templates/enrollment-created'
 import type { Course, Enrollment, Student } from '@/payload-types'
 
@@ -100,8 +100,7 @@ function notifyEnrollmentCreated(
   { studentId, studentEmail, course }: { studentId: number; studentEmail: string; course: Course },
 ): void {
   const { title, content } = createStudentEnrolledNotificationTemplate(course.title)
-  void createNotification(payload, {
-    audience: 'student',
+  void createStudentNotification(payload, {
     studentId,
     type: 'ENROLLMENT_CREATED',
     title,

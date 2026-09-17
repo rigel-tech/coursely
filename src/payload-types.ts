@@ -1016,6 +1016,7 @@ export interface ConsultationBlock {
 export interface Notification {
   id: number;
   student?: (number | null) | Student;
+  user?: (number | null) | User;
   type: 'ACCOUNT_CREATED' | 'ENROLLMENT_CREATED';
   title: string;
   content: string;
@@ -1792,6 +1793,7 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface NotificationsSelect<T extends boolean = true> {
   student?: T;
+  user?: T;
   type?: T;
   title?: T;
   content?: T;

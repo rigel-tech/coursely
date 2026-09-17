@@ -7,8 +7,9 @@ import { authenticated } from '../../access/authenticated'
  * staff (`/admin`). `student` set means that one student's own notification; `student`
  * absent means staff-facing, broadcast to every signed-in staff member — there is no
  * separate field for audience, its presence/absence *is* the audience
- * (specs/011-admin-notification-bell). More `type` values are added as other features
- * raise notifications.
+ * (specs/011-admin-notification-bell). `user` is a plain FK to a staff user — it plays no
+ * part in audience determination. More `type` values are added as other features raise
+ * notifications.
  */
 export const Notifications: CollectionConfig = {
   slug: 'notifications',
@@ -32,6 +33,12 @@ export const Notifications: CollectionConfig = {
       name: 'student',
       type: 'relationship',
       relationTo: 'students',
+      index: true,
+    },
+    {
+      name: 'user',
+      type: 'relationship',
+      relationTo: 'users',
       index: true,
     },
     {
