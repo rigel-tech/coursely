@@ -131,15 +131,20 @@ describe('registerAction — new email', () => {
     expect(staff.totalDocs).toBe(0)
 
     // ACCOUNT_CREATED is staff-facing (specs/011): a broadcast every signed-in staff
-    // member sees, never attached to the registering student's own record.
-    const staffNotes = await payload.find({
-      collection: 'notifications',
-      where: broadcastWhere,
-      sort: '-createdAt',
-      limit: 1,
-      depth: 0,
+    // member sees, never attached to the registering student's own record. It is raised
+    // fire-and-forget from `notifyAccountCreated` (not awaited by `registerAction`), so
+    // this polls instead of reading right after the action resolves.
+    const staffNotes = await vi.waitFor(async () => {
+      const result = await payload.find({
+        collection: 'notifications',
+        where: broadcastWhere,
+        sort: '-createdAt',
+        limit: 1,
+        depth: 0,
+      })
+      expect(result.totalDocs).toBe(before.totalDocs + 1)
+      return result
     })
-    expect(staffNotes.totalDocs).toBe(before.totalDocs + 1)
     createdBroadcastNotificationIds.push(staffNotes.docs[0].id)
 
     const ownNotes = await payload.find({
