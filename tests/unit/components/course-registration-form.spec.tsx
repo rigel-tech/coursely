@@ -99,21 +99,6 @@ describe('CourseRegistrationForm — submits directly, no confirmation step', ()
     expect(onSuccess).not.toHaveBeenCalled()
     expect(assign).not.toHaveBeenCalled()
   })
-
-  it('hard-navigates to redirectTo when the server sends one', async () => {
-    vi.mocked(createEnrollmentAction).mockResolvedValue({
-      status: 'error',
-      message: 'Vui lòng đăng nhập để đăng ký khóa học.',
-      redirectTo: '/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend',
-    })
-    render(<CourseRegistrationForm course={baseCourse} profile={completeProfile} />)
-
-    submit()
-
-    await waitFor(() =>
-      expect(assign).toHaveBeenCalledWith('/dang-nhap?callbackUrl=%2Fkhoa-hoc%2Ffrontend'),
-    )
-  })
 })
 
 describe('CourseRegistrationForm — user info is always editable (item 2)', () => {

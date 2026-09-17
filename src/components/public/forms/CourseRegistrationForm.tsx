@@ -66,11 +66,6 @@ export function CourseRegistrationForm({
 
     if (result.status === 'success') {
       onSuccess?.()
-      return
-    }
-
-    if (result.redirectTo) {
-      window.location.assign(result.redirectTo)
     }
   }
 

@@ -4,10 +4,7 @@ import { getPayload } from 'payload'
 
 import type { Student } from '@/payload-types'
 
-import {
-  createEnrollmentAction,
-  type CreateEnrollmentState,
-} from '@/actions/student/create-enrollment'
+import { createEnrollmentAction } from '@/actions/student/create-enrollment'
 import {
   CourseNotFound,
   EnrollmentAlreadyExists,
@@ -15,10 +12,6 @@ import {
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
 import { asPayload } from '../helpers/payload-stub'
-
-/** `redirectTo` only exists on the `'error'` branch of the discriminated union. */
-const redirectTo = (result: CreateEnrollmentState) =>
-  result.status === 'error' ? result.redirectTo : undefined
 
 // This dependency reaches for the Payload config, which a unit test has no business
 // booting. Mocking it leaves exactly what this action is: the decision about who may
@@ -66,7 +59,6 @@ describe('createEnrollmentAction — the sign-in gate', () => {
       status: 'error',
       message: 'Không tìm thấy học sinh trong phiên. Người dùng phải đăng nhập để đăng ký.',
     })
-    expect(redirectTo(result)).toBeUndefined()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 
@@ -95,7 +87,6 @@ describe('createEnrollmentAction — an account that may not enrol', () => {
       status: 'error',
       message: 'Tài khoản chưa xác thực email. Vui lòng xác thực trước khi đăng ký khóa học.',
     })
-    expect(redirectTo(result)).toBeUndefined()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 
@@ -108,7 +99,6 @@ describe('createEnrollmentAction — an account that may not enrol', () => {
       status: 'error',
       message: 'Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ trung tâm để được hỗ trợ.',
     })
-    expect(redirectTo(result)).toBeUndefined()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 })
@@ -160,7 +150,6 @@ describe('createEnrollmentAction — already enrolled', () => {
       status: 'error',
       message: 'Bạn đã đăng ký khóa học này rồi.',
     })
-    expect(redirectTo(result)).toBeUndefined()
   })
 })
 
