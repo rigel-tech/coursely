@@ -36,7 +36,7 @@ mocked Payload) and `tests/int` (`tests/int/enrollment-duplicate-guard.spec.ts` 
 case, concurrency, that a mock cannot exercise)
 
 **Target Platform**: Server (Next.js server actions / Payload local API) + two existing
-client components (`CourseRegistrationCTA`, `CourseRegistrationForm`)
+client components (`CourseRegistration`, `CourseRegistrationForm`)
 
 **Project Type**: Web application — existing single Next.js + Payload project, no new
 project or package
@@ -127,7 +127,7 @@ src/
                                                the full refusal try/catch chain
 
 src/components/public/
-├── CourseRegistrationCTA.tsx                # Story 2: fullName?/phone?/email? props
+├── CourseRegistration.tsx                # Story 2: fullName?/phone?/email? props
 └── forms/CourseRegistrationForm.tsx         # Story 2: editable inputs, zodResolver
 
 src/app/(frontend)/courses/[slug]/page.tsx   # Story 2: passes profile fields when signed in

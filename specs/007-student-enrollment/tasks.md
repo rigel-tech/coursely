@@ -29,7 +29,7 @@ except the small new modules called out per story below.
 - [x] T002 [US1] The sign-in destination's return address is derived server-side from the
       course id being registered for, at the course's public address (`/khoa-hoc/<slug>`),
       never accepted from the submitter.
-- [x] T003 [US1] `CourseRegistrationForm`/`CourseRegistrationCTA` follow whatever destination
+- [x] T003 [US1] `CourseRegistrationForm`/`CourseRegistration` follow whatever destination
       the action returns rather than deciding navigation themselves.
 - [x] T004 [US1] On a successful registration, the control switches to showing enrollment
       status without a reload (no separate page navigation).
@@ -61,7 +61,7 @@ except the small new modules called out per story below.
       `(input: CreateEnrollmentInput)`; profile-completeness check runs after the sign-in/
       standing gate and before the course/duplicate checks (research.md Decision 5); calls
       `updateStudentProfile` before `createStudentEnrollment`.
-- [x] T010 [US2] `CourseRegistrationCTA`/`Form` gained optional `fullName`/`phone`/`email`
+- [x] T010 [US2] `CourseRegistration`/`Form` gained optional `fullName`/`phone`/`email`
       props, editable inputs for the first two (email read-only), wired through
       `zodResolver(enrollmentProfileSchema)`; `page.tsx` passes them only when
       `getSessionStudent()` resolved a student.

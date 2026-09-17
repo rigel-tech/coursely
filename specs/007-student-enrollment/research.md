@@ -233,7 +233,7 @@ existing `tests/unit/lib/profile-schema.spec.ts` staying green unmodified.
 
 ## Decision 10 — Client-side field visibility only when signed in
 
-**Decision**: `page.tsx` passes `fullName`, `phone`, `email` down to `CourseRegistrationCTA`
+**Decision**: `page.tsx` passes `fullName`, `phone`, `email` down to `CourseRegistration`
 → `CourseRegistrationForm` only when `getSessionStudent()` returned a student (the same
 `student` already resolved there for `enrollmentStatus`). All three props are optional; when
 absent, the form renders exactly as it does for a signed-out visitor (courseId + submit

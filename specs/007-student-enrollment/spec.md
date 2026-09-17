@@ -402,7 +402,7 @@ the other and from the generic retry message.
 - The notification bell (a separate, unrelated feature area — see `specs/010-notification-bell`
   and `specs/011-admin-notification-bell`).
 - Any change to how the course page decides to show an existing enrollment's status, or to
-  `CourseRegistrationCTA`/`Form` beyond surfacing the refusal messages this spec's stories
+  `CourseRegistration`/`Form` beyond surfacing the refusal messages this spec's stories
   add.
 - Editing the profile avatar or password from this location.
 - Any change to how or whether email can be edited, beyond Clarification Q1 for this one

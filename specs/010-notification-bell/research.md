@@ -114,7 +114,7 @@ closes it.
 
 **Rationale**: keeps `HeaderAuthControls` from growing a second unrelated concern inline —
 same reasoning that already split `CourseRegistrationForm` out of
-`CourseRegistrationCTA`. Polling starts only once `HeaderAuthControls` has confirmed
+`CourseRegistration`. Polling starts only once `HeaderAuthControls` has confirmed
 `authenticated === true` (its existing `/next/auth-status` call), so a signed-out visitor
 never polls at all (FR-001).
 

@@ -19,12 +19,12 @@ import {
   Layers,
 } from 'lucide-react'
 import PageClient from './page.client'
-import { CourseRegistrationCTA } from '@/components/public/CourseRegistrationCTA'
+import { CourseRegistration } from '@/components/public/CourseRegistration'
 import { LivePreviewListener } from '@/components/public/LivePreviewListener'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { getActiveEnrollmentStatus } from '@/services/student-enrollment'
 import { COURSE_TYPE_LABEL } from '@/components/public/course-type-label'
-import type { Course, CourseObjective, CoursePhase } from '@/payload-types'
+import type { Course } from '@/payload-types'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
@@ -79,7 +79,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
       },
     },
   })
-  const objectives = objectivesRes.docs as CourseObjective[]
+  const objectives = objectivesRes.docs
 
   // Lấy lộ trình các giai đoạn học tập (Course Phases)
   const phasesRes = await payload.find({
@@ -94,7 +94,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
       },
     },
   })
-  const phases = phasesRes.docs as CoursePhase[]
+  const phases = phasesRes.docs
 
   const img = typeof course.image === 'object' && course.image !== null ? course.image : null
   const metaImg =
@@ -301,7 +301,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                     </a>
                   </Button>
                 ) : (
-                  <CourseRegistrationCTA
+                  <CourseRegistration
                     course={{ id: course.id, title: course.title, slug: course.slug }}
                     enrollmentStatus={enrollmentStatus}
                     profile={

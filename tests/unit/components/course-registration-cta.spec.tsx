@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { CourseRegistrationCTA } from '@/components/public/CourseRegistrationCTA'
+import { CourseRegistration } from '@/components/public/CourseRegistration'
 
 vi.mock('@/actions/student/create-enrollment', () => ({
   createEnrollmentAction: vi.fn(),
@@ -21,10 +21,10 @@ afterEach(() => {
   cleanup()
 })
 
-describe('CourseRegistrationCTA', () => {
+describe('CourseRegistration', () => {
   it('renders the registration form directly for a signed-in profile, with no client fetch', () => {
     render(
-      <CourseRegistrationCTA
+      <CourseRegistration
         course={baseCourse}
         profile={{ fullName: 'Nguyễn Văn A', phone: '0987654321' }}
       />,
@@ -35,14 +35,14 @@ describe('CourseRegistrationCTA', () => {
   })
 
   it('shows the sign-in call to action, not the registration form, with no profile at all', () => {
-    render(<CourseRegistrationCTA course={baseCourse} />)
+    render(<CourseRegistration course={baseCourse} />)
 
     expect(screen.getByRole('link', { name: 'Đăng nhập để đăng ký' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Gửi đăng ký' })).toBeNull()
   })
 
   it('shows the existing enrollment status instead of the registration form', () => {
-    render(<CourseRegistrationCTA course={baseCourse} enrollmentStatus="CONFIRMED" />)
+    render(<CourseRegistration course={baseCourse} enrollmentStatus="CONFIRMED" />)
 
     expect(screen.getByText('Trạng thái đăng ký')).toBeTruthy()
     expect(screen.getByText('Đã xác nhận')).toBeTruthy()
@@ -51,12 +51,12 @@ describe('CourseRegistrationCTA', () => {
 
   it('gives CANCELLED a different badge colour than CONFIRMED — statuses are not lumped together', () => {
     const { unmount } = render(
-      <CourseRegistrationCTA course={baseCourse} enrollmentStatus="CONFIRMED" />,
+      <CourseRegistration course={baseCourse} enrollmentStatus="CONFIRMED" />,
     )
     const confirmedClass = screen.getByText('Đã xác nhận').className
     unmount()
 
-    render(<CourseRegistrationCTA course={baseCourse} enrollmentStatus="CANCELLED" />)
+    render(<CourseRegistration course={baseCourse} enrollmentStatus="CANCELLED" />)
     const cancelledClass = screen.getByText('Đã hủy').className
 
     expect(cancelledClass).not.toBe(confirmedClass)
@@ -68,7 +68,7 @@ describe('CourseRegistrationCTA', () => {
       message: 'Đăng ký khóa học thành công.',
     })
     render(
-      <CourseRegistrationCTA
+      <CourseRegistration
         course={baseCourse}
         profile={{ fullName: 'Nguyễn Văn A', phone: '0987654321' }}
       />,
@@ -82,7 +82,7 @@ describe('CourseRegistrationCTA', () => {
 
   it('passes the student profile fields through to the registration form as prefilled inputs (specs/009)', () => {
     render(
-      <CourseRegistrationCTA
+      <CourseRegistration
         course={baseCourse}
         profile={{ email: 'a@b.com', fullName: 'Nguyễn Văn A', phone: '0987654321' }}
       />,

@@ -10,7 +10,7 @@ import { Badge } from '@/components/public/ui/badge'
 import { ENROLLMENT_STATUS } from '@/components/public/enrollment-status'
 import type { Enrollment, Student } from '@/payload-types'
 
-type CourseRegistrationCTAProps = {
+type CourseRegistrationProps = {
   course: CourseRegistrationCourse
   enrollmentStatus?: Enrollment['enrollmentStatus']
   profile?: Partial<Pick<Student, 'email' | 'fullName' | 'phone'>>
@@ -23,11 +23,7 @@ type CourseRegistrationCTAProps = {
  * server-side lookup; `onSuccess` moves it into local state so a successful submit shows
  * the badge immediately, without a reload.
  */
-export function CourseRegistrationCTA({
-  course,
-  enrollmentStatus,
-  profile,
-}: CourseRegistrationCTAProps) {
+export function CourseRegistration({ course, enrollmentStatus, profile }: CourseRegistrationProps) {
   const [status, setStatus] = useState(enrollmentStatus)
 
   return (

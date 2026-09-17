@@ -37,7 +37,7 @@ export function CourseRegistrationForm({
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
-  } = useForm<Required<CreateEnrollmentInput>>({
+  } = useForm<CreateEnrollmentInput>({
     resolver: zodResolver(createEnrollmentSchema),
     defaultValues: { courseId: course.id, fullName: fullName ?? '', phone: phone ?? '' },
   })
@@ -56,7 +56,7 @@ export function CourseRegistrationForm({
     )
   }
 
-  const onSubmit = async (values: Required<CreateEnrollmentInput>) => {
+  const onSubmit = async (values: CreateEnrollmentInput) => {
     const result = await createEnrollmentAction(values).catch((): CreateEnrollmentState => ({
       status: 'error',
       message: 'Không thể đăng ký khóa học. Vui lòng thử lại.',

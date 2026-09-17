@@ -25,4 +25,4 @@ export const createEnrollmentSchema = z.object({
  * parsed shape, because a signed-out visitor's request has no profile to send yet and must
  * still reach the sign-in redirect rather than fail here on a missing `fullName`/`phone`.
  */
-export type CreateEnrollmentInput = { courseId: number; fullName: string; phone: string }
+export type CreateEnrollmentInput = z.infer<typeof createEnrollmentSchema>
