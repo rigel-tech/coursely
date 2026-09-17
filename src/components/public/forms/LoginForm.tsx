@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import * as React from 'react'
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
@@ -12,10 +12,10 @@ import { Button } from '@/components/public/ui/button'
 import { Input } from '@/components/public/ui/input'
 import { Label } from '@/components/public/ui/label'
 import { loginAction } from '@/actions/student/login'
-import { startGoogleAuthAction } from '@/actions/student/google-auth'
 import { initialLoginState, type LoginState } from '@/lib/constants/login-state'
 import { loginSchema, type LoginFormValues } from '@/lib/validation/login-schema'
 import { GOOGLE_AUTH_ERROR_MESSAGES } from '@/lib/constants/google-auth-errors'
+import { useGoogleAuth } from '@/hooks/useGoogleAuth'
 /**
  * Sign-in form for the `/dang-nhap` page. `react-hook-form` owns the fields and every
  * field-level message, validating against the same `loginSchema` the action re-checks
@@ -38,7 +38,9 @@ const SYSTEM_FAILURE: LoginState = {
 export const LoginForm: React.FC = () => {
   const searchParams = useSearchParams()
   const [state, setState] = useState<LoginState>(initialLoginState)
-  const [isGooglePending, startGoogleTransition] = useTransition()
+  const { isGooglePending, loginWithGoogle } = useGoogleAuth({
+    onError: (message) => setState({ status: 'error', message }),
+  })
 
   const googleErrorKey = searchParams?.get('error')
   const displayErrorMessage =
@@ -70,14 +72,6 @@ export const LoginForm: React.FC = () => {
     if (result.redirectTo) window.location.replace(result.redirectTo)
   }
 
-  const handleGoogleAuth = () => {
-    const params = new URLSearchParams(window.location.search)
-    const callbackUrl = params.get('callbackUrl')
-    startGoogleTransition(async () => {
-      await startGoogleAuthAction(callbackUrl)
-    })
-  }
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
@@ -100,8 +94,14 @@ export const LoginForm: React.FC = () => {
           </p>
         )}
       </div>
+
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="login-password">Mật khẩu</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="login-password">Mật khẩu</Label>
+          <Link href="/quen-mat-khau" className="text-xs text-link hover:underline font-medium">
+            Quên mật khẩu?
+          </Link>
+        </div>
         <Input
           id="login-password"
           type="password"
@@ -120,24 +120,17 @@ export const LoginForm: React.FC = () => {
           </p>
         )}
       </div>
-      <div className="flex items-center justify-end">
-        <Link href="/quen-mat-khau" className="text-xs text-link hover:underline font-medium">
-          Quên mật khẩu?
-        </Link>
-      </div>
-      {displayErrorMessage && (
+
+      {displayErrorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{displayErrorMessage}</AlertDescription>
         </Alert>
-      )}
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isSubmitting || isGooglePending}
-        aria-busy={isSubmitting}
-      >
+      ) : null}
+
+      <Button type="submit" disabled={isSubmitting || isGooglePending} className="w-full mt-2">
         {isSubmitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
       </Button>
+
       <div className="relative my-2 flex items-center justify-center">
         <div className="w-full border-t border-border" />
         <span className="bg-card px-2 text-xs uppercase tracking-wider text-muted-foreground font-medium">
@@ -149,7 +142,7 @@ export const LoginForm: React.FC = () => {
         type="button"
         variant="outline"
         disabled={isSubmitting || isGooglePending}
-        onClick={handleGoogleAuth}
+        onClick={loginWithGoogle}
         className="w-full flex items-center justify-center gap-2.5"
       >
         {isGooglePending ? (
