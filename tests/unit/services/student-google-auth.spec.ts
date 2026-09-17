@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Payload } from 'payload'
 import { handleGoogleStudentAuth } from '@/services/student-google-auth'
-import { sendVerificationOtp } from '@/services/student-verification-otp'
 import type { GoogleUserInfo } from '@/lib/auth/google-oauth'
 import type { Student } from '@/payload-types'
 
@@ -38,10 +37,6 @@ vi.mock('payload', () => ({
   getPayload: vi.fn(async () => mockPayload),
 }))
 
-vi.mock('@/services/student-verification-otp', () => ({
-  sendVerificationOtp: vi.fn(),
-}))
-
 describe('handleGoogleStudentAuth', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -56,11 +51,6 @@ describe('handleGoogleStudentAuth', () => {
     email_verified: true,
     name: 'Nguyễn Văn A',
     picture: 'https://lh3.googleusercontent.com/a/photo.jpg',
-  }
-
-  const unverifiedGoogleUser: GoogleUserInfo = {
-    ...verifiedGoogleUser,
-    email_verified: false,
   }
 
   it('normalizes email (trimmed and lowercased) when querying database', async () => {
@@ -202,52 +192,6 @@ describe('handleGoogleStudentAuth', () => {
         }),
       }),
     )
-  })
-
-  it('creates pending student and sends OTP if Google email is not verified and student does not exist', async () => {
-    mockFind.mockResolvedValue({ docs: [] })
-    const pendingStudent = {
-      id: 4,
-      email: 'student@example.com',
-      fullName: 'Nguyễn Văn A',
-      status: 'PENDING_VERIFICATION',
-    } as Student
-    mockCreate.mockImplementation(async ({ collection }) => {
-      if (collection === 'students') return pendingStudent
-      return { id: 101 }
-    })
-
-    const result = await handleGoogleStudentAuth(unverifiedGoogleUser)
-
-    expect(result).toEqual({ kind: 'requires_otp', email: 'student@example.com' })
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collection: 'students',
-        data: expect.objectContaining({
-          email: 'student@example.com',
-          status: 'PENDING_VERIFICATION',
-        }),
-      }),
-    )
-    expect(sendVerificationOtp).toHaveBeenCalledWith(mockPayload, 'student@example.com', 'initial')
-  })
-
-  it('sends OTP without re-creating student if unverified Google login matches existing student', async () => {
-    mockFind.mockResolvedValue({
-      docs: [
-        {
-          id: 5,
-          email: 'student@example.com',
-          status: 'PENDING_VERIFICATION',
-        } as Student,
-      ],
-    })
-
-    const result = await handleGoogleStudentAuth(unverifiedGoogleUser)
-
-    expect(result).toEqual({ kind: 'requires_otp', email: 'student@example.com' })
-    expect(mockCreate).not.toHaveBeenCalled()
-    expect(sendVerificationOtp).toHaveBeenCalledWith(mockPayload, 'student@example.com', 'initial')
   })
 
   it('rolls back transaction and rethrows when student creation fails', async () => {

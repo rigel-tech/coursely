@@ -4,12 +4,8 @@ import configPromise from '@payload-config'
 
 import type { GoogleUserInfo } from '@/lib/auth/google-oauth'
 import type { Student } from '@/payload-types'
-import { sendVerificationOtp } from '@/services/student-verification-otp'
 
-export type GoogleAuthOutcome =
-  | { kind: 'authenticated'; student: Student }
-  | { kind: 'requires_otp'; email: string }
-  | { kind: 'disabled' }
+export type GoogleAuthOutcome = { kind: 'authenticated'; student: Student } | { kind: 'disabled' }
 
 export async function handleGoogleStudentAuth(
   googleUser: GoogleUserInfo,
@@ -30,17 +26,6 @@ export async function handleGoogleStudentAuth(
   if (existing?.status === 'DISABLED') {
     payload.logger.warn({ email }, 'Google login attempt on a DISABLED account')
     return { kind: 'disabled' }
-  }
-
-  if (!googleUser.email_verified) {
-    if (!existing) {
-      await createPendingGoogleStudent(payload, {
-        email,
-        fullName: googleUser.name,
-      })
-    }
-    await sendVerificationOtp(payload, email, 'initial')
-    return { kind: 'requires_otp', email }
   }
 
   if (existing) {
@@ -103,61 +88,24 @@ async function createActiveGoogleStudent(
       req,
     })
 
-    await payload.create({
-      collection: 'notifications',
-      data: {
-        student: student.id,
-        type: 'ACCOUNT_CREATED',
-        title: 'Chào mừng bạn đến với Coursely',
-        content: 'Tài khoản của bạn đã được liên kết và kích hoạt thành công qua Google.',
-        isRead: false,
-      },
-      overrideAccess: true,
-      req,
-    })
-
     if (transactionID) await payload.db.commitTransaction(transactionID)
-    return student
-  } catch (err) {
-    if (transactionID) await payload.db.rollbackTransaction(transactionID)
-    throw err
-  }
-}
 
-async function createPendingGoogleStudent(
-  payload: Payload,
-  data: { email: string; fullName: string },
-): Promise<Student> {
-  const transactionID = (await payload.db.beginTransaction()) ?? undefined
-  const req: Partial<PayloadRequest> = { transactionID }
+    payload
+      .create({
+        collection: 'notifications',
+        data: {
+          student: student.id,
+          type: 'ACCOUNT_CREATED',
+          title: 'Chào mừng bạn đến với Coursely',
+          content: 'Tài khoản của bạn đã được liên kết và kích hoạt thành công qua Google.',
+          isRead: false,
+        },
+        overrideAccess: true,
+      })
+      .catch((err) => {
+        payload.logger.error({ err }, 'Lỗi tạo thông báo chào mừng cho học viên')
+      })
 
-  try {
-    const student = await payload.create({
-      collection: 'students',
-      data: {
-        email: data.email,
-        fullName: data.fullName,
-        password: randomBytes(32).toString('hex'),
-        status: 'PENDING_VERIFICATION',
-      },
-      overrideAccess: true,
-      req,
-    })
-
-    await payload.create({
-      collection: 'notifications',
-      data: {
-        student: student.id,
-        type: 'ACCOUNT_CREATED',
-        title: 'Có người dùng đăng ký tài khoản mới',
-        content: 'Tài khoản của bạn đã được tạo. Hãy xác minh email để bắt đầu.',
-        isRead: false,
-      },
-      overrideAccess: true,
-      req,
-    })
-
-    if (transactionID) await payload.db.commitTransaction(transactionID)
     return student
   } catch (err) {
     if (transactionID) await payload.db.rollbackTransaction(transactionID)
