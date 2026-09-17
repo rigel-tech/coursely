@@ -121,5 +121,15 @@ export const Classes: CollectionConfig<'classes'> = {
         step: 1,
       },
     },
+    {
+      name: 'roster',
+      type: 'ui',
+      label: { vi: 'Xếp lớp', en: 'Roster' },
+      admin: {
+        components: {
+          Field: '@/components/admin/ClassRoster#ClassRoster',
+        },
+      },
+    },
   ],
 }

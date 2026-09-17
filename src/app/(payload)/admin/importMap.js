@@ -12,6 +12,7 @@ import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c08
 import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { SlugField as SlugField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
+import { ClassRoster as ClassRoster_78e429b629c5460e9fdb417ba2561bd2 } from '@/components/admin/ClassRoster'
 import { InlineToolbarFeatureClient as InlineToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { FixedToolbarFeatureClient as FixedToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { HeadingFeatureClient as HeadingFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
@@ -58,6 +59,7 @@ export const importMap = {
   '@payloadcms/plugin-seo/client#PreviewComponent':
     PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
   '@payloadcms/next/client#SlugField': SlugField_2b8867833a34864a02ddf429b0728a40,
+  '@/components/admin/ClassRoster#ClassRoster': ClassRoster_78e429b629c5460e9fdb417ba2561bd2,
   '@payloadcms/richtext-lexical/client#InlineToolbarFeatureClient':
     InlineToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   '@payloadcms/richtext-lexical/client#FixedToolbarFeatureClient':

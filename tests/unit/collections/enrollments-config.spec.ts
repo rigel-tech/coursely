@@ -58,6 +58,28 @@ describe('Enrollments collection fields', () => {
     expect(field('createdBy').required).not.toBe(true)
   })
 
+  it('offers only classes of the enrollment’s own course, and never a dead class', async () => {
+    const classField = field('class') as Field & {
+      filterOptions?: (args: unknown) => unknown
+    }
+    expect(typeof classField.filterOptions).toBe('function')
+
+    const where = await classField.filterOptions!({ data: { course: 12 } })
+
+    expect(where).toMatchObject({
+      course: { equals: 12 },
+      status: { not_in: ['CANCELLED', 'COMPLETED'] },
+    })
+  })
+
+  it('offers no class at all when the enrollment has no course yet', async () => {
+    const classField = field('class') as Field & {
+      filterOptions?: (args: unknown) => unknown
+    }
+
+    expect(await classField.filterOptions!({ data: {} })).toBe(false)
+  })
+
   it('uses the requested lifecycle enums and defaults', () => {
     expect(field('enrollmentStatus')).toMatchObject({
       options: [
