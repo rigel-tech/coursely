@@ -1,11 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import configPromise from '@payload-config'
+import { getPayload, type PayloadRequest } from 'payload'
 
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { profileSchema } from '@/lib/validation/profile-schema'
 import type { ProfileState } from '@/lib/constants/profile-state'
-import { updateStudentProfileWithAvatar } from '@/services/student-profile'
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024 // 5MB
