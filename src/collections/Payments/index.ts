@@ -1,14 +1,10 @@
 import type { CollectionConfig, Validate } from 'payload'
-
 import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
+import { populatePaymentRelations } from './hooks/populatePaymentRelations'
 import { setPaymentDate } from './hooks/setPaymentDate'
+import { setRecordedByUser } from './hooks/setRecordedByUser'
 
-/**
- * `decimal(12,0)` in the source schema — whole VND, no cents. `admin.step: 1` only
- * shapes the browser stepper; this is the server-side guard that rejects a
- * non-integer amount arriving over the REST/GraphQL/Local API.
- */
 export const validatePaymentAmount: Validate<number> = (value) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return 'Số tiền là bắt buộc.'
   if (!Number.isInteger(value)) return 'Số tiền phải là số nguyên, không có phần thập phân.'
@@ -16,14 +12,6 @@ export const validatePaymentAmount: Validate<number> = (value) => {
   return true
 }
 
-/**
- * Records each payment a student makes toward an enrollment. `enrollmentId` is
- * a plain number — no relationship to `enrollments` yet at this stage (wiring
- * that FK is a later feature). `studentId` and `userId` are real relationships,
- * to `students` and `users`. `payment_status` (an enrollment's aggregate
- * paid/partial/cancelled state) does not belong to this collection — it is
- * derived from the sum of payments, not a property of a single payment.
- */
 export const Payments: CollectionConfig = {
   slug: 'payments',
   labels: {
@@ -48,7 +36,8 @@ export const Payments: CollectionConfig = {
     ],
   },
   hooks: {
-    beforeChange: [setPaymentDate],
+    beforeChange: [setPaymentDate, setRecordedByUser],
+    afterRead: [populatePaymentRelations],
   },
   fields: [
     {
@@ -119,9 +108,10 @@ export const Payments: CollectionConfig = {
       relationTo: 'users',
       label: { vi: 'Người ghi nhận', en: 'Recorded By' },
       admin: {
+        readOnly: true,
         description: {
-          vi: 'Nhân sự đã trực tiếp ghi nhận khoản thu này. Để trống nếu không xác định.',
-          en: 'Staff member who recorded this payment. Leave blank if unknown.',
+          vi: 'Tự động ghi theo tài khoản nhân sự đang tạo bản ghi này, không chọn tay được.',
+          en: 'Automatically set to the staff account creating this record — not manually selectable.',
         },
         components: {
           Cell: '@/collections/Payments/components/RecorderCell#RecorderCell',

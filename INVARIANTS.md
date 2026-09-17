@@ -208,6 +208,29 @@ no error anywhere.
 `src/blocks/RelatedPosts/Component.tsx:27` (`RelatedPosts`),
 `src/components/public/CollectionArchive/index.tsx:21` (`CollectionArchive`).
 
+### The admin list view always reads relationship fields at `depth: 0`
+
+**Rule** — A custom list-view `Cell` for a `relationship` field cannot assume `cellData` is
+the populated document. Every other read path in this project (Local API default, REST
+default) populates at `depth: 2`, but `@payloadcms/next`'s List view hard-codes `depth: 0` for
+its own `find` call — not something a collection config can override. Either write the `Cell`
+to handle a bare id (numeric fallback), or resolve the relationship in a collection
+`afterRead` hook so it is always an object by the time any `Cell` runs, regardless of the
+caller's `depth`.
+
+**Why it breaks silently** — `DefaultCellComponentProps['cellData']` is typed loosely enough
+that reading `cellData.email` compiles fine even though at runtime, in the list view only,
+`cellData` is a plain number. No error, no warning — the column just renders whatever the
+`Cell`'s number/undefined branch does (commonly a raw id, or nothing), while the exact same
+`Cell` shows the right name/email everywhere else (the edit view, `findByID` at default
+depth) because those paths really do populate.
+
+**Where** — `node_modules/@payloadcms/next/dist/views/List/index.js` (`depth: 0` in the list's
+`req.payload.find` call — not project code, so it cannot be patched, only worked around).
+Fixed for this collection by `src/collections/Payments/hooks/populatePaymentRelations.ts`
+(`afterRead`, mirrors `src/collections/Posts/hooks/populateAuthors.ts`), consumed by
+`src/collections/Payments/components/StudentCell.tsx` and `RecorderCell.tsx`.
+
 ## Server actions
 
 ### An auth server action that sets a cookie must not `redirect()` — it returns `redirectTo`

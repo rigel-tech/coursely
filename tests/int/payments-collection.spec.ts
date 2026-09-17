@@ -25,6 +25,14 @@ const createPayment = (data: LooseData) =>
     Payload['create']
   >[0]) as unknown as Promise<LooseDoc>
 
+const createPaymentAs = (user: unknown, data: LooseData) =>
+  payload.create({
+    collection: 'payments',
+    data,
+    user,
+    overrideAccess: false,
+  } as Parameters<Payload['create']>[0]) as unknown as Promise<LooseDoc>
+
 // 1x1 transparent PNG — smallest valid file the `media` upload collection will accept.
 const TINY_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
@@ -154,9 +162,26 @@ describe('payments collection — studentId relationship', () => {
   })
 })
 
-describe('payments collection — userId relationship', () => {
-  it('creates a payment whose userId resolves to the real staff account', async () => {
-    const doc = await createPayment({ ...baseData(), userId: staffUserId })
+describe('payments collection — admin list resolves relations at depth 0', () => {
+  it('still returns studentId and userId as populated objects when fetched at depth: 0', async () => {
+    const staff = await payload.findByID({ collection: 'users', id: staffUserId })
+    const doc = await createPaymentAs(staff, baseData())
+    madePayments.push(doc.id)
+
+    const listRow = await payload.findByID({ collection: 'payments', id: doc.id, depth: 0 })
+    const rowStudent = listRow.studentId as unknown as { id: number; email: string }
+    const rowUser = listRow.userId as unknown as { id: number; email: string }
+    expect(rowStudent.id).toBe(studentId)
+    expect(rowStudent.email).toBeTruthy()
+    expect(rowUser.id).toBe(staffUserId)
+    expect(rowUser.email).toBeTruthy()
+  })
+})
+
+describe('payments collection — userId is auto-set to the creator, read-only', () => {
+  it('auto-fills userId to the authenticated staff account that created it', async () => {
+    const staff = await payload.findByID({ collection: 'users', id: staffUserId })
+    const doc = await createPaymentAs(staff, baseData())
     madePayments.push(doc.id)
     expect(relId(doc.userId)).toBe(staffUserId)
 
@@ -166,21 +191,11 @@ describe('payments collection — userId relationship', () => {
     expect(populatedUser.email).toBeTruthy()
   })
 
-  it('populates studentId and userId together on the same document', async () => {
-    const doc = await createPayment({ ...baseData(), userId: staffUserId })
+  it('overrides an explicitly supplied userId with the authenticated creator', async () => {
+    const staff = await payload.findByID({ collection: 'users', id: staffUserId })
+    const doc = await createPaymentAs(staff, { ...baseData(), userId: 999999999 })
     madePayments.push(doc.id)
-
-    const populated = await payload.findByID({ collection: 'payments', id: doc.id, depth: 1 })
-    const populatedStudent = populated.studentId as unknown as { id: number; email: string }
-    const populatedUser = populated.userId as unknown as { id: number; email: string }
-    expect(populatedStudent.id).toBe(studentId)
-    expect(populatedStudent.email).toBeTruthy()
-    expect(populatedUser.id).toBe(staffUserId)
-    expect(populatedUser.email).toBeTruthy()
-  })
-
-  it('rejects a userId that does not reference an existing user', async () => {
-    await expect(createPayment({ ...baseData(), userId: 999999999 })).rejects.toThrow()
+    expect(relId(doc.userId)).toBe(staffUserId)
   })
 })
 

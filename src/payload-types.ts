@@ -528,7 +528,7 @@ export interface Payment {
    */
   paymentDate: string;
   /**
-   * Staff member who recorded this payment. Leave blank if unknown.
+   * Automatically set to the staff account creating this record — not manually selectable.
    */
   userId?: (number | null) | User;
   /**

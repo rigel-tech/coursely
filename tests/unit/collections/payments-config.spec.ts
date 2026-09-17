@@ -69,6 +69,11 @@ describe('Payments fields', () => {
     expect(f?.required).toBeFalsy()
   })
 
+  it('types userId as read-only — staff never pick it by hand, it is auto-set to the creator', () => {
+    const f = field(Payments.fields, 'userId') as { admin?: { readOnly?: boolean } } | undefined
+    expect(f?.admin?.readOnly).toBe(true)
+  })
+
   it('types paymentDate as a read-only date field — staff never enter it by hand', () => {
     const f = field(Payments.fields, 'paymentDate') as
       { type?: string; admin?: { readOnly?: boolean } } | undefined
