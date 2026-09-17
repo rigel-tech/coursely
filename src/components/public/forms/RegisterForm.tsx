@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 
@@ -9,10 +9,10 @@ import { FormField } from '@/components/public/forms/field'
 import { Button } from '@/components/public/ui/button'
 import { Input } from '@/components/public/ui/input'
 import { registerAction } from '@/actions/student/register'
-import { startGoogleAuthAction } from '@/actions/student/google-auth'
 import { initialRegisterState, type RegisterState } from '@/lib/constants/register-state'
 import { GOOGLE_AUTH_ERROR_MESSAGES } from '@/lib/constants/google-auth-errors'
 import { registerSchema, type RegisterValues } from '@/lib/validation/register-schema'
+import { useGoogleAuth } from '@/hooks/useGoogleAuth'
 
 const SYSTEM_FAILURE: RegisterState = {
   status: 'error',
@@ -23,7 +23,9 @@ export function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [state, setState] = useState<RegisterState>(initialRegisterState)
-  const [isGooglePending, startGoogleTransition] = useTransition()
+  const { isGooglePending, loginWithGoogle } = useGoogleAuth({
+    onError: (message) => setState({ status: 'error', message }),
+  })
 
   const googleErrorKey = searchParams?.get('error')
   const displayErrorMessage =
@@ -45,14 +47,6 @@ export function RegisterForm() {
     if (result.status === 'error' && result.field === 'email' && result.message) {
       setError('email', { type: 'server', message: result.message })
     }
-  }
-
-  const handleGoogleAuth = () => {
-    const params = new URLSearchParams(window.location.search)
-    const callbackUrl = params.get('callbackUrl')
-    startGoogleTransition(async () => {
-      await startGoogleAuthAction(callbackUrl)
-    })
   }
 
   return (
@@ -130,7 +124,7 @@ export function RegisterForm() {
         type="button"
         variant="outline"
         disabled={isSubmitting || isGooglePending}
-        onClick={handleGoogleAuth}
+        onClick={loginWithGoogle}
         className="w-full flex items-center justify-center gap-2.5"
       >
         {isGooglePending ? (

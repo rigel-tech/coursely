@@ -14,9 +14,9 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => currentSearchParams,
 }))
 
-const startGoogleAuthAction = vi.fn()
+const getGoogleAuthUrlAction = vi.fn()
 vi.mock('@/actions/student/google-auth', () => ({
-  startGoogleAuthAction: (...args: unknown[]) => startGoogleAuthAction(...args),
+  getGoogleAuthUrlAction: (...args: unknown[]) => getGoogleAuthUrlAction(...args),
 }))
 
 const { LoginForm } = await import('@/components/public/forms/LoginForm')
@@ -26,7 +26,7 @@ const replace = vi.fn()
 
 beforeEach(() => {
   loginAction.mockReset()
-  startGoogleAuthAction.mockReset()
+  getGoogleAuthUrlAction.mockReset()
   assign.mockReset()
   replace.mockReset()
   currentSearchParams = new URLSearchParams()
@@ -176,15 +176,22 @@ describe('LoginForm', () => {
     ).toBeTruthy()
   })
 
-  it('triggers startGoogleAuthAction when clicking google login button', async () => {
-    startGoogleAuthAction.mockResolvedValue(undefined)
+  it('triggers getGoogleAuthUrlAction and opens popup when clicking google login button', async () => {
+    const mockOpen = vi.fn().mockReturnValue({ closed: false })
+    vi.stubGlobal('open', mockOpen)
+    getGoogleAuthUrlAction.mockResolvedValue('https://accounts.google.com/o/oauth2/auth')
     render(React.createElement(LoginForm))
 
     const googleBtn = screen.getByRole('button', { name: /tiếp tục với google/i })
     fireEvent.click(googleBtn)
 
     await waitFor(() => {
-      expect(startGoogleAuthAction).toHaveBeenCalledTimes(1)
+      expect(getGoogleAuthUrlAction).toHaveBeenCalledTimes(1)
+      expect(mockOpen).toHaveBeenCalledWith(
+        'https://accounts.google.com/o/oauth2/auth',
+        'GoogleAuthPopup',
+        expect.stringContaining('width=500,height=600'),
+      )
     })
   })
 })
