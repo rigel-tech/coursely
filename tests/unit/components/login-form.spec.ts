@@ -8,15 +8,30 @@ vi.mock('@/actions/student/login', () => ({
   loginAction: (...args: unknown[]) => loginAction(...args),
 }))
 
+let currentSearchParams = new URLSearchParams()
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => currentSearchParams,
+}))
+
+const getGoogleAuthUrlAction = vi.fn()
+vi.mock('@/actions/student/google-auth', () => ({
+  getGoogleAuthUrlAction: (...args: unknown[]) => getGoogleAuthUrlAction(...args),
+}))
+
 const { LoginForm } = await import('@/components/public/forms/LoginForm')
 
 const assign = vi.fn()
+const replace = vi.fn()
 
 beforeEach(() => {
   loginAction.mockReset()
+  getGoogleAuthUrlAction.mockReset()
   assign.mockReset()
-  // jsdom's window.location.assign is non-configurable, so shadow the whole object.
-  vi.stubGlobal('location', { assign, href: 'http://localhost/' })
+  replace.mockReset()
+  currentSearchParams = new URLSearchParams()
+  // jsdom's window.location.assign/replace is non-configurable, so shadow the whole object.
+  vi.stubGlobal('location', { assign, replace, href: 'http://localhost/' })
 })
 
 afterEach(() => {
@@ -38,7 +53,7 @@ describe('LoginForm', () => {
     fill()
     submit()
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/'))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/'))
   })
 
   it('follows redirectTo on an error state too (AUTH_022 → /xac-thuc-otp)', async () => {
@@ -52,7 +67,7 @@ describe('LoginForm', () => {
     fill()
     submit()
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/xac-thuc-otp'))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/xac-thuc-otp'))
   })
 
   it('shows the message and stays put when there is no redirectTo', async () => {
@@ -150,5 +165,33 @@ describe('LoginForm', () => {
 
     expect(await screen.findByText('Vui lòng nhập email')).toBeTruthy()
     expect(loginAction).not.toHaveBeenCalled()
+  })
+
+  it('displays google auth error alert when error query param is present', async () => {
+    currentSearchParams = new URLSearchParams('error=invalid_state')
+    render(React.createElement(LoginForm))
+
+    expect(
+      await screen.findByText('Phiên xác thực đã hết hạn hoặc không hợp lệ. Vui lòng thử lại.'),
+    ).toBeTruthy()
+  })
+
+  it('triggers getGoogleAuthUrlAction and opens popup when clicking google login button', async () => {
+    const mockOpen = vi.fn().mockReturnValue({ closed: false })
+    vi.stubGlobal('open', mockOpen)
+    getGoogleAuthUrlAction.mockResolvedValue('https://accounts.google.com/o/oauth2/auth')
+    render(React.createElement(LoginForm))
+
+    const googleBtn = screen.getByRole('button', { name: /tiếp tục với google/i })
+    fireEvent.click(googleBtn)
+
+    await waitFor(() => {
+      expect(getGoogleAuthUrlAction).toHaveBeenCalledTimes(1)
+      expect(mockOpen).toHaveBeenCalledWith(
+        'https://accounts.google.com/o/oauth2/auth',
+        'GoogleAuthPopup',
+        expect.stringContaining('width=500,height=600'),
+      )
+    })
   })
 })

@@ -20,12 +20,14 @@
     "prepare": "husky",
     "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && rm pnpm-lock.yaml && pnpm --ignore-workspace install",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
+    "seed": "cross-env NODE_OPTIONS=--no-deprecation payload run scripts/seed.ts",
     "typecheck": "tsc --noEmit",
     "lint:theme": "node scripts/theme-guard.mjs",
     "test": "pnpm run test:unit && pnpm run test:int && pnpm run test:e2e",
     "test:unit": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts tests/unit",
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts tests/int",
-    "test:e2e": "cross-env NODE_OPTIONS=--no-deprecation playwright test --config=playwright.config.ts"
+    "test:e2e": "cross-env NODE_OPTIONS=--no-deprecation playwright test --config=playwright.config.ts",
+    "test:smoke": "cross-env NODE_OPTIONS=--no-deprecation playwright test tests/e2e/frontend.spec.ts --config=playwright.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -53,7 +55,6 @@
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",
     "graphql": "^16.8.2",
-    "ioredis": "^6.0.0",
     "jose": "^6.2.12",
     "lucide-react": "0.563.0",
     "next": "16.3.0",

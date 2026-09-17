@@ -127,15 +127,17 @@ export const FormBlock: React.FC<
           {error && <div>{`${error.status || '500'}: ${error.message || ''}`}</div>}
           {!hasSubmitted && (
             <form id={formID} onSubmit={handleSubmit(onSubmit)}>
-              <div className="mb-4 last:mb-0">
+              <div className="flex flex-wrap -mx-2 gap-y-4 mb-4">
                 {formFromProps &&
                   formFromProps.fields &&
                   formFromProps.fields?.map((field, index) => {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const Field: React.FC<any> = fields?.[field.blockType as keyof typeof fields]
                     if (Field) {
+                      const width =
+                        'width' in field && typeof field.width === 'number' ? field.width : 100
                       return (
-                        <div className="mb-6 last:mb-0" key={index}>
+                        <div key={index} className="px-2 w-full" style={{ width: `${width}%` }}>
                           <Field
                             form={formFromProps}
                             {...field}

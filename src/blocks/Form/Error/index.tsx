@@ -9,7 +9,7 @@ export const Error = ({ name }: { name: string }) => {
   } = useFormContext()
   return (
     <div className="mt-2 text-destructive-foreground text-xs font-medium">
-      {(errors[name]?.message as string) || 'This field is required'}
+      {(errors[name]?.message as string) || 'Vui lòng điền thông tin này'}
     </div>
   )
 }

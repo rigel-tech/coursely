@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import React, { Suspense } from 'react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/public/ui/card'
 import { RegisterForm } from '@/components/public/forms/RegisterForm'
@@ -18,7 +19,9 @@ export default function RegisterPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <RegisterForm />
+          <Suspense fallback={null}>
+            <RegisterForm />
+          </Suspense>
         </CardContent>
       </Card>
     </main>

@@ -12,7 +12,6 @@ declare global {
       SMTP_SECURE: string
       SMTP_FROM_NAME: string
       SMTP_FROM_ADDRESS: string
-      REDIS_URL: string
       OTP_SECRET: string
     }
   }

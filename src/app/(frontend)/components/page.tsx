@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 
-import React from 'react'
+import React, { Suspense } from 'react'
 
 import { ComponentGallery } from './page.client'
+
+export const dynamic = 'force-dynamic'
 
 /**
  * Live index of every component in the project.
@@ -12,7 +14,11 @@ import { ComponentGallery } from './page.client'
  * cross the server/client boundary as a prop.
  */
 export default function ComponentsPage() {
-  return <ComponentGallery />
+  return (
+    <Suspense fallback={null}>
+      <ComponentGallery />
+    </Suspense>
+  )
 }
 
 export const metadata: Metadata = {
