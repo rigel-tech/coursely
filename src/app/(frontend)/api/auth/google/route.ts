@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { exchangeCodeForGoogleTokens, fetchGoogleUserInfo } from '@/lib/auth/google-oauth'
+import {
+  exchangeCodeForGoogleTokens,
+  fetchGoogleUserInfo,
+  resolveOAuthOrigin,
+} from '@/lib/auth/google-oauth'
 import { handleGoogleStudentAuth } from '@/services/student-google-auth'
 import { setSessionCookies } from '@/lib/auth/session-cookies'
 
@@ -9,9 +13,9 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state')
   const error = searchParams.get('error')
 
-  const origin = request.nextUrl.origin
+  const origin = resolveOAuthOrigin(request.headers, request.nextUrl.origin)
 
-  const entryPath = request.cookies.get('oauth_entry_path')?.value
+  const entryPath = request.cookies.get('oauth_entry_path')?.value || '/dang-nhap'
   const fallbackUrl = `${origin}${entryPath}`
 
   if (error) {
@@ -62,6 +66,7 @@ export async function GET(request: NextRequest) {
 
     return response
   } catch (err) {
+    console.error('[Google OAuth Callback Error]:', err)
     return sendPopupResponse(
       'ERROR',
       { error: 'google_auth_failed' },

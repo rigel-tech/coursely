@@ -113,6 +113,80 @@ every admin-content collection (`Users`, `Students`, `Media`, `Posts`, `Pages`, 
 `src/access/authenticatedOrPublished.ts` has the same `Boolean(user)` shape for `pages`/`posts`
 reads and leaks drafts to a student token — narrower (no PII), still open, not yet fixed.
 
+### A student reads their own notifications only through `student-notifications.ts` — never by widening `Notifications.access`
+
+**Rule** — `Notifications.access` stays `authenticated` (staff-only, per the entry above) —
+that does not change to let a student in. A student's own notification count and list are
+read by `src/services/student-notifications.ts`'s `countUnreadNotifications(studentId)` /
+`listAndMarkRecentNotifications(studentId)`, each an `overrideAccess: true` Local API call
+explicitly scoped by `where: { student: { equals: studentId } }`, with `studentId` resolved
+by the caller from `getSessionStudent()` — never taken from the request. If a student
+needs a new way to read their own notifications, add a scoped function here; do not add a
+student-admitting branch to the collection's own `access`.
+
+**Why it breaks silently** — the obvious-looking fix for "students can't read their own
+notifications" is to loosen `Notifications.access.read` to admit any authenticated
+principal, or to add a `req.user?.collection === 'students'` branch that returns
+`{ student: { equals: req.user.id } }`. Either compiles, passes a quick manual check (the
+signed-in student who tested it only ever queries their own id), and ships — but it opens
+the collection's REST/GraphQL/admin-adjacent surface to every student token, and a student
+who edits their own query (or calls the API directly) can ask for `student: { equals:
+<anyone else's id> }` and read it. Nothing in the collection config stops them once
+`access` itself admits students; the only thing that was ever stopping this was
+`authenticated`'s staff-only check, and that is exactly what got widened.
+
+**Where** — `src/services/student-notifications.ts`, called from
+`src/app/(frontend)/next/notifications-count/route.ts` and
+`src/actions/student/notifications.ts`. `src/collections/Notifications/index.ts`'s
+`access` block is the thing this entry says never to touch for this purpose.
+
+### The admin notification bell must never mark a student's own notification as read
+
+**Rule** — `src/components/admin/NotificationBell`'s `loadList` fetches the whole
+`notifications` collection (staff-facing and student-facing rows alike), but its
+mark-as-read `PATCH` must only ever target rows with no `student` — filter to that subset
+(`staffDocs` in the current code) before building the `where[id][in][...]` query. Never
+`PATCH` the full fetched batch.
+
+**Why it breaks silently** — a student's own unread count
+(`countUnreadNotifications`/`listAndMarkRecentNotifications` in
+`src/services/student-notifications.ts`) trusts `isRead` as the only signal that the
+student has seen a notification. Batch-PATCHing every row the admin bell fetches compiles,
+passes lint, and looks like a harmless simplification — the admin panel renders fine and
+the badge clears as expected. But it silently flips `isRead` on a student's own
+`ENROLLMENT_CREATED`/etc. notification the moment a staff member merely opens their own
+bell, and that notification then vanishes from the student's unread count without the
+student ever having opened it. Nothing throws, nothing logs.
+
+**Where** — `src/components/admin/NotificationBell/index.tsx` (`loadList`, the `staffDocs`
+filter), pinned by `tests/unit/components/admin/notification-bell.spec.tsx` § "marks only
+the rows without a student as read". `src/services/student-notifications.ts` is the reader
+this protects.
+
+### `notifications.user` scopes nothing — it is a bare FK, not a per-user notification channel
+
+**Rule** — Setting `notifications.user` on a row does not restrict who can read it, does not
+exclude it from the staff broadcast list, and does not make that notification private to
+that one staff member. `Notifications.access` stays `authenticated` (staff-only, broadcast
+to every signed-in staff member) regardless of whether `user` is set. Building "this
+notification belongs to this one staff member" — a per-staff inbox, a "mine" filter, a read
+receipt scoped to them — needs the same treatment `student-notifications.ts` gives
+`student`: an explicit, separately-scoped query, and a corresponding change to what the
+admin bell treats as broadcast vs personal. Neither exists yet; today `user` is only a
+reference.
+
+**Why it breaks silently** — the field reads exactly like `student`, which _does_ gate a
+student's own list (`student-notifications.ts`'s `where: { student: { equals: studentId }
+}`). Setting `user` on a notification meant to be private to one staff member compiles,
+saves, and looks right in the admin UI — every staff member still sees it in the shared
+bell (`NotificationBell`'s `loadList` fetches the whole collection with no `user` filter),
+and nothing errors to say the "privacy" never happened.
+
+**Where** — `src/collections/Notifications/index.ts` (`user` field, the module banner
+stating it plays no part in audience determination), `src/components/admin/NotificationBell/index.tsx`
+(`loadList`, fetches every row regardless of `user`), `src/access/authenticated.ts`
+(`Notifications.access`, unchanged).
+
 ## Cache invalidation
 
 ### Every `revalidateTag(X)` must match an `unstable_cache` tag `X` character for character
@@ -288,6 +362,47 @@ already turns "no session" into a proper in-app message — never even ran.
 session". Any action reachable from a page under `PROTECTED_PREFIXES`
 (`src/lib/constants/auth.ts`) depends on this — today that's
 `src/actions/student/profile.ts`'s `updateProfileAction`, called from `/tai-khoan`.
+
+### A refusal must be _returned_, not thrown, or the client's catch-all swallows its message
+
+**Rule** — A server action that wants a specific message to reach the student returns
+`{ status: 'error', message }` from an early check or a narrow `try/catch`. It must not let
+a refusal escape as a thrown error and rely on the calling component to read `error.message`
+— if that component's own `.catch()` is a blanket "show the generic retry text" (the normal,
+correct shape for a truly unexpected failure), a thrown refusal with its own carefully
+written copy is discarded exactly the same as a real crash.
+
+**Why it breaks silently** — nothing here throws a type error, fails a build, or fails a
+test that doesn't specifically assert on the client's rendered message: the server-side
+function still returns/throws with the right Vietnamese string attached, `pnpm typecheck`
+and a unit test calling the action directly both see a correctly-thrown `Error` with the
+correct `.message`, and the client component still renders _some_ text, so nothing looks
+broken in a cursory check. Only opening the browser and triggering that specific refusal
+shows the generic fallback where the specific message should be. This was live from when
+the duplicate-enrollment guard shipped (`specs/007-student-enrollment/research.md`
+Decision 3's note flagged it as an accepted, unclosed gap) until it was fixed on
+2026-09-15: `validateCourseForEnrollment` threw two distinct, already-written Vietnamese
+messages for "registration not open yet" and "registration deadline passed", but
+`createEnrollmentAction` only converted `EnrollmentAlreadyExists` to a returned message and
+re-threw everything else, so `CourseRegistrationForm`'s
+`.catch(() => ({ message: 'Không thể đăng ký khóa học. Vui lòng thử lại.' }))` replaced both
+with the generic fallback. The fix was to give each refusal its own `APIError` subclass
+(`CourseNotFound`, `RegistrationNotOpen`, `RegistrationClosed` alongside
+`EnrollmentAlreadyExists`, all in `src/lib/errors/enrollment.ts`) and map every one of them
+in `createEnrollmentAction`'s `try/catch` — the trap is what a _new_ refusal added to this
+chain falls back into if it throws a plain `Error` instead of one of these classes.
+
+**Where** — `src/actions/student/create-enrollment.ts` (`createEnrollmentAction`'s
+`try/catch`, one `instanceof` branch per class in `src/lib/errors/enrollment.ts`),
+`src/services/student-enrollment.ts` (`validateCourseForEnrollment`, throwing the typed
+classes instead of a plain `Error`),
+`src/components/public/forms/CourseRegistrationForm.tsx` (`onSubmit`'s `.catch()`,
+unchanged — it is the reason the action-level fix was necessary, not itself where the fix
+lives). The same shape this repo already gets right elsewhere is what the fix copies:
+`createEnrollmentAction`'s own `STANDING_REFUSAL` branch and `loginAction`'s `instanceof`
+chain against `src/lib/errors/auth.ts`, both _return_ their refusal instead of throwing it.
+(`PROFILE_INCOMPLETE_MESSAGE` no longer exists — profile completeness is now enforced by
+`createEnrollmentSchema` itself, not a separate branch here.)
 
 ## Routing
 
@@ -482,6 +597,20 @@ signed-in visitor, on exactly the pages that host the header. No warning, no bui
 `src/app/(frontend)/**/page.tsx` files above. Design rationale:
 `specs/002-header-logout-ui/research.md` D1/D4.
 
+**Exception, narrow and deliberate** — `src/app/(frontend)/courses/[slug]/page.tsx` calls
+`getSessionStudent()` (reads `cookies()`) and branches render on the result: whether to show
+the registration form or an enrollment-status badge, and which profile fields to pass down
+(`specs/007-student-enrollment`). This is a real instance of the pattern the rule above
+forbids — it is not broken only because this page carries **no** `force-static` export. The
+moment one is added here (a plausible future optimisation, matching its three siblings
+above), this page silently regresses exactly the way `HeaderAuthControls` was written to
+avoid: every visitor renders signed-out, seeing a blank registration form and never their
+own enrollment badge, with no build error. **Do not add `force-static` to this page** without
+first moving the signed-in read to the client (a dedicated status route, the same shape as
+`/next/auth-status`, returning the student's profile fields and enrollment status) — that
+work was scoped out of PR #47 as a larger change than the review comment (2.9) that flagged
+this warranted on its own.
+
 ## Theming
 
 ### A region that must stay dark sets `data-theme="dark"`; it never reaches for `bg-black`
@@ -586,6 +715,107 @@ invisible to it, because there is nothing to dangle.
 `src/app/(frontend)/globals.css` (the token file), the "Rich text (prose)" table in
 [`DESIGN.md`](DESIGN.md), `src/components/public/RichText/index.tsx:74` (`enableProse`,
 `dark:prose-invert`), and the blind-spot note in the header of `scripts/theme-guard.mjs`.
+
+## Data integrity
+
+### A race between two concurrent enrollment submissions no longer gets "already enrolled" — it gets a generic failure
+
+**Rule** — `checkExistingEnrollment` in `src/services/student-enrollment.ts` is the only
+duplicate check `createStudentEnrollment` makes: a `payload.find` immediately before
+`payload.create`, no transaction around either, no `try/catch` translating a
+database-level rejection into `EnrollmentAlreadyExists`. Removed 2026-09-16 — the
+transaction and the catch existed to keep the enrollment insert and the now-decoupled
+`ENROLLMENT_CREATED` notification insert atomic together; once the notification moved
+out (see the notification-decoupling entry), neither had a reason left to stay.
+
+A genuine race (two submissions both pass the pre-check before either writes) still cannot
+double-insert — the partial unique index (`enrollments_active_student_course_idx`,
+`WHERE enrollment_status <> 'CANCELLED'`, added via `afterSchemaInit` in
+`src/payload.config.ts`) still rejects the second `payload.create` at the database level.
+But that `ValidationError` is no longer caught here: it falls through
+`createEnrollmentAction`'s `instanceof` chain (none of its classes match a raw
+`ValidationError`) and the student sees the generic "Không thể đăng ký khóa học. Vui lòng
+thử lại." fallback instead of "Bạn đã đăng ký khóa học này rồi."
+
+**Why it breaks silently** — `checkExistingEnrollment`'s own code and comment read as a
+complete guard; nothing there hints that the same race it cannot close (FR-002) used to be
+caught one call below and no longer is. Data integrity is still fine (the unique index
+still blocks the duplicate row) — what silently regressed is only the message a student in
+that rare race sees. Re-adding a second write after the enrollment insert (e.g. restoring
+the notification to this same call) would silently resurrect the old reason to wrap both in
+a transaction — see `specs/007-student-enrollment/research.md` Decision 2 for the mechanism
+this replaced before reaching for that fix without first checking whether the new write
+actually needs the atomicity back.
+
+**Where** — `src/services/student-enrollment.ts` (`checkExistingEnrollment`,
+`createEnrollment`), `src/actions/student/create-enrollment.ts` (`createEnrollmentAction`'s
+`instanceof` chain — a raw `ValidationError` falls through it to the generic fallback),
+`src/lib/errors/enrollment.ts` (`EnrollmentAlreadyExists`, now only ever thrown by the
+pre-check).
+
+### The duplicate-enrollment partial unique index is defined twice — keep both in sync
+
+**Rule** — `afterSchemaInit` in `src/payload.config.ts` is what dev/test's drizzle-push
+reads, but prod runs `prodMigrations` instead — the same partial unique index
+(`enrollments_active_student_course_idx`) also has to exist as a hand-written migration
+(`src/migrations/20260914_130000_add_enrollment_active_guard.ts`) for prod to ever get it.
+The two are independent definitions with nothing that checks they match.
+
+**Why it breaks silently** — edit the `WHERE` clause or the columns in one and not the
+other, and `pnpm test:int` (drizzle-push) keeps passing while prod either never gets the
+guard or gets a different one — no error, no failed migration, just a duplicate-enrollment
+guard that silently doesn't match between environments.
+
+**Where** — `src/payload.config.ts` (`afterSchemaInit`),
+`src/migrations/20260914_130000_add_enrollment_active_guard.ts` (the hand-written prod copy
+of the same index — change one, change both).
+
+### `updateStudentProfile` no longer covers the enrollment-time profile write — `createEnrollmentAction` writes directly
+
+**Rule** — Two independent call sites write a student's `fullName`/`phone`:
+`updateStudentProfile` (`src/services/student-profile.ts`), used by `/tai-khoan`'s
+`updateProfileAction` (via `updateStudentProfileWithAvatar`), and `createEnrollmentAction`
+(`src/actions/student/create-enrollment.ts`), which calls `payload.update` on the
+`students` collection directly instead of going through the service. A change made only to
+`updateStudentProfile` — a new hook, a transaction wrap, an audit log, an extra field —
+does not reach the enrollment-time write.
+
+**Why it breaks silently** — both paths call `payload.update` on the same collection with
+the same shape (`{ fullName, phone }`), so a manual test of either flow looks identical;
+only a change that assumes both paths share one implementation exposes the split, and only
+in the flow nobody re-tested. `updateStudentProfile`'s own JSDoc used to claim it was
+shared by both call sites, so reading that function gave no hint the enrollment flow had
+diverged.
+
+**Where** — `src/actions/student/create-enrollment.ts` (`createEnrollmentAction`, builds
+`profileChanges` from only the fields that differ from the session's student, then calls
+`payload.update` itself), `src/services/student-profile.ts` (`updateStudentProfile`, the
+other path — its own JSDoc no longer claims to cover enrollment).
+
+### `find`'s `limit: 0` is not a cheap count — it disables pagination and returns every row
+
+**Rule** — To get just a number of matching documents, call the collection's own `/count`
+REST endpoint or the Local API's `payload.count()`. Never reach for `find({ ..., limit: 0
+})` (Local API or REST `?limit=0`) as a "count-only" shortcut.
+
+**Why it breaks silently** — `findOperation` computes `usePagination = pagination && limit
+!== 0`; `limit: 0` takes the `!usePagination` branch and returns **every** matching
+document with full field data, not an empty page with just a total. `totalDocs` in the
+response is still correct, so a caller that only reads `totalDocs` gets the right number
+back and everything appears to work — while the query silently fetches, populates and
+serializes the entire matching set on every call. Nothing throws, nothing warns, and a
+small collection hides the cost completely; it only surfaces as a real problem once the
+collection is large enough for that full fetch to matter, at which point the number was
+always right and nothing in review would have caught it.
+
+**Where** — confirmed by reading
+`node_modules/payload/dist/collections/operations/find.js` (`usePagination`, the
+`sanitizedLimit` fallback) and `node_modules/payload/dist/collections/endpoints/count.js` /
+`endpoints/index.js` (`defaultCollectionEndpoints`, the `/count` route backed by
+`countOperation`, a real `SELECT count(*)`). Used correctly by
+`src/services/student-notifications.ts`'s `countUnreadNotifications` (Local API
+`payload.count()`) and `src/components/admin/NotificationBell/index.tsx` (REST
+`GET /notifications/count`).
 
 ## Identifiers
 

@@ -1,4 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" fill="none">
-  <rect width="40" height="40" rx="10" fill="#FF6A1A" />
-  <text x="20" y="26" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="18" text-anchor="middle" letter-spacing="-0.5">SE</text>
+  <defs>
+    <linearGradient id="courselyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+  <rect width="40" height="40" rx="10" fill="url(#courselyGrad)" />
+  <path d="M25 15.5C23.8 14 21.8 13 19.5 13C15.4 13 12 16.1 12 20C12 23.9 15.4 27 19.5 27C21.8 27 23.8 26 25 24.5" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>
 </svg>

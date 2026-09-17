@@ -13,7 +13,9 @@ const MAX_AVATAR_SIZE = 5 * 1024 * 1024 // 5MB
 
 /**
  * Server action to update the authenticated student's profile (US-205). Updates
- * `fullName` and `phone`, and uploads a new `avatar` if one was chosen.
+ * `fullName` and `phone`, and uploads a new `avatar` if one was chosen — the write itself,
+ * transaction included, lives in `updateStudentProfileWithAvatar`; this only authenticates,
+ * validates, and reports the outcome.
  *
  * Takes `FormData`, not a plain object: `avatar` is a `File`, and Next's documented
  * Server Action pattern for a file is `FormData`, so `<ProfileForm>` builds one inside
@@ -46,15 +48,16 @@ export async function updateProfileAction(formData: FormData): Promise<ProfileSt
   const fullName = parsed.data.fullName.trim() || undefined
   const phone = parsed.data.phone.trim() || null
   const avatarFile = formData.get('avatar')
+  const avatar = avatarFile instanceof File && avatarFile.size > 0 ? avatarFile : undefined
 
-  if (avatarFile instanceof File && avatarFile.size > 0) {
-    if (!ALLOWED_MIME_TYPES.includes(avatarFile.type)) {
+  if (avatar) {
+    if (!ALLOWED_MIME_TYPES.includes(avatar.type)) {
       return {
         status: 'error',
         message: 'Định dạng ảnh không hỗ trợ. Vui lòng chọn tệp JPG, PNG, WEBP hoặc GIF.',
       }
     }
-    if (avatarFile.size > MAX_AVATAR_SIZE) {
+    if (avatar.size > MAX_AVATAR_SIZE) {
       return { status: 'error', message: 'Kích thước ảnh vượt quá 5MB. Vui lòng chọn tệp nhỏ hơn.' }
     }
   }

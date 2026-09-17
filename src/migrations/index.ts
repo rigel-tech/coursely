@@ -51,9 +51,24 @@ export const migrations = [
     name: '20260912_000000_drop_students_is_walk_in',
   },
   {
-    up: migration_20260915_064125.up,
-    down: migration_20260915_064125.down,
-    name: '20260915_064125',
+    up: migration_20260914_120000_add_enrollments_collection.up,
+    down: migration_20260914_120000_add_enrollments_collection.down,
+    name: '20260914_120000_add_enrollments_collection',
+  },
+  {
+    up: migration_20260914_130000_add_enrollment_active_guard.up,
+    down: migration_20260914_130000_add_enrollment_active_guard.down,
+    name: '20260914_130000_add_enrollment_active_guard',
+  },
+  {
+    up: migration_20260914_140000_make_notification_student_optional.up,
+    down: migration_20260914_140000_make_notification_student_optional.down,
+    name: '20260914_140000_make_notification_student_optional',
+  },
+  {
+    up: migration_20260917_070000_add_notifications_user_field.up,
+    down: migration_20260917_070000_add_notifications_user_field.down,
+    name: '20260917_070000_add_notifications_user_field',
   },
   {
     up: migration_20260915_220048_add_payments_collection.up,

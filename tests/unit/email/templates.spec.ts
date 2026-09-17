@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { duplicateRegisterAttemptEmail } from '@/email/templates/duplicate-register-attempt'
+import { createEnrollmentCreatedEmailTemplate } from '@/email/templates/enrollment-created'
 import { resetPasswordEmail } from '@/email/templates/reset-password'
 import { verifyOtpEmail } from '@/email/templates/verify-otp'
 import { getServerSideURL } from '@/utilities/getURL'
@@ -31,5 +32,31 @@ describe('resetPasswordEmail', () => {
     expect(subject.trim()).not.toBe('')
     expect(html).toContain(link)
     expect(text).toContain(link)
+  })
+})
+
+describe('createEnrollmentCreatedEmailTemplate', () => {
+  it('includes the course title in the confirmation email', () => {
+    const { subject, html, text } = createEnrollmentCreatedEmailTemplate(
+      'Giao tiếp cho người đi làm',
+    )
+
+    expect(subject.trim()).not.toBe('')
+    expect(html).toContain('Giao tiếp cho người đi làm')
+    expect(text).toContain('Giao tiếp cho người đi làm')
+  })
+
+  it('escapes a course title containing < and & so it cannot break the HTML markup', () => {
+    const { html } = createEnrollmentCreatedEmailTemplate('Toán <cao cấp> & Vật lý')
+
+    expect(html).not.toContain('<cao cấp>')
+    expect(html).toContain('&lt;cao cấp&gt;')
+    expect(html).toContain('&amp;')
+  })
+
+  it('leaves the plain-text body with the title exactly as given, unescaped', () => {
+    const { text } = createEnrollmentCreatedEmailTemplate('Toán <cao cấp> & Vật lý')
+
+    expect(text).toContain('Toán <cao cấp> & Vật lý')
   })
 })

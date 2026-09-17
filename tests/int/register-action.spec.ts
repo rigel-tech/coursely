@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getPayload, type Payload } from 'payload'
+import { getPayload, type Payload, type Where } from 'payload'
 import configPromise from '@payload-config'
 
 import { clearOtp, readOtp } from './helpers/otp-record'
@@ -69,8 +69,20 @@ beforeEach(() => {
   ctx.cookieOptions.clear()
 })
 
+// `ACCOUNT_CREATED` is staff-facing (specs/011) — it has no `student`, so it cannot be
+// cleaned up by student id the way every other test debris here is. Each test that
+// creates one pushes its id here for `afterEach` to remove.
+const createdBroadcastNotificationIds: number[] = []
+
 afterEach(async () => {
   vi.restoreAllMocks()
+  if (createdBroadcastNotificationIds.length > 0) {
+    await payload.delete({
+      collection: 'notifications',
+      where: { id: { in: createdBroadcastNotificationIds } },
+    })
+    createdBroadcastNotificationIds.length = 0
+  }
   for (const email of usedEmails) {
     await clearOtp(payload, email)
     const { docs } = await payload.find({
@@ -92,6 +104,14 @@ describe('registerAction — new email', () => {
     const email = uniqueEmail()
     const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
 
+    const broadcastWhere: Where = {
+      and: [{ type: { equals: 'ACCOUNT_CREATED' } }, { student: { exists: false } }],
+    }
+    const before = await payload.count({
+      collection: 'notifications',
+      where: broadcastWhere,
+    })
+
     expect(await run(validForm(email))).toEqual({ status: 'success' })
 
     const { docs } = await payload.find({
@@ -104,26 +124,41 @@ describe('registerAction — new email', () => {
 
     // The whole point of the split: registration writes to `students` and leaves
     // `users` — the staff table — untouched.
-    const staff = await payload.find({
+    const staff = await payload.count({
       collection: 'users',
       where: { email: { equals: email } },
-      limit: 0,
     })
     expect(staff.totalDocs).toBe(0)
 
-    const notes = await payload.find({
+    // ACCOUNT_CREATED is staff-facing (specs/011): a broadcast every signed-in staff
+    // member sees, never attached to the registering student's own record. It is raised
+    // fire-and-forget from `notifyAccountCreated` (not awaited by `registerAction`), so
+    // this polls instead of reading right after the action resolves.
+    const staffNotes = await vi.waitFor(async () => {
+      const result = await payload.find({
+        collection: 'notifications',
+        where: broadcastWhere,
+        sort: '-createdAt',
+        limit: 1,
+        depth: 0,
+      })
+      expect(result.totalDocs).toBe(before.totalDocs + 1)
+      return result
+    })
+    createdBroadcastNotificationIds.push(staffNotes.docs[0].id)
+
+    const ownNotes = await payload.find({
       collection: 'notifications',
       where: { student: { equals: docs[0].id } },
       depth: 0,
     })
-    expect(notes.docs).toHaveLength(1)
-    expect(notes.docs[0].type).toBe('ACCOUNT_CREATED')
+    expect(ownNotes.docs).toHaveLength(0)
 
     // The action stopped reading `headers()`, so there is no IP and no user agent to
     // record. The `metadata` column is still on the collection and still writable by
     // anything else that raises a notification — what must not come back is this shape.
-    expect(notes.docs[0].metadata ?? {}).not.toHaveProperty('ip')
-    expect(notes.docs[0].metadata ?? {}).not.toHaveProperty('userAgent')
+    expect(staffNotes.docs[0].metadata ?? {}).not.toHaveProperty('ip')
+    expect(staffNotes.docs[0].metadata ?? {}).not.toHaveProperty('userAgent')
 
     expect(await readOtp(payload, email)).toBeTruthy()
     expect(ctx.cookieJar.get('pending_email')).toBe(email)
@@ -147,10 +182,9 @@ describe('registerAction — existing ACTIVE email', () => {
       message: 'Email đã tồn tại.',
     })
 
-    const { totalDocs } = await payload.find({
+    const { totalDocs } = await payload.count({
       collection: 'students',
       where: { email: { equals: email } },
-      limit: 0,
     })
     expect(totalDocs).toBe(1)
     expect(await readOtp(payload, email)).toBeNull()
@@ -180,10 +214,9 @@ describe('registerAction — existing PENDING_VERIFICATION email', () => {
       await run(validForm(email, { password: 'newpass123', confirmPassword: 'newpass123' })),
     ).toEqual({ status: 'success' })
 
-    const notes = await payload.find({
+    const notes = await payload.count({
       collection: 'notifications',
       where: { student: { equals: existing.id } },
-      limit: 0,
     })
     expect(notes.totalDocs).toBe(0)
     expect(await readOtp(payload, email)).toBeTruthy()
@@ -218,12 +251,12 @@ describe('registerAction — DISABLED email', () => {
   })
 })
 
-describe('registerAction — transaction atomicity', () => {
-  // The failure now leaves by `throw` instead of coming back as `AUTH_003`: an error
-  // nobody wrote copy for is a bug, and returning "please try again" buried it. The form
-  // catches this and shows its system-failure banner.
-  it('rolls the student back when the notification write fails, and rethrows', async () => {
-    const email = uniqueEmail('rollback')
+describe('registerAction — the welcome notification is not required to succeed', () => {
+  // The notification write is no longer part of the student-create transaction (it fires
+  // after that write succeeds, fire-and-forget) — a failure there is logged, not thrown,
+  // and does not roll the student back.
+  it('creates the student and returns success even when the notification write fails', async () => {
+    const email = uniqueEmail('notif-fail')
     const realCreate = payload.create.bind(payload)
     vi.spyOn(payload, 'create').mockImplementation(
       async (args: Parameters<typeof payload.create>[0]) => {
@@ -232,15 +265,14 @@ describe('registerAction — transaction atomicity', () => {
       },
     )
 
-    await expect(run(validForm(email))).rejects.toThrow('boom')
+    await expect(run(validForm(email))).resolves.toEqual({ status: 'success' })
 
     vi.restoreAllMocks()
-    const { totalDocs } = await payload.find({
+    const { totalDocs } = await payload.count({
       collection: 'students',
       where: { email: { equals: email } },
-      limit: 0,
     })
-    expect(totalDocs).toBe(0)
+    expect(totalDocs).toBe(1)
   })
 })
 
@@ -253,10 +285,9 @@ describe('registerAction — guards', () => {
       status: 'error',
       message: 'Vui lòng kiểm tra lại thông tin đã nhập.',
     })
-    const { totalDocs } = await payload.find({
+    const { totalDocs } = await payload.count({
       collection: 'students',
       where: { email: { equals: email } },
-      limit: 0,
     })
     expect(totalDocs).toBe(0)
   })

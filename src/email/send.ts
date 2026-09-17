@@ -7,6 +7,7 @@
 import type { Payload } from 'payload'
 
 import { duplicateRegisterAttemptEmail } from '@/email/templates/duplicate-register-attempt'
+import { createEnrollmentCreatedEmailTemplate } from '@/email/templates/enrollment-created'
 import { verifyOtpEmail } from '@/email/templates/verify-otp'
 import { resetPasswordEmail } from '@/email/templates/reset-password'
 
@@ -26,5 +27,13 @@ export async function sendResetPasswordEmail(
   resetUrl: string,
 ): Promise<void> {
   const { subject, html, text } = resetPasswordEmail(resetUrl)
+  await payload.sendEmail({ to, subject, html, text })
+}
+
+export async function sendEnrollmentConfirmationEmail(
+  payload: Payload,
+  { to, courseTitle }: { to: string; courseTitle: string },
+): Promise<void> {
+  const { subject, html, text } = createEnrollmentCreatedEmailTemplate(courseTitle)
   await payload.sendEmail({ to, subject, html, text })
 }
