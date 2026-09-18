@@ -26,26 +26,7 @@ import { getActiveEnrollmentStatus } from '@/services/student-enrollment'
 import { COURSE_TYPE_LABEL } from '@/components/public/course-type-label'
 import type { Course } from '@/payload-types'
 
-// getSessionStudent() → cookies(): dynamic API that throws DYNAMIC_SERVER_USAGE
-// during ISR background revalidation (no real HTTP request). force-dynamic
-// ensures every request is rendered on the server with full request context.
 export const dynamic = 'force-dynamic'
-
-export async function generateStaticParams() {
-  const payload = await getPayload({ config: configPromise })
-  const courses = await payload.find({
-    collection: 'courses',
-    draft: false,
-    limit: 1000,
-    overrideAccess: false,
-    pagination: false,
-    select: {
-      slug: true,
-    },
-  })
-
-  return courses.docs.map(({ slug }) => ({ slug }))
-}
 
 type Args = {
   params: Promise<{
