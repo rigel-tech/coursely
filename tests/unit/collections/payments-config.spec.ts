@@ -235,4 +235,16 @@ describe('parseAmountInput', () => {
     expect(parseAmountInput('')).toBeNull()
     expect(parseAmountInput('abc')).toBeNull()
   })
+
+  it('rejects a decimal amount instead of silently multiplying it by 100', () => {
+    // Pasted from a bank statement: US-style thousands+decimal, and vi-VN
+    // thousands+decimal. Both used to strip every non-digit and concatenate
+    // what was left, turning 1,500,000.00 into 150000000.
+    expect(parseAmountInput('1,500,000.00')).toBeNull()
+    expect(parseAmountInput('1.500.000,50')).toBeNull()
+  })
+
+  it('rejects a value that would lose precision past Number.MAX_SAFE_INTEGER', () => {
+    expect(parseAmountInput('9.007.199.254.740.993')).toBeNull()
+  })
 })

@@ -4,7 +4,13 @@ export const formatAmountDisplay = (value: number | null | undefined): string =>
 }
 
 export const parseAmountInput = (raw: string): number | null => {
-  const digitsOnly = raw.replace(/\D/g, '')
-  if (digitsOnly === '') return null
-  return Number(digitsOnly)
+  // Only the vi-VN thousands separator ('.') is stripped — any other non-digit
+  // character (a decimal point or comma from a pasted bank statement) means the
+  // input isn't a plain integer, so it's rejected rather than silently
+  // concatenated into a wildly wrong amount.
+  const withoutSeparators = raw.replace(/\./g, '')
+  if (!/^\d+$/.test(withoutSeparators)) return null
+
+  const value = Number(withoutSeparators)
+  return Number.isSafeInteger(value) ? value : null
 }
