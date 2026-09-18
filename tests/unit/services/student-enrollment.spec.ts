@@ -6,6 +6,7 @@ import {
   createStudentEnrollment,
   findCourseSlug,
   getActiveEnrollmentStatus,
+  getStudentEnrollments,
 } from '@/services/student-enrollment'
 import {
   CourseNotFound,
@@ -202,5 +203,86 @@ describe('findCourseSlug', () => {
         where: expect.objectContaining({ _status: { equals: 'published' } }),
       }),
     )
+  })
+})
+
+describe('getStudentEnrollments', () => {
+  it('queries with depth: 1 and narrows class document to 5 public fields without internal metadata', async () => {
+    const rawEnrollment = {
+      id: 50,
+      student: 7,
+      course: {
+        id: 12,
+        title: 'Frontend cơ bản',
+        slug: 'frontend-co-ban',
+        duration: '6 tuần',
+      },
+      class: {
+        id: 999,
+        code: 'FE-01',
+        course: 12,
+        status: 'OPEN',
+        startDate: '2026-10-01T00:00:00.000Z',
+        endDate: '2026-11-15T00:00:00.000Z',
+        scheduleTime: 'Tối 2-4-6',
+        location: 'Phòng 101',
+        maxStudents: 30, // Internal field — must be stripped
+        createdAt: '2026-09-01T00:00:00.000Z', // Internal field — must be stripped
+        updatedAt: '2026-09-01T00:00:00.000Z', // Internal field — must be stripped
+      },
+      enrollmentStatus: 'CONFIRMED',
+      paymentStatus: 'PAID',
+      registeredAt: '2026-09-10T00:00:00.000Z',
+      createdAt: '2026-09-10T00:00:00.000Z',
+    }
+
+    const find = vi.fn().mockResolvedValue({ docs: [rawEnrollment] })
+    const payload = asPayload({ find })
+
+    const result = await getStudentEnrollments(payload, 7)
+
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'enrollments',
+        depth: 1,
+        where: { student: { equals: 7 } },
+      }),
+    )
+
+    expect(result).toHaveLength(1)
+    expect(result[0].class).toEqual({
+      code: 'FE-01',
+      startDate: '2026-10-01T00:00:00.000Z',
+      endDate: '2026-11-15T00:00:00.000Z',
+      scheduleTime: 'Tối 2-4-6',
+      location: 'Phòng 101',
+    })
+    expect(result[0].class).not.toHaveProperty('maxStudents')
+    expect(result[0].class).not.toHaveProperty('status')
+  })
+
+  it('sets class to null if the assigned class is DRAFT or CANCELLED', async () => {
+    const draftClassEnrollment = {
+      id: 51,
+      student: 7,
+      course: { id: 12, title: 'Frontend', slug: 'frontend' },
+      class: {
+        id: 1000,
+        code: 'DRAFT-01',
+        status: 'DRAFT',
+        startDate: '2026-10-01T00:00:00.000Z',
+        maxStudents: 30,
+      },
+      enrollmentStatus: 'CONFIRMED',
+      paymentStatus: 'PAID',
+      createdAt: '2026-09-10T00:00:00.000Z',
+    }
+
+    const find = vi.fn().mockResolvedValue({ docs: [draftClassEnrollment] })
+    const payload = asPayload({ find })
+
+    const result = await getStudentEnrollments(payload, 7)
+
+    expect(result[0].class).toBeNull()
   })
 })

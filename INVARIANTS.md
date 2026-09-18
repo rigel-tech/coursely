@@ -817,6 +817,14 @@ declared `id: string` throughout until it was regenerated.
 `src/components/public/PayloadRedirects/index.tsx:26` (`PayloadRedirects`) and
 `src/blocks/RelatedPosts/Component.tsx:25` (`RelatedPosts`).
 
+### `ProfileForm` and `getStudentEnrollments` depend on `depth: 1` and narrowed `StudentEnrollmentItem` shape
+
+**Rule** — `getStudentEnrollments` must query with `depth: 1` to resolve class/course relationships and must sanitize docs into `StudentEnrollmentItem` (narrowing `class` to only `{ code, startDate, endDate, scheduleTime, location }` and stripping `DRAFT`/`CANCELLED` classes). Callers must never serialize raw `Class` documents to the student's browser.
+
+**Why it breaks silently** — `Enrollment['class']` is typed as `(number | null) | Class`. At `depth: 0`, Payload returns unpopulated foreign key IDs as plain `number`s, causing the client to treat the student as unassigned ("Chưa xếp lớp") without throwing. Conversely, serializing raw `Class` docs leaks internal operational fields (`status: 'DRAFT'`, `maxStudents`, timestamps) to client RSC payloads for an `authenticated`-only collection.
+
+**Where** — `src/services/student-enrollment.ts` (`getStudentEnrollments`, `StudentEnrollmentItem`, `AssignedClassSummary`), `src/components/public/forms/ProfileForm.tsx` (`ProfileFormProps`).
+
 ## Agent tooling
 
 ### A git worktree with no `.codegraph/` of its own answers from the parent repo's index

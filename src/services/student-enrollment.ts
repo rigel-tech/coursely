@@ -169,7 +169,40 @@ export async function createStudentEnrollment({
   notifyEnrollmentCreated(payload, { studentId: student.id, studentEmail: student.email, course })
 }
 
-export async function getStudentEnrollments(payload: Payload, studentId: number) {
+export interface AssignedClassSummary {
+  code: string
+  startDate: string
+  endDate?: string | null
+  scheduleTime?: string | null
+  location?: string | null
+}
+
+export interface StudentEnrollmentItem {
+  id: number
+  course: {
+    id: number
+    title: string
+    slug: string
+    duration?: string | null
+  }
+  class?: AssignedClassSummary | null
+  enrollmentStatus: Enrollment['enrollmentStatus']
+  paymentStatus: Enrollment['paymentStatus']
+  registeredAt?: string | null
+  createdAt: string
+}
+
+/**
+ * Lấy danh sách đơn đăng ký của học viên đã được làm sạch để an toàn khi serialize về phía client.
+ * Yêu cầu `depth: 1` để populate `course` và `class`.
+ * Chỉ chọn lọc 5 trường công khai của lớp học (`code`, `startDate`, `endDate`, `scheduleTime`, `location`),
+ * đồng thời lọc bỏ các lớp DRAFT/CANCELLED nhằm bảo mật thông tin nội bộ của `Classes`.
+ * Xem INVARIANTS.md ("ProfileForm and getStudentEnrollments depend on depth: 1").
+ */
+export async function getStudentEnrollments(
+  payload: Payload,
+  studentId: number,
+): Promise<StudentEnrollmentItem[]> {
   const result = await payload.find({
     collection: 'enrollments',
     where: {
@@ -180,5 +213,40 @@ export async function getStudentEnrollments(payload: Payload, studentId: number)
     limit: 100,
     overrideAccess: true,
   })
+
   return result.docs
+    .map((doc): StudentEnrollmentItem | null => {
+      const course = typeof doc.course === 'object' && doc.course !== null ? doc.course : null
+      if (!course) return null
+
+      const assignedClass: AssignedClassSummary | null =
+        typeof doc.class === 'object' &&
+        doc.class !== null &&
+        doc.class.status !== 'DRAFT' &&
+        doc.class.status !== 'CANCELLED'
+          ? {
+              code: doc.class.code,
+              startDate: doc.class.startDate,
+              endDate: doc.class.endDate,
+              scheduleTime: doc.class.scheduleTime,
+              location: doc.class.location,
+            }
+          : null
+
+      return {
+        id: doc.id,
+        course: {
+          id: course.id,
+          title: course.title,
+          slug: course.slug,
+          duration: course.duration,
+        },
+        class: assignedClass,
+        enrollmentStatus: doc.enrollmentStatus,
+        paymentStatus: doc.paymentStatus,
+        registeredAt: doc.registeredAt,
+        createdAt: doc.createdAt,
+      }
+    })
+    .filter((item): item is StudentEnrollmentItem => item !== null)
 }

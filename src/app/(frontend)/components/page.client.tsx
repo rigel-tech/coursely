@@ -4,6 +4,7 @@ import { AlertCircle, BookOpenIcon } from 'lucide-react'
 import * as React from 'react'
 
 import type { Student } from '@/payload-types'
+import type { StudentEnrollmentItem } from '@/services/student-enrollment'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
 
@@ -82,6 +83,43 @@ const SHOWCASE_STUDENT: Student = {
   createdAt: '2026-08-01T00:00:00.000Z',
   updatedAt: '2026-08-01T00:00:00.000Z',
 }
+
+const SHOWCASE_ENROLLMENTS: StudentEnrollmentItem[] = [
+  {
+    id: 1,
+    course: {
+      id: 101,
+      title: 'Ứng Dụng GenAI & ChatGPT Tối Ưu Hiệu Suất Làm Việc',
+      slug: 'ung-dung-genai-chatgpt-hieu-suat',
+      duration: '6 tuần (18 buổi)',
+    },
+    class: {
+      code: 'GENAI-K24-01',
+      startDate: '2026-10-01T00:00:00.000Z',
+      endDate: '2026-11-15T00:00:00.000Z',
+      scheduleTime: 'Thứ 2 - 4 - 6 (18:30 - 20:30)',
+      location: 'Phòng Lab 302, Tòa nhà Innovation',
+    },
+    enrollmentStatus: 'CONFIRMED',
+    paymentStatus: 'PAID',
+    registeredAt: '2026-09-10T08:00:00.000Z',
+    createdAt: '2026-09-10T08:00:00.000Z',
+  },
+  {
+    id: 2,
+    course: {
+      id: 102,
+      title: 'Chuyển Đổi Số Toàn Diện Cho Doanh Nghiệp',
+      slug: 'chuyen-doi-so-toan-dien-doanh-nghiep',
+      duration: '8 tuần (24 buổi)',
+    },
+    class: null, // Chưa xếp lớp
+    enrollmentStatus: 'NEW',
+    paymentStatus: 'UNPAID',
+    registeredAt: '2026-09-15T09:30:00.000Z',
+    createdAt: '2026-09-15T09:30:00.000Z',
+  },
+]
 
 const COURSES = [
   {
@@ -585,7 +623,7 @@ const READY_FORMS: Entry[] = [
     note: 'Trang /tai-khoan. Học viên minh hoạ, không phải tài khoản thật.',
     preview: (
       <div className="max-w-2xl">
-        <ProfileForm user={SHOWCASE_STUDENT} />
+        <ProfileForm user={SHOWCASE_STUDENT} enrollments={SHOWCASE_ENROLLMENTS} />
       </div>
     ),
   },

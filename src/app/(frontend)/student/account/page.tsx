@@ -5,7 +5,7 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { getSessionStudent } from '@/lib/auth/session-student'
-import { ProfileForm } from '../../../../components/public/forms/ProfileForm'
+import { ProfileForm } from '@/components/public/forms/ProfileForm'
 import { getStudentEnrollments } from '@/services/student-enrollment'
 
 export const dynamic = 'force-dynamic'

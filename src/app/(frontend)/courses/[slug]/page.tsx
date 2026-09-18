@@ -23,6 +23,7 @@ import { CourseRegistration } from '@/components/public/CourseRegistration'
 import { LivePreviewListener } from '@/components/public/LivePreviewListener'
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { getActiveEnrollmentStatus } from '@/services/student-enrollment'
+import { formatDate } from '@/utilities/formatDateTime'
 import { COURSE_TYPE_LABEL } from '@/components/public/course-type-label'
 import type { Course } from '@/payload-types'
 
@@ -261,7 +262,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                       <Calendar className="size-4" /> Mở đăng ký:
                     </span>
                     <span className="text-foreground font-semibold">
-                      {new Date(course.registrationStartAt).toLocaleDateString('vi-VN')}
+                      {formatDate(course.registrationStartAt)}
                     </span>
                   </div>
                 )}
@@ -272,7 +273,7 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                       <Calendar className="size-4" /> Hạn chót:
                     </span>
                     <span className="font-semibold text-destructive-foreground">
-                      {new Date(course.registrationEndAt).toLocaleDateString('vi-VN')}
+                      {formatDate(course.registrationEndAt)}
                     </span>
                   </div>
                 )}
