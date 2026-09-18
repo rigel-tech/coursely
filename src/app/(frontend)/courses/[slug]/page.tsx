@@ -26,21 +26,7 @@ import { getActiveEnrollmentStatus } from '@/services/student-enrollment'
 import { COURSE_TYPE_LABEL } from '@/components/public/course-type-label'
 import type { Course } from '@/payload-types'
 
-export async function generateStaticParams() {
-  const payload = await getPayload({ config: configPromise })
-  const courses = await payload.find({
-    collection: 'courses',
-    draft: false,
-    limit: 1000,
-    overrideAccess: false,
-    pagination: false,
-    select: {
-      slug: true,
-    },
-  })
-
-  return courses.docs.map(({ slug }) => ({ slug }))
-}
+export const dynamic = 'force-dynamic'
 
 type Args = {
   params: Promise<{
@@ -62,8 +48,8 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
 
   const payload = await getPayload({ config: configPromise })
   const student = await getSessionStudent()
-  const enrollmentStatus = student
-    ? await getActiveEnrollmentStatus(payload, { studentId: student.id, courseId: course.id })
+  const activeEnrollment = student
+    ? await getActiveEnrollmentStatus(payload, student.id, course.id)
     : undefined
 
   // Lấy danh sách mục tiêu khóa học (Course Objectives)
@@ -303,7 +289,9 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                 ) : (
                   <CourseRegistration
                     course={{ id: course.id, title: course.title, slug: course.slug }}
-                    enrollmentStatus={enrollmentStatus}
+                    enrollmentId={activeEnrollment?.id}
+                    enrollmentStatus={activeEnrollment?.enrollmentStatus}
+                    canCancel={activeEnrollment?.canCancel ?? false}
                     profile={
                       student
                         ? { email: student.email, fullName: student.fullName, phone: student.phone }

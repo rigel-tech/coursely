@@ -8,6 +8,7 @@ import type { Payload } from 'payload'
 
 import { duplicateRegisterAttemptEmail } from '@/email/templates/duplicate-register-attempt'
 import { createEnrollmentCreatedEmailTemplate } from '@/email/templates/enrollment-created'
+import { createEnrollmentCancelledEmailTemplate } from '@/email/templates/enrollment-cancelled'
 import { verifyOtpEmail } from '@/email/templates/verify-otp'
 import { resetPasswordEmail } from '@/email/templates/reset-password'
 
@@ -35,5 +36,13 @@ export async function sendEnrollmentConfirmationEmail(
   { to, courseTitle }: { to: string; courseTitle: string },
 ): Promise<void> {
   const { subject, html, text } = createEnrollmentCreatedEmailTemplate(courseTitle)
+  await payload.sendEmail({ to, subject, html, text })
+}
+
+export async function sendEnrollmentCancellationEmail(
+  payload: Payload,
+  { to, courseTitle }: { to: string; courseTitle: string },
+): Promise<void> {
+  const { subject, html, text } = createEnrollmentCancelledEmailTemplate(courseTitle)
   await payload.sendEmail({ to, subject, html, text })
 }

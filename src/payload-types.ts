@@ -1062,7 +1062,7 @@ export interface Notification {
   id: number;
   student?: (number | null) | Student;
   user?: (number | null) | User;
-  type: 'ACCOUNT_CREATED' | 'ENROLLMENT_CREATED';
+  type: 'ACCOUNT_CREATED' | 'ENROLLMENT_CREATED' | 'ENROLLMENT_CANCELLED';
   title: string;
   content: string;
   metadata?:

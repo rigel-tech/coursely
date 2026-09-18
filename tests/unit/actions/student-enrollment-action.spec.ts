@@ -106,11 +106,12 @@ describe('createEnrollmentAction — an account that may not enrol', () => {
 describe('createEnrollmentAction — the path that enrols', () => {
   it('validates the course id and delegates valid input', async () => {
     vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
-    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await expect(createEnrollmentAction({ courseId: 12, ...validProfile })).resolves.toEqual({
       status: 'success',
       message: 'Đăng ký khóa học thành công.',
+      enrollmentId: 31,
     })
     expect(createStudentEnrollment).toHaveBeenCalledWith({
       courseId: 12,
@@ -225,7 +226,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
 
   it('saves the profile before attempting the enrollment, in that order', async () => {
     vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
-    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(31)
     const callOrder: string[] = []
     updateStudentProfile.mockImplementation(async () => {
       callOrder.push('updateStudentProfile')
@@ -233,6 +234,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
     })
     vi.mocked(createStudentEnrollment).mockImplementation(async () => {
       callOrder.push('createStudentEnrollment')
+      return 31
     })
 
     await createEnrollmentAction({ courseId: 12, ...validProfile })
@@ -266,7 +268,7 @@ describe('createEnrollmentAction — skips the profile write when nothing change
   it('does not call updateStudentProfile when the submitted profile matches the stored one', async () => {
     const student = studentWith('ACTIVE', validProfile)
     vi.mocked(getSessionStudent).mockResolvedValue(student)
-    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await createEnrollmentAction({ courseId: 12, ...validProfile })
 
@@ -276,7 +278,7 @@ describe('createEnrollmentAction — skips the profile write when nothing change
   it('still enrols when the profile write is skipped', async () => {
     const student = studentWith('ACTIVE', validProfile)
     vi.mocked(getSessionStudent).mockResolvedValue(student)
-    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await createEnrollmentAction({ courseId: 12, ...validProfile })
 
@@ -286,7 +288,7 @@ describe('createEnrollmentAction — skips the profile write when nothing change
   it('still calls updateStudentProfile when the stored profile differs', async () => {
     const student = studentWith('ACTIVE', validProfile)
     vi.mocked(getSessionStudent).mockResolvedValue(student)
-    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await createEnrollmentAction({ courseId: 12, fullName: 'Trần Thị B', phone: '0912345678' })
 
@@ -301,7 +303,7 @@ describe('createEnrollmentAction — skips the profile write when nothing change
   it('still calls updateStudentProfile with both fields when only the phone differs', async () => {
     const student = studentWith('ACTIVE', validProfile)
     vi.mocked(getSessionStudent).mockResolvedValue(student)
-    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await createEnrollmentAction({
       courseId: 12,
@@ -320,7 +322,7 @@ describe('createEnrollmentAction — skips the profile write when nothing change
   it('still calls updateStudentProfile with both fields when only the full name differs', async () => {
     const student = studentWith('ACTIVE', validProfile)
     vi.mocked(getSessionStudent).mockResolvedValue(student)
-    vi.mocked(createStudentEnrollment).mockResolvedValue(undefined)
+    vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await createEnrollmentAction({
       courseId: 12,

@@ -3,7 +3,7 @@ services:
     image: ghcr.io/rigel-tech/coursely:${IMAGE_TAG:-latest}
     restart: always
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
     volumes:
       - media_data:/app/public/media
     env_file:
