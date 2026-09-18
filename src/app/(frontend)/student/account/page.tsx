@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import React from 'react'
+import configPromise from '@payload-config'
+import { getPayload } from 'payload'
 
 import { getSessionStudent } from '@/lib/auth/session-student'
 import { ProfileForm } from '../../../../components/public/forms/ProfileForm'
+import { getStudentEnrollments } from '@/services/student-enrollment'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,9 +28,12 @@ export default async function ProfilePage() {
     redirect('/dang-nhap?callbackUrl=%2Ftai-khoan')
   }
 
+  const payload = await getPayload({ config: configPromise })
+  const enrollments = await getStudentEnrollments(payload, student.id)
+
   return (
     <div className="pt-24 pb-24">
-      <ProfileForm user={student} />
+      <ProfileForm user={student} enrollments={enrollments} />
     </div>
   )
 }
