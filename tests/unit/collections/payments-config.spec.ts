@@ -137,6 +137,26 @@ describe('Payments registration in the Payload config', () => {
   })
 })
 
+describe('amount field admin components', () => {
+  it('renders the list-view amount through AmountCell', () => {
+    const f = field(Payments.fields, 'amount') as
+      { admin?: { components?: { Cell?: unknown } } } | undefined
+    expect(f?.admin?.components?.Cell).toBe(
+      '@/collections/Payments/components/AmountCell#AmountCell',
+    )
+  })
+})
+
+describe('enrollmentId field admin components', () => {
+  it('renders the list-view enrollment reference through EnrollmentCell', () => {
+    const f = field(Payments.fields, 'enrollmentId') as
+      { admin?: { components?: { Cell?: unknown } } } | undefined
+    expect(f?.admin?.components?.Cell).toBe(
+      '@/collections/Payments/components/EnrollmentCell#EnrollmentCell',
+    )
+  })
+})
+
 describe('validatePaymentAmount', () => {
   const cases: Array<[number, boolean]> = [
     [-100, false],

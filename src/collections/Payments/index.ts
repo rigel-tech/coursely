@@ -27,6 +27,7 @@ export const Payments: CollectionConfig = {
   },
   admin: {
     group: adminGroups.academic,
+    hidden: true,
     defaultColumns: [
       'studentId',
       'userId',
@@ -52,6 +53,9 @@ export const Payments: CollectionConfig = {
         description: {
           vi: 'Được điền sẵn từ đơn đăng ký đang xem, không chọn tay được.',
           en: 'Pre-filled from the enrollment being viewed — not manually selectable.',
+        },
+        components: {
+          Cell: '@/collections/Payments/components/EnrollmentCell#EnrollmentCell',
         },
       },
     },
@@ -82,6 +86,7 @@ export const Payments: CollectionConfig = {
         step: 1,
         components: {
           Field: '@/collections/Payments/components/AmountField#AmountField',
+          Cell: '@/collections/Payments/components/AmountCell#AmountCell',
         },
       },
       validate: validatePaymentAmount,
