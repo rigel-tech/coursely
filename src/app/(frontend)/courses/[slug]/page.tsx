@@ -49,8 +49,8 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
 
   const payload = await getPayload({ config: configPromise })
   const student = await getSessionStudent()
-  const enrollmentStatus = student
-    ? await getActiveEnrollmentStatus(payload, { studentId: student.id, courseId: course.id })
+  const activeEnrollment = student
+    ? await getActiveEnrollmentStatus(payload, student.id, course.id)
     : undefined
 
   // Lấy danh sách mục tiêu khóa học (Course Objectives)
@@ -290,7 +290,9 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                 ) : (
                   <CourseRegistration
                     course={{ id: course.id, title: course.title, slug: course.slug }}
-                    enrollmentStatus={enrollmentStatus}
+                    enrollmentId={activeEnrollment?.id}
+                    enrollmentStatus={activeEnrollment?.enrollmentStatus}
+                    canCancel={activeEnrollment?.canCancel ?? false}
                     profile={
                       student
                         ? { email: student.email, fullName: student.fullName, phone: student.phone }

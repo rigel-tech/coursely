@@ -11,6 +11,23 @@ const named = (fields: Field[]) =>
 
 const field = (fields: Field[], name: string) => fields.find((f) => 'name' in f && f.name === name)
 
+const bilingual = (label: unknown) => {
+  expect(label && typeof label === 'object').toBe(true)
+  const l = label as Record<string, string>
+  expect(l.vi).toBeTruthy()
+  expect(l.en).toBeTruthy()
+}
+
+const CORE_FIELDS = [
+  'fullName',
+  'phone',
+  'avatar',
+  'status',
+  'verifiedAt',
+  'lastLoginAt',
+  'createdBy',
+]
+
 /** Calls an access function as a signed-in staff member. */
 const asStaff = (fn: Access | undefined) =>
   fn?.({ req: { user: { id: 1, collection: 'users' } } as unknown as PayloadRequest })
@@ -67,8 +84,18 @@ describe('Students fields', () => {
   it('keeps the status enum, and defaults to ACTIVE for the counter-created account', () => {
     const status = field(Students.fields, 'status') as Extract<Field, { type: 'select' }>
 
-    expect(status.options).toEqual(['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'])
+    const values = status.options.map((o) => (typeof o === 'string' ? o : o.value))
+    expect(values).toEqual(['PENDING_VERIFICATION', 'ACTIVE', 'DISABLED'])
     expect(status.defaultValue).toBe('ACTIVE')
+  })
+
+  it('restricts status to the three fixed options, each with a bilingual label', () => {
+    const status = field(Students.fields, 'status') as Extract<Field, { type: 'select' }>
+
+    for (const opt of status.options) {
+      expect(typeof opt).not.toBe('string')
+      bilingual((opt as { label: unknown }).label)
+    }
   })
 
   it('points createdBy at users — the one place the two lanes meet', () => {
@@ -78,6 +105,19 @@ describe('Students fields', () => {
     >
 
     expect(createdBy.relationTo).toBe('users')
+  })
+
+  it('carries a bilingual label on every core field', () => {
+    for (const name of CORE_FIELDS) {
+      bilingual((field(Students.fields, name) as { label?: unknown } | undefined)?.label)
+    }
+  })
+
+  it('carries a bilingual description on status and createdBy', () => {
+    for (const name of ['status', 'createdBy']) {
+      const f = field(Students.fields, name) as { admin?: { description?: unknown } } | undefined
+      bilingual(f?.admin?.description)
+    }
   })
 })
 

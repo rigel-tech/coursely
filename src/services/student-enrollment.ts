@@ -1,14 +1,17 @@
 import configPromise from '@payload-config'
 import { getPayload, type Payload } from 'payload'
-import { sendEnrollmentConfirmationEmail } from '@/email/send'
 import {
   CourseNotFound,
+  EnrollmentAlreadyCancelled,
   EnrollmentAlreadyExists,
+  EnrollmentAlreadyStarted,
+  EnrollmentHasPayment,
+  EnrollmentNotCancellable,
+  EnrollmentNotFound,
   RegistrationClosed,
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
-import { createStudentNotification } from '@/notifications/create'
-import { createStudentEnrolledNotificationTemplate } from '@/notifications/templates/enrollment-created'
+import { notifyEnrollment } from '@/notifications/enrollment'
 import type { Course, Enrollment, Student } from '@/payload-types'
 
 /**
@@ -77,10 +80,10 @@ async function checkExistingEnrollment(
 async function createEnrollment(
   payload: Payload,
   { studentId, course }: { studentId: number; course: Course },
-): Promise<void> {
+): Promise<number> {
   await checkExistingEnrollment(payload, { studentId, courseId: course.id })
 
-  await payload.create({
+  const enrollment = await payload.create({
     collection: 'enrollments',
     data: {
       student: studentId,
@@ -93,37 +96,62 @@ async function createEnrollment(
     draft: false,
     overrideAccess: true,
   })
-}
 
-function notifyEnrollmentCreated(
-  payload: Payload,
-  { studentId, studentEmail, course }: { studentId: number; studentEmail: string; course: Course },
-): void {
-  const { title, content } = createStudentEnrolledNotificationTemplate(course.title)
-  void createStudentNotification(payload, {
-    studentId,
-    type: 'ENROLLMENT_CREATED',
-    title,
-    content,
-    metadata: { course: course.id },
-  }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CREATED notification failed'))
-
-  void sendEnrollmentConfirmationEmail(payload, {
-    to: studentEmail,
-    courseTitle: course.title,
-  }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CONFIRMATION email failed'))
+  return enrollment.id
 }
 
 /**
- * The student's current active (non-CANCELLED) enrollment status for a course, or
- * `undefined` if none — used by the course detail page to choose between the
- * registration form and a status badge. Same `where` shape as `checkExistingEnrollment`,
- * so a CANCELLED enrollment never blocks the form from showing again (FR-008).
+ * The pure eligibility rule for student self-cancellation (specs/012): `NEW`/`CONFIRMED`,
+ * fully unpaid, and — if assigned to a class — that class has not started yet. Shared by
+ * `cancelStudentEnrollment` (which enforces it) and `getActiveEnrollmentStatus` (which only
+ * uses it to decide whether to show a cancel control) so the rule is never duplicated.
  */
+type CancellableEnrollment = {
+  enrollmentStatus: Enrollment['enrollmentStatus']
+  paymentStatus: Enrollment['paymentStatus']
+  class?: Enrollment['class']
+}
+
+export function isEnrollmentCancellable(
+  enrollment: CancellableEnrollment,
+  now: Date = new Date(),
+): boolean {
+  if (enrollment.enrollmentStatus !== 'NEW' && enrollment.enrollmentStatus !== 'CONFIRMED') {
+    return false
+  }
+  if (enrollment.paymentStatus !== 'UNPAID') {
+    return false
+  }
+
+  const assignedClass = enrollment.class
+  const startDate =
+    assignedClass && typeof assignedClass === 'object' ? assignedClass.startDate : undefined
+
+  if (startDate && new Date(startDate) <= now) {
+    return false
+  }
+
+  return true
+}
+
+/**
+ * The student's current active (non-CANCELLED) enrollment for a course, or `undefined` if
+ * none — used by the course detail page to choose between the registration form and a
+ * status badge, and whether to offer a cancel control. Same `where` shape as
+ * `checkExistingEnrollment`, so a CANCELLED enrollment never blocks the form from showing
+ * again (FR-008). `depth: 1` so `canCancel` can inspect an assigned class's `startDate`.
+ */
+type ActiveEnrollmentStatus = {
+  id: number
+  enrollmentStatus: Enrollment['enrollmentStatus']
+  canCancel: boolean
+}
+
 export async function getActiveEnrollmentStatus(
   payload: Payload,
-  { studentId, courseId }: { studentId: number; courseId: number },
-): Promise<Enrollment['enrollmentStatus'] | undefined> {
+  studentId: number,
+  courseId: number,
+): Promise<ActiveEnrollmentStatus | undefined> {
   const result = await payload.find({
     collection: 'enrollments',
     where: {
@@ -134,11 +162,18 @@ export async function getActiveEnrollmentStatus(
       ],
     },
     limit: 1,
-    depth: 0,
+    depth: 1,
     overrideAccess: true,
   })
 
-  return result.docs[0]?.enrollmentStatus
+  const enrollment = result.docs[0]
+  if (!enrollment) return undefined
+
+  return {
+    id: enrollment.id,
+    enrollmentStatus: enrollment.enrollmentStatus,
+    canCancel: isEnrollmentCancellable(enrollment),
+  }
 }
 
 /** The course's public slug, or `null` when no course carries that id — never a draft's. */
@@ -152,7 +187,8 @@ export async function findCourseSlug(courseId: number): Promise<string | null> {
 /**
  * Creates the enrollment for `student`, already resolved and confirmed `ACTIVE` by the
  * caller (`createEnrollmentAction`) — this does not re-fetch or re-check the session
- * itself, to avoid doing that work twice on every registration.
+ * itself, to avoid doing that work twice on every registration. Resolves the new
+ * enrollment's id so the caller can offer an immediate cancel control without a reload.
  */
 export async function createStudentEnrollment({
   courseId,
@@ -160,13 +196,84 @@ export async function createStudentEnrollment({
 }: {
   courseId: number
   student: Pick<Student, 'id' | 'email'>
-}): Promise<void> {
+}): Promise<number> {
   const payload = await getPayload({ config: configPromise })
   const course = await validateCourseForEnrollment(payload, courseId)
 
-  await createEnrollment(payload, { studentId: student.id, course })
+  const enrollmentId = await createEnrollment(payload, { studentId: student.id, course })
 
-  notifyEnrollmentCreated(payload, { studentId: student.id, studentEmail: student.email, course })
+  notifyEnrollment({ payload, event: 'ENROLLMENT_CREATED', student, course })
+
+  return enrollmentId
+}
+
+/**
+ * Cancels `enrollmentId` on behalf of `studentId` — re-validates ownership and every
+ * eligibility rule server-side (never trusts a client-shown `canCancel`), then writes
+ * `enrollmentStatus: 'CANCELLED'` and `cancelledAt`. `depth: 1` so the assigned class's
+ * `startDate` and the student/course needed for the confirmation notification are already
+ * on hand, no second round trip. A non-owner and a non-existent id throw the identical
+ * `EnrollmentNotFound` — never confirms another student's enrollment exists.
+ */
+export async function cancelStudentEnrollment(
+  enrollmentId: number,
+  studentId: number,
+): Promise<void> {
+  const payload = await getPayload({ config: configPromise })
+
+  const enrollment = await payload
+    .findByID({
+      collection: 'enrollments',
+      id: enrollmentId,
+      depth: 1,
+      overrideAccess: true,
+    })
+    .catch(() => null)
+
+  const ownerId =
+    enrollment && typeof enrollment.student === 'object'
+      ? enrollment.student.id
+      : enrollment?.student
+
+  if (!enrollment || ownerId !== studentId) {
+    throw new EnrollmentNotFound()
+  }
+
+  if (enrollment.enrollmentStatus === 'CANCELLED') {
+    throw new EnrollmentAlreadyCancelled()
+  }
+  if (enrollment.enrollmentStatus === 'ATTENDED' || enrollment.enrollmentStatus === 'COMPLETED') {
+    throw new EnrollmentNotCancellable()
+  }
+  if (enrollment.paymentStatus !== 'UNPAID') {
+    throw new EnrollmentHasPayment()
+  }
+
+  const assignedClass = enrollment.class
+  if (
+    assignedClass &&
+    typeof assignedClass === 'object' &&
+    assignedClass.startDate &&
+    new Date(assignedClass.startDate) <= new Date()
+  ) {
+    throw new EnrollmentAlreadyStarted()
+  }
+
+  await payload.update({
+    collection: 'enrollments',
+    id: enrollmentId,
+    data: { enrollmentStatus: 'CANCELLED', cancelledAt: new Date().toISOString() },
+    overrideAccess: true,
+  })
+
+  if (typeof enrollment.student === 'object' && typeof enrollment.course === 'object') {
+    notifyEnrollment({
+      payload,
+      event: 'ENROLLMENT_CANCELLED',
+      student: enrollment.student,
+      course: enrollment.course,
+    })
+  }
 }
 
 export interface AssignedClassSummary {

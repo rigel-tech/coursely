@@ -16,6 +16,7 @@ import { Enrollments } from './collections/Enrollments'
 import { Media } from './collections/Media'
 import { Notifications } from './collections/Notifications'
 import { Pages } from './collections/Pages'
+import { Payments } from './collections/Payments'
 import { Posts } from './collections/Posts'
 import { Students } from './collections/Students'
 import { Users } from './collections/Users'
@@ -48,6 +49,7 @@ export default buildConfig({
         Icon: '@/components/admin/Graphics/Icon#Icon',
       },
       actions: ['@/components/admin/NotificationBell#NotificationBell'],
+      providers: ['@/components/admin/HidePaymentsCreateButton#HidePaymentsCreateButton'],
     },
     importMap: {
       baseDir: path.resolve(dirname),
@@ -101,6 +103,15 @@ export default buildConfig({
           }),
         })
 
+        extendTable({
+          table: schema.tables.payments,
+          extraConfig: (table) => ({
+            paymentsEnrollmentIdUniqueIdx: uniqueIndex('payments_enrollment_id_unique_idx').on(
+              table.enrollmentId,
+            ),
+          }),
+        })
+
         return schema
       },
     ],
@@ -131,6 +142,7 @@ export default buildConfig({
     CoursePhases,
     CourseObjectives,
     Categories,
+    Payments,
     // --- 2. Content (Nội dung & Truyền thông) ---
     Pages,
     Posts,

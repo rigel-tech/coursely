@@ -7,6 +7,7 @@ import {
   findCourseSlug,
   getActiveEnrollmentStatus,
   getStudentEnrollments,
+  isEnrollmentCancellable,
 } from '@/services/student-enrollment'
 import {
   CourseNotFound,
@@ -55,13 +56,13 @@ const payloadStub = (overrides: {
 }
 
 describe('createStudentEnrollment', () => {
-  it('creates an enrollment for the given student and course', async () => {
+  it('creates an enrollment for the given student and course, resolving its new id', async () => {
     const create = vi.fn().mockResolvedValue({ id: 31 })
     vi.mocked(getPayload).mockResolvedValue(asPayload(payloadStub({ create })))
 
-    await expect(
-      createStudentEnrollment({ courseId: 12, student: activeStudent }),
-    ).resolves.toBeUndefined()
+    await expect(createStudentEnrollment({ courseId: 12, student: activeStudent })).resolves.toBe(
+      31,
+    )
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: 'enrollments',
@@ -157,9 +158,7 @@ describe('getActiveEnrollmentStatus', () => {
     vi.mocked(getPayload).mockResolvedValue(asPayload({ find }))
 
     const payload = await getPayload({} as never)
-    await expect(
-      getActiveEnrollmentStatus(payload, { studentId: 7, courseId: 12 }),
-    ).resolves.toBeUndefined()
+    await expect(getActiveEnrollmentStatus(payload, 7, 12)).resolves.toBeUndefined()
     expect(find).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: 'enrollments',
@@ -172,14 +171,78 @@ describe('getActiveEnrollmentStatus', () => {
     )
   })
 
-  it('returns the active enrollment status when one exists', async () => {
-    const find = vi.fn().mockResolvedValue({ docs: [{ id: 99, enrollmentStatus: 'CONFIRMED' }] })
+  it('returns the active enrollment, including whether it can be self-cancelled', async () => {
+    const find = vi.fn().mockResolvedValue({
+      docs: [{ id: 99, enrollmentStatus: 'CONFIRMED', paymentStatus: 'UNPAID' }],
+    })
     vi.mocked(getPayload).mockResolvedValue(asPayload({ find }))
 
     const payload = await getPayload({} as never)
-    await expect(getActiveEnrollmentStatus(payload, { studentId: 7, courseId: 12 })).resolves.toBe(
-      'CONFIRMED',
-    )
+    await expect(getActiveEnrollmentStatus(payload, 7, 12)).resolves.toEqual({
+      id: 99,
+      enrollmentStatus: 'CONFIRMED',
+      canCancel: true,
+    })
+  })
+
+  it('reports canCancel: false when the enrollment is already paid', async () => {
+    const find = vi.fn().mockResolvedValue({
+      docs: [{ id: 99, enrollmentStatus: 'CONFIRMED', paymentStatus: 'PAID' }],
+    })
+    vi.mocked(getPayload).mockResolvedValue(asPayload({ find }))
+
+    const payload = await getPayload({} as never)
+    await expect(getActiveEnrollmentStatus(payload, 7, 12)).resolves.toEqual({
+      id: 99,
+      enrollmentStatus: 'CONFIRMED',
+      canCancel: false,
+    })
+  })
+})
+
+describe('isEnrollmentCancellable', () => {
+  const NOW = new Date('2026-06-15T00:00:00.000Z')
+  const FUTURE = '2026-07-01T00:00:00.000Z'
+  const PAST = '2026-06-01T00:00:00.000Z'
+
+  it.each([
+    ['NEW + UNPAID + no class', { enrollmentStatus: 'NEW', paymentStatus: 'UNPAID' }, true],
+    [
+      'CONFIRMED + UNPAID + no class',
+      { enrollmentStatus: 'CONFIRMED', paymentStatus: 'UNPAID' },
+      true,
+    ],
+    [
+      'CONFIRMED + UNPAID + class not started',
+      { enrollmentStatus: 'CONFIRMED', paymentStatus: 'UNPAID', class: { startDate: FUTURE } },
+      true,
+    ],
+    ['NEW + PAID', { enrollmentStatus: 'NEW', paymentStatus: 'PAID' }, false],
+    ['CONFIRMED + PAID', { enrollmentStatus: 'CONFIRMED', paymentStatus: 'PAID' }, false],
+    [
+      'CONFIRMED + PARTIALLY_PAID',
+      { enrollmentStatus: 'CONFIRMED', paymentStatus: 'PARTIALLY_PAID' },
+      false,
+    ],
+    [
+      'CONFIRMED + UNPAID + class already started',
+      { enrollmentStatus: 'CONFIRMED', paymentStatus: 'UNPAID', class: { startDate: PAST } },
+      false,
+    ],
+    [
+      'CONFIRMED + UNPAID + class starts exactly now (boundary)',
+      {
+        enrollmentStatus: 'CONFIRMED',
+        paymentStatus: 'UNPAID',
+        class: { startDate: NOW.toISOString() },
+      },
+      false,
+    ],
+    ['ATTENDED + UNPAID', { enrollmentStatus: 'ATTENDED', paymentStatus: 'UNPAID' }, false],
+    ['COMPLETED + UNPAID', { enrollmentStatus: 'COMPLETED', paymentStatus: 'UNPAID' }, false],
+    ['CANCELLED + UNPAID', { enrollmentStatus: 'CANCELLED', paymentStatus: 'UNPAID' }, false],
+  ] as const)('%s → %s', (_label, enrollment, expected) => {
+    expect(isEnrollmentCancellable(enrollment as never, NOW)).toBe(expected)
   })
 })
 
