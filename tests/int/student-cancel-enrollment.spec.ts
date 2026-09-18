@@ -23,7 +23,7 @@ const madePayments: number[] = []
 type LooseData = Record<string, unknown>
 type LooseDoc = Record<string, unknown> & { id: number }
 const createDoc = (
-  collection: 'courses' | 'classes' | 'students' | 'enrollments',
+  collection: 'courses' | 'classes' | 'students' | 'enrollments' | 'payments',
   data: LooseData,
 ) =>
   payload.create({ collection, data } as Parameters<
@@ -166,13 +166,10 @@ describe('cancelStudentEnrollment — refused, enrollment unchanged', () => {
       enrollmentStatus: 'CONFIRMED',
     })
 
-    const payment = await payload.create({
-      collection: 'payments',
-      data: {
-        enrollmentId,
-        amount: 50000,
-        paymentMethod: 'CASH',
-      },
+    const payment = await createDoc('payments', {
+      enrollmentId,
+      amount: 50000,
+      paymentMethod: 'CASH',
     })
     madePayments.push(payment.id as number)
 
