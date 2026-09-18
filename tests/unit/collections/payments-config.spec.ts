@@ -75,6 +75,14 @@ describe('Payments fields', () => {
     expect(f?.admin?.readOnly).toBe(true)
   })
 
+  it('does not block an empty studentId at validate time — the create-time hook fills it, and a client-side required check on a value the user never enters would lock the create drawer after any other field fails validation once', () => {
+    const f = field(Payments.fields, 'studentId') as
+      { validate?: (value: unknown, ctx: unknown) => unknown } | undefined
+    expect(f?.validate, 'studentId should define a custom validate').toBeTruthy()
+    expect(f?.validate?.(undefined, {} as never)).toBe(true)
+    expect(f?.validate?.('', {} as never)).toBe(true)
+  })
+
   it('types userId as a relationship to users', () => {
     const f = field(Payments.fields, 'userId') as Extract<Field, { type: 'relationship' }>
     expect(f?.type).toBe('relationship')
@@ -92,6 +100,14 @@ describe('Payments fields', () => {
       { type?: string; admin?: { readOnly?: boolean } } | undefined
     expect(f?.type).toBe('date')
     expect(f?.admin?.readOnly).toBe(true)
+  })
+
+  it('does not block an empty paymentDate at validate time — same create-time-hook-fills-it reasoning as studentId', () => {
+    const f = field(Payments.fields, 'paymentDate') as
+      { validate?: (value: unknown, ctx: unknown) => unknown } | undefined
+    expect(f?.validate, 'paymentDate should define a custom validate').toBeTruthy()
+    expect(f?.validate?.(undefined, {} as never)).toBe(true)
+    expect(f?.validate?.('', {} as never)).toBe(true)
   })
 
   it('types referenceNote as a textarea', () => {

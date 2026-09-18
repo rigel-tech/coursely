@@ -5,6 +5,10 @@ import { populatePaymentRelations } from './hooks/populatePaymentRelations'
 import { setPaymentDate } from './hooks/setPaymentDate'
 import { setRecordedByUser } from './hooks/setRecordedByUser'
 import { setStudentFromEnrollment } from './hooks/setStudentFromEnrollment'
+import {
+  syncEnrollmentPaymentStatusAfterChange,
+  syncEnrollmentPaymentStatusAfterDelete,
+} from './hooks/syncEnrollmentPaymentStatus'
 
 export const validatePaymentAmount: Validate<number> = (value) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return 'Số tiền là bắt buộc.'
@@ -27,18 +31,27 @@ export const Payments: CollectionConfig = {
   },
   admin: {
     group: adminGroups.academic,
-    hidden: true,
+    // Visible in the sidebar for browsing/editing; its list-view "Create New" button is
+    // hidden via `HidePaymentsCreateButton` (registered in payload.config.ts) instead of
+    // `access.create`, since the enrollment join field's own "Add new" button depends on
+    // that same access check.
+    // `paymentDate` leads deliberately: it is the only column with no custom `Cell`, and
+    // Payload only wires its edit-drawer pencil (and, through that drawer, delete) onto
+    // the first column — every other column below has a custom Cell (StudentCell,
+    // RecorderCell, EnrollmentCell, AmountCell), which bypasses that wiring entirely.
     defaultColumns: [
+      'paymentDate',
       'studentId',
       'userId',
       'enrollmentId',
       'amount',
       'paymentMethod',
-      'paymentDate',
     ],
   },
   hooks: {
     beforeChange: [setPaymentDate, setRecordedByUser, setStudentFromEnrollment],
+    afterChange: [syncEnrollmentPaymentStatusAfterChange],
+    afterDelete: [syncEnrollmentPaymentStatusAfterDelete],
     afterRead: [populatePaymentRelations],
   },
   fields: [
@@ -65,6 +78,11 @@ export const Payments: CollectionConfig = {
       relationTo: 'students',
       label: { vi: 'Học viên', en: 'Student' },
       required: true,
+      // The default required check runs before `setStudentFromEnrollment` (a beforeChange
+      // hook) ever fills this in, so the admin create form always sees it empty — without
+      // this override, one unrelated field failing validation once locks the drawer, since
+      // client-side re-validation then also flags this always-empty field as required.
+      validate: (): true => true,
       admin: {
         readOnly: true,
         description: {
@@ -108,6 +126,9 @@ export const Payments: CollectionConfig = {
       type: 'date',
       label: { vi: 'Thời điểm thanh toán', en: 'Payment Date' },
       required: true,
+      // Same reasoning as `studentId`'s `validate` above: `setPaymentDate` fills this in a
+      // beforeChange hook, after the default required check would already reject it empty.
+      validate: (): true => true,
       admin: {
         readOnly: true,
         description: {
