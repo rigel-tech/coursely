@@ -282,6 +282,37 @@ no error anywhere.
 `src/blocks/RelatedPosts/Component.tsx:27` (`RelatedPosts`),
 `src/components/public/CollectionArchive/index.tsx:21` (`CollectionArchive`).
 
+### The admin list view always reads relationship fields at `depth: 0`
+
+**Rule** — A custom list-view `Cell` for a `relationship` field cannot assume `cellData` is
+the populated document. Every other read path in this project (Local API default, REST
+default) populates at `depth: 2`, but `@payloadcms/next`'s List view hard-codes `depth: 0` for
+its own `find` call — not something a collection config can override. Write the `Cell` to
+handle a bare numeric id itself — an `afterRead` collection hook that mutates the field into
+an object looks like a fix but corrupts every other read path instead (see below), so it is
+not an option.
+
+**Why it breaks silently** — `DefaultCellComponentProps['cellData']` is typed loosely enough
+that reading `cellData.email` compiles fine even though at runtime, in the list view only,
+`cellData` is a plain number. No error, no warning — the column just renders whatever the
+`Cell`'s number/undefined branch does (commonly a raw id, or nothing), while the exact same
+`Cell` shows the right name/email everywhere else (the edit view, `findByID` at default
+depth) because those paths really do populate.
+
+**Where** — `node_modules/@payloadcms/next/dist/views/List/index.js` (`depth: 0` in the list's
+`req.payload.find` call — not project code, so it cannot be patched, only worked around).
+Fixed for this collection by making `src/collections/Payments/components/StudentCell.tsx` and
+`RecorderCell.tsx` **server** components (no `use client`): given a bare number they call
+`payload.findByID` themselves, given an already-populated object they render it directly.
+`enrollmentId`'s `EnrollmentCell.tsx` needs no such fetch — it only ever displays the id,
+populated or not. An earlier version of this fix used an `afterRead` hook
+(`populatePaymentRelations`, mirroring `src/collections/Posts/hooks/populateAuthors.ts`) that
+mutated `studentId`/`userId`/`enrollmentId` in place; that changed the shape of _every_ read
+(REST, Local API, GraphQL) regardless of requested `depth`, and broke GraphQL outright — its
+relationship resolver reads the field's raw value as an id (`parseFloat`), so a pre-populated
+object resolved to `NaN` and the field came back `null`. Resolving only inside the two `Cell`s
+that need it keeps every other read path returning exactly what its own `depth` asked for.
+
 ## Server actions
 
 ### An auth server action that sets a cookie must not `redirect()` — it returns `redirectTo`
@@ -773,6 +804,8 @@ guard that silently doesn't match between environments.
 `src/migrations/20260914_130000_add_enrollment_active_guard.ts` (the hand-written prod copy
 of the same index — change one, change both).
 
+<<<<<<< HEAD
+
 ### An advisory lock only guards a write that actually has a transaction
 
 **Rule** — `lockClassSeats` (`src/services/class-seats.ts`) takes a Postgres advisory lock
@@ -800,6 +833,52 @@ latter also depends on running inside the same transaction to see rows the batch
 written), `src/collections/Enrollments/hooks/guardClassCapacity.ts` (per-document caller,
 transaction supplied by Payload itself), `src/services/class-assignment.ts`
 (`assignStudentsToClass`, the batch caller — explicitly opens the transaction it passes in).
+=======
+
+### A relationship field's `ON DELETE` behavior can only be fixed for prod, never for dev/test
+
+**Rule** — Payload's postgres adapter exposes no per-field `onDelete` option — every
+relationship column it generates via `drizzle-push` (what dev/test runs on every schema
+change) gets `ON DELETE SET NULL`, unconditionally. A hand-written migration can still give
+prod a stricter FK (`payments_enrollment_id_id_enrollments_id_fk` is `ON DELETE restrict` as
+of `20260917_150000_convert_payments_enrollment_id_to_relationship.ts`), but dev/test's
+`drizzle-push` will regenerate `SET NULL` for that same column regardless — there is no
+config to make it match. The real protection has to live at the application layer
+(`Enrollments/hooks/guardAgainstDeleteWithPayments.ts`, a `beforeDelete` hook, which runs
+identically in every environment); the migration's `restrict` is a database-level backstop
+that only exists in prod.
+
+**Why it breaks silently** — a test against the dev/test database can never catch a
+regression in the app-level guard by relying on the database to also reject the delete —
+dev/test's `SET NULL` would silently null out the FK instead of erroring, while prod's
+`restrict` would (separately) reject it. The two environments only agree because the app
+hook runs first in both; remove that hook and they diverge with no error anywhere.
+
+**Where** — `src/collections/Enrollments/hooks/guardAgainstDeleteWithPayments.ts` (the actual
+protection, all environments), `src/migrations/20260917_150000_convert_payments_enrollment_id_to_relationship.ts`
+(prod-only DB backstop). Every other relationship FK in this schema
+(`payments_student_id_id_students_id_fk`, `payments_user_id_id_users_id_fk`,
+`payments_proof_image_id_media_id_fk`, …) is still `SET NULL` in every environment — this is
+the only column with a stricter prod migration.
+
+### The one-payment-per-enrollment unique index is defined twice — keep both in sync
+
+**Rule** — Same trap as the entry above, second occurrence: `payments_enrollment_id_unique_idx`
+(an enrollment may have at most one payment, FR-030) is declared in `afterSchemaInit` in
+`src/payload.config.ts` for dev/test's drizzle-push, and separately as a hand-written migration
+(`src/migrations/20260918_100000_add_payments_enrollment_unique_idx.ts`) for prod. Nothing
+checks the two agree.
+
+**Why it breaks silently** — change the indexed column in one and not the other, and
+`pnpm test:int` keeps passing while prod either never gets the one-payment guard or gets a
+different one — no error, no failed migration, just silently divergent constraints between
+environments.
+
+**Where** — `src/payload.config.ts` (`afterSchemaInit`),
+`src/migrations/20260918_100000_add_payments_enrollment_unique_idx.ts` (the hand-written prod
+copy of the same index — change one, change both).
+
+> > > > > > > origin/main
 
 ### `updateStudentProfile` no longer covers the enrollment-time profile write — `createEnrollmentAction` writes directly
 

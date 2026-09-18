@@ -32,7 +32,8 @@ import { LogoutCta } from '@/components/public/LogoutCta'
 import { updateProfileAction } from '@/actions/student/profile'
 import { initialProfileState, type ProfileState } from '@/lib/constants/profile-state'
 import { profileSchema, type ProfileValues } from '@/lib/validation/profile-schema'
-import type { Student, Media } from '@/payload-types'
+import type { Student, Media, Enrollment } from '@/payload-types'
+import { ENROLLMENT_STATUS } from '@/components/public/enrollment-status'
 
 const SYSTEM_FAILURE: ProfileState = {
   status: 'error',
@@ -57,10 +58,21 @@ const COURSE_TABS = [
 
 type CourseTab = (typeof COURSE_TABS)[number]['key']
 
-interface ProfileFormProps {
-  user: Student
+// Mapping nhãn tiếng Việt cho trạng thái học phí
+export const PAYMENT_STATUS_LABELS: Record<
+  string,
+  { label: string; variant: 'success' | 'warning' | 'error' | 'outline' | 'default' | 'brand' }
+> = {
+  UNPAID: { label: 'Chưa thanh toán', variant: 'warning' },
+  PARTIALLY_PAID: { label: 'Thanh toán một phần', variant: 'brand' },
+  PAID: { label: 'Đã thanh toán', variant: 'success' },
+  CANCELLED: { label: 'Đã hủy / Hoàn tiền', variant: 'error' },
 }
 
+interface ProfileFormProps {
+  user: Student
+  enrollments?: Enrollment[]
+}
 /**
  * The student's own profile: read-only view plus an edit form for `fullName`, `phone`
  * and `avatar`. `react-hook-form` validates the text fields against the same
@@ -72,7 +84,7 @@ interface ProfileFormProps {
  * with the banner and the person's typed values both still there, instead of bouncing
  * them back to the read-only view before they can see what went wrong.
  */
-export function ProfileForm({ user }: ProfileFormProps) {
+export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
   const [state, setState] = useState<ProfileState>(initialProfileState)
   const [isEditing, setIsEditing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -118,12 +130,28 @@ export function ProfileForm({ user }: ProfileFormProps) {
     variant: 'outline' as const,
   }
 
-  /** No enrollment data source yet — every tab renders the same empty list. */
-  const courses: never[] = []
+  const completedCount = enrollments.filter((e) => e.enrollmentStatus === 'COMPLETED').length
+  const inProgressCount = enrollments.filter(
+    (e) => e.enrollmentStatus === 'ATTENDED' || e.enrollmentStatus === 'CONFIRMED',
+  ).length
+  const pendingCount = enrollments.filter((e) => e.enrollmentStatus === 'NEW').length
+
+  const filteredEnrollments = enrollments.filter((e) => {
+    if (courseTab === 'in-progress') {
+      return (
+        e.enrollmentStatus === 'ATTENDED' ||
+        e.enrollmentStatus === 'CONFIRMED' ||
+        e.enrollmentStatus === 'NEW'
+      )
+    }
+    if (courseTab === 'completed') {
+      return e.enrollmentStatus === 'COMPLETED'
+    }
+    return true
+  })
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Banner: full-bleed như header, nội dung căn theo container bên trong */}
       <div className="bg-hero-accent">
         <div className="container mx-auto flex flex-col gap-6 px-4 py-8 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-5">
@@ -188,7 +216,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
       </div>
 
       <div className="container mx-auto grid grid-cols-1 gap-8 px-4 lg:grid-cols-12">
-        {/* Cột trái: thông tin cá nhân + tổng quan học tập */}
         <div className="flex flex-col gap-8 lg:col-span-4">
           <Card>
             <CardHeader>
@@ -329,21 +356,20 @@ export function ProfileForm({ user }: ProfileFormProps) {
             <CardContent className="space-y-3 text-sm">
               <p className="flex items-center justify-between">
                 <span className="text-muted-foreground">Khóa đã hoàn thành</span>
-                <span className="font-semibold text-foreground">0</span>
+                <span className="font-semibold text-foreground">{completedCount}</span>
               </p>
               <p className="flex items-center justify-between">
                 <span className="text-muted-foreground">Đang học</span>
-                <span className="font-semibold text-foreground">0</span>
+                <span className="font-semibold text-foreground">{inProgressCount}</span>
               </p>
               <p className="flex items-center justify-between">
                 <span className="text-muted-foreground">Chờ xác nhận</span>
-                <span className="font-semibold text-foreground">0</span>
+                <span className="font-semibold text-foreground">{pendingCount}</span>
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Cột phải: khóa học của tôi */}
         <div className="lg:col-span-8">
           <Card>
             <CardHeader className="flex-row items-center justify-between gap-4 space-y-0">
@@ -364,14 +390,15 @@ export function ProfileForm({ user }: ProfileFormProps) {
                     onClick={() => setCourseTab(tab.key)}
                   >
                     {tab.label}
-                    {tab.key === 'all' && ` (${courses.length})`}
+                    {tab.key === 'all' &&
+                      (enrollments.length > 0 ? ` (${enrollments.length})` : '')}
                   </Button>
                 ))}
               </div>
             </CardHeader>
 
             <CardContent>
-              {courses.length === 0 ? (
+              {filteredEnrollments.length === 0 ? (
                 <EmptyState
                   icon={courseTab === 'completed' ? GraduationCap : BookOpen}
                   title="Chưa có khóa học nào"
@@ -382,7 +409,73 @@ export function ProfileForm({ user }: ProfileFormProps) {
                     </Button>
                   }
                 />
-              ) : null}
+              ) : (
+                <div className="space-y-4">
+                  {filteredEnrollments.map((enrollment) => {
+                    const course = typeof enrollment.course === 'object' ? enrollment.course : null
+                    if (!course) return null
+
+                    const enrollmentStatusInfo = ENROLLMENT_STATUS[enrollment.enrollmentStatus] || {
+                      label: enrollment.enrollmentStatus,
+                      variant: 'outline' as const,
+                    }
+                    const paymentStatusInfo = PAYMENT_STATUS_LABELS[enrollment.paymentStatus] || {
+                      label: enrollment.paymentStatus,
+                      variant: 'outline' as const,
+                    }
+
+                    const registerDate = enrollment.registeredAt || enrollment.createdAt
+                    const formattedDate = registerDate
+                      ? new Date(registerDate).toLocaleDateString('vi-VN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })
+                      : '—'
+
+                    return (
+                      <div
+                        key={enrollment.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-border/60 bg-card p-4 sm:p-5 transition-colors hover:border-border"
+                      >
+                        <div className="space-y-1.5 flex-1">
+                          <Link
+                            href={`/khoa-hoc/${course.slug}`}
+                            className="text-base font-semibold text-foreground hover:text-primary transition-colors line-clamp-1"
+                          >
+                            {course.title}
+                          </Link>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <span>
+                              Ngày đăng ký:{' '}
+                              <strong className="text-foreground font-medium">
+                                {formattedDate}
+                              </strong>
+                            </span>
+                            {course.duration && (
+                              <span>
+                                Thời lượng:{' '}
+                                <strong className="text-foreground font-medium">
+                                  {course.duration}
+                                </strong>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 sm:self-center">
+                          <Badge variant={enrollmentStatusInfo.variant}>
+                            {enrollmentStatusInfo.label}
+                          </Badge>
+                          <Badge variant={paymentStatusInfo.variant}>
+                            {paymentStatusInfo.label}
+                          </Badge>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

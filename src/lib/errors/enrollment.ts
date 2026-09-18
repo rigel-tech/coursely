@@ -58,3 +58,37 @@ export class EnrollmentNotAssignable extends APIError {
     super('Chỉ đơn đăng ký đã xác nhận và chưa xếp lớp mới được xếp vào lớp.', 400)
   }
 }
+
+export class EnrollmentNotFound extends APIError {
+  constructor() {
+    super('Không tìm thấy đơn đăng ký.', 404)
+  }
+}
+
+/** `enrollmentStatus` is already `CANCELLED`. */
+export class EnrollmentAlreadyCancelled extends APIError {
+  constructor() {
+    super('Đơn đăng ký này đã được hủy trước đó.', 409)
+  }
+}
+
+/** `enrollmentStatus` is `ATTENDED` or `COMPLETED` — too far along to self-cancel. */
+export class EnrollmentNotCancellable extends APIError {
+  constructor() {
+    super('Đơn đăng ký này không thể tự hủy ở trạng thái hiện tại.', 400)
+  }
+}
+
+/** `paymentStatus` is `PARTIALLY_PAID` or `PAID` — a transaction already exists. */
+export class EnrollmentHasPayment extends APIError {
+  constructor() {
+    super('Đơn đăng ký đã có giao dịch thanh toán, vui lòng liên hệ trung tâm để được hỗ trợ.', 400)
+  }
+}
+
+/** The assigned class's `startDate` has already arrived. */
+export class EnrollmentAlreadyStarted extends APIError {
+  constructor() {
+    super('Khóa học đã khai giảng, không thể tự hủy đăng ký.', 400)
+  }
+}

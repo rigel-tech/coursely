@@ -13,6 +13,7 @@ const field = (name: string) =>
     defaultValue?: unknown
     required?: boolean
     admin?: { readOnly?: boolean; date?: { pickerAppearance?: string; displayFormat?: string } }
+    access?: { update?: (args: Record<string, unknown>) => boolean | Promise<boolean> }
   }
 
 describe('Enrollments collection fields', () => {
@@ -30,8 +31,21 @@ describe('Enrollments collection fields', () => {
         'classAssignedAt',
         'cancelledAt',
         'createdBy',
+        'payments',
       ]),
     )
+  })
+
+  it('makes paymentStatus read-only — staff never choose it by hand, it is derived (FR-032)', () => {
+    expect(field('paymentStatus').admin?.readOnly).toBe(true)
+  })
+
+  it('exposes payments as a join field back to the payments collection', () => {
+    expect(field('payments')).toMatchObject({
+      type: 'join',
+      collection: 'payments',
+      on: 'enrollmentId',
+    })
   })
 
   it('requires the student and course relationships', () => {
@@ -45,6 +59,17 @@ describe('Enrollments collection fields', () => {
       relationTo: 'courses',
       required: true,
     })
+  })
+
+  it('locks student and course from being changed after creation', async () => {
+    const student = field('student')
+    const course = field('course')
+    expect(typeof student.access?.update).toBe('function')
+    expect(typeof course.access?.update).toBe('function')
+
+    const args = {} as Record<string, unknown>
+    expect(await student.access!.update!(args)).toBe(false)
+    expect(await course.access!.update!(args)).toBe(false)
   })
 
   it('keeps class and creator relationships optional', () => {
@@ -95,9 +120,7 @@ describe('Enrollments collection fields', () => {
     expect(field('paymentStatus')).toMatchObject({
       options: [
         { value: 'UNPAID', label: { vi: 'Chưa thanh toán', en: 'Unpaid' } },
-        { value: 'PARTIALLY_PAID', label: { vi: 'Đã thanh toán một phần', en: 'Partially paid' } },
-        { value: 'PAID', label: { vi: 'Đã thanh toán đủ', en: 'Paid' } },
-        { value: 'CANCELLED', label: { vi: 'Đã hủy / hoàn tiền', en: 'Cancelled / Refunded' } },
+        { value: 'PAID', label: { vi: 'Đã thanh toán', en: 'Paid' } },
       ],
       defaultValue: 'UNPAID',
       required: true,

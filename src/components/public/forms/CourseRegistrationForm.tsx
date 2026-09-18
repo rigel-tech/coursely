@@ -28,7 +28,7 @@ export function CourseRegistrationForm({
 }: {
   course: CourseRegistrationCourse
   profile?: Partial<Pick<Student, 'email' | 'fullName' | 'phone'>>
-  onSuccess?: () => void
+  onSuccess?: (enrollmentId: number) => void
 }) {
   const { email, fullName, phone } = profile ?? {}
   const [message, setMessage] = useState<CreateEnrollmentState | null>(null)
@@ -65,7 +65,7 @@ export function CourseRegistrationForm({
     setMessage(result)
 
     if (result.status === 'success') {
-      onSuccess?.()
+      onSuccess?.(result.enrollmentId)
     }
   }
 

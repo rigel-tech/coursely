@@ -57,8 +57,9 @@ export async function createEnrollmentAction(
     })
   }
 
+  let enrollmentId: number
   try {
-    await createStudentEnrollment({ courseId, student })
+    enrollmentId = await createStudentEnrollment({ courseId, student })
   } catch (error) {
     if (
       error instanceof EnrollmentAlreadyExists ||
@@ -71,5 +72,5 @@ export async function createEnrollmentAction(
     throw error
   }
 
-  return { status: 'success', message: 'Đăng ký khóa học thành công.' }
+  return { status: 'success', message: 'Đăng ký khóa học thành công.', enrollmentId }
 }
