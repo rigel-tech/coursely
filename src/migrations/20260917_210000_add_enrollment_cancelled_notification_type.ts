@@ -7,8 +7,11 @@ import { MigrateDownArgs, MigrateUpArgs, sql } from '@payloadcms/db-postgres'
  */
 export async function up({ db }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
+    COMMIT;
     ALTER TYPE "public"."enum_notifications_type"
-      ADD VALUE IF NOT EXISTS 'ENROLLMENT_CANCELLED';`)
+      ADD VALUE IF NOT EXISTS 'ENROLLMENT_CANCELLED';
+    BEGIN;
+  `)
 }
 
 export async function down(_args: MigrateDownArgs): Promise<void> {}

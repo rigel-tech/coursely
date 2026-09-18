@@ -489,3 +489,187 @@
 [2K[1G[[32m✓[39m] Pulling schema from database...
  [32m✓[39m tests/int/users-notifications.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 4089[2mms[22m[39m
      [33m[2m✓[22m[39m applies ACTIVE / isWalkIn=false when unspecified [33m 382[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/int/student-cancel-enrollment.spec.ts[2m > [22mcancelStudentEnrollment — refused, enrollment unchanged[2m > [22mrefuses a PARTIALLY_PAID enrollment
+[31m[1mAssertionError[22m: promise resolved "undefined" instead of rejecting[39m
+
+[32m- Expected:[39m 
+Error {
+  "message": "rejected promise",
+}
+
+[31m+ Received:[39m 
+undefined
+
+[36m [2m❯[22m tests/int/student-cancel-enrollment.spec.ts:[2m166:66[22m[39m
+    [90m164| [39m    })
+    [90m165| [39m
+    [90m166| [39m    await expect(cancelStudentEnrollment(enrollmentId, studentId)).rej…
+    [90m   | [39m                                                                 [31m^[39m
+    [90m167| [39m      [33mEnrollmentHasPayment[39m[33m,[39m
+    [90m168| [39m    )
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/int/student-cancel-enrollment.spec.ts[2m > [22mcancelStudentEnrollment — refused, enrollment unchanged[2m > [22mrefuses a PAID enrollment
+[31m[1mAssertionError[22m: promise resolved "undefined" instead of rejecting[39m
+
+[32m- Expected:[39m 
+Error {
+  "message": "rejected promise",
+}
+
+[31m+ Received:[39m 
+undefined
+
+[36m [2m❯[22m tests/int/student-cancel-enrollment.spec.ts:[2m183:66[22m[39m
+    [90m181| [39m    })
+    [90m182| [39m
+    [90m183| [39m    await expect(cancelStudentEnrollment(enrollmentId, studentId)).rej…
+    [90m   | [39m                                                                 [31m^[39m
+    [90m184| [39m      [33mEnrollmentHasPayment[39m[33m,[39m
+    [90m185| [39m    )
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Errors [49m[22m[31m⎯⎯⎯⎯⎯⎯[39m
+[31m[1m
+Vitest caught 9 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m[1mError[22m: [vitest-pool]: Worker forks emitted error.[39m
+[90m [2m❯[22m EventEmitter.<anonymous> node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m8043:22[22m[39m
+[90m [2m❯[22m EventEmitter.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7610:22[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+[31m[1mCaused by: Error[22m: Worker exited unexpectedly[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7609:33[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m[1mError[22m: [vitest-pool]: Worker forks emitted error.[39m
+[90m [2m❯[22m EventEmitter.<anonymous> node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m8043:22[22m[39m
+[90m [2m❯[22m EventEmitter.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7610:22[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+[31m[1mCaused by: Error[22m: Worker exited unexpectedly[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7609:33[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m[1mError[22m: [vitest-pool]: Worker forks emitted error.[39m
+[90m [2m❯[22m EventEmitter.<anonymous> node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m8043:22[22m[39m
+[90m [2m❯[22m EventEmitter.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7610:22[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+[31m[1mCaused by: Error[22m: Worker exited unexpectedly[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7609:33[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m[1mError[22m: [vitest-pool]: Worker forks emitted error.[39m
+[90m [2m❯[22m EventEmitter.<anonymous> node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m8043:22[22m[39m
+[90m [2m❯[22m EventEmitter.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7610:22[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+[31m[1mCaused by: Error[22m: Worker exited unexpectedly[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7609:33[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m[1mError[22m: [vitest-pool]: Worker forks emitted error.[39m
+[90m [2m❯[22m EventEmitter.<anonymous> node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m8043:22[22m[39m
+[90m [2m❯[22m EventEmitter.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7610:22[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+[31m[1mCaused by: Error[22m: Worker exited unexpectedly[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7609:33[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m[1mError[22m: [vitest-pool]: Worker forks emitted error.[39m
+[90m [2m❯[22m EventEmitter.<anonymous> node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m8043:22[22m[39m
+[90m [2m❯[22m EventEmitter.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7610:22[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+[31m[1mCaused by: Error[22m: Worker exited unexpectedly[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7609:33[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m[1mError[22m: [vitest-pool]: Worker forks emitted error.[39m
+[90m [2m❯[22m EventEmitter.<anonymous> node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m8043:22[22m[39m
+[90m [2m❯[22m EventEmitter.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7610:22[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+[31m[1mCaused by: Error[22m: Worker exited unexpectedly[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7609:33[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m[1mError[22m: [vitest-pool]: Worker forks emitted error.[39m
+[90m [2m❯[22m EventEmitter.<anonymous> node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m8043:22[22m[39m
+[90m [2m❯[22m EventEmitter.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7610:22[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+[31m[1mCaused by: Error[22m: Worker exited unexpectedly[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7609:33[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m[1mError[22m: [vitest-pool]: Worker forks emitted error.[39m
+[90m [2m❯[22m EventEmitter.<anonymous> node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m8043:22[22m[39m
+[90m [2m❯[22m EventEmitter.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7610:22[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+[31m[1mCaused by: Error[22m: Worker exited unexpectedly[39m
+[90m [2m❯[22m ChildProcess.emitUnexpectedExit node_modules/.pnpm/vitest@4.0.18_@types+node@2_36ee048e8b9a57f2b1de873d5ceeb390/node_modules/vitest/dist/chunks/cli-api.B7PN_QUv.js:[2m7609:33[22m[39m
+[90m [2m❯[22m ChildProcess.emit node:events:[2m508:28[22m[39m
+[90m [2m❯[22m Process.ChildProcess._handle.onexit node:internal/child_process:[2m294:12[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m17 passed[39m[22m[90m (18)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m118 passed[39m[22m[90m (120)[39m
+[2m     Errors [22m [1m[31m9 errors[39m[22m
+[2m   Start at [22m 17:02:00
+[2m   Duration [22m 668.02s[2m (transform 3.23s, setup 453ms, import 73.06s, tests 105.25s, environment 2.31s)[22m
+
