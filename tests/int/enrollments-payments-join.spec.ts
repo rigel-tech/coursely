@@ -211,13 +211,24 @@ describe('enrollments — adding a payment via the join field (US2)', () => {
   })
 
   it('still runs the same hooks and validation as any other payment creation path', async () => {
+    const student = await createDoc('students', {
+      email: uniqueEmail('join-student-hooks'),
+      password: 'Secret123',
+      status: 'ACTIVE',
+      fullName: 'Student Hooks',
+    })
+    madeStudents.push(student.id as number)
+
+    const enrollment = await createDoc('enrollments', { student: student.id, course: courseId })
+    madeEnrollments.push(enrollment.id as number)
+
     const staff = await payload.findByID({ collection: 'users', id: staffUserId })
     const before = Date.now()
     const created = await createDocAs(
       'payments',
       {
-        enrollmentId: enrollmentAddId,
-        studentId: studentAddId,
+        enrollmentId: enrollment.id,
+        studentId: student.id,
         amount: 150000,
         paymentMethod: 'CASH',
       },
@@ -233,42 +244,85 @@ describe('enrollments — adding a payment via the join field (US2)', () => {
 
     await expect(
       createDoc('payments', {
-        enrollmentId: enrollmentAddId,
-        studentId: studentAddId,
+        enrollmentId: enrollment.id,
+        studentId: student.id,
         amount: -100,
         paymentMethod: 'CASH',
       }),
     ).rejects.toThrow()
   })
 
-  it('lets a staff member add two payments to the same enrollment, one after another', async () => {
+  it('rejects a second payment against an enrollment that already has one', async () => {
+    const student = await createDoc('students', {
+      email: uniqueEmail('join-student-second-payment'),
+      password: 'Secret123',
+      status: 'ACTIVE',
+      fullName: 'Student Second Payment',
+    })
+    madeStudents.push(student.id as number)
+
+    const enrollment = await createDoc('enrollments', { student: student.id, course: courseId })
+    madeEnrollments.push(enrollment.id as number)
+
     const first = await createDoc('payments', {
-      enrollmentId: enrollmentAddId,
-      studentId: studentAddId,
+      enrollmentId: enrollment.id,
+      studentId: student.id,
       amount: 50000,
       paymentMethod: 'CASH',
     })
     madePayments.push(first.id)
 
-    const second = await createDoc('payments', {
-      enrollmentId: enrollmentAddId,
-      studentId: studentAddId,
-      amount: 75000,
-      paymentMethod: 'BANK_TRANSFER',
-    })
-    madePayments.push(second.id)
+    await expect(
+      createDoc('payments', {
+        enrollmentId: enrollment.id,
+        studentId: student.id,
+        amount: 75000,
+        paymentMethod: 'BANK_TRANSFER',
+      }),
+    ).rejects.toThrow()
 
-    expect(relId(first.enrollmentId)).toBe(enrollmentAddId)
-    expect(relId(second.enrollmentId)).toBe(enrollmentAddId)
-
-    const enrollment = (await payload.findByID({
+    const refetched = (await payload.findByID({
       collection: 'enrollments',
-      id: enrollmentAddId,
+      id: enrollment.id as number,
       depth: 1,
     })) as unknown as LooseDoc & { payments: { docs: LooseDoc[] } }
 
-    const ids = enrollment.payments.docs.map((doc) => doc.id)
-    expect(ids).toContain(first.id)
-    expect(ids).toContain(second.id)
+    expect(refetched.payments.docs.map((doc) => doc.id)).toEqual([first.id])
+  })
+
+  it('rejects a second payment even when application hooks are bypassed (the constraint lives in the database)', async () => {
+    const student = await createDoc('students', {
+      email: uniqueEmail('join-student-db-unique'),
+      password: 'Secret123',
+      status: 'ACTIVE',
+      fullName: 'Student DB Unique',
+    })
+    madeStudents.push(student.id as number)
+
+    const enrollment = await createDoc('enrollments', { student: student.id, course: courseId })
+    madeEnrollments.push(enrollment.id as number)
+
+    const first = await createDoc('payments', {
+      enrollmentId: enrollment.id,
+      studentId: student.id,
+      amount: 50000,
+      paymentMethod: 'CASH',
+    })
+    madePayments.push(first.id)
+
+    // `overrideAccess: true` skips access control, not database constraints — this proves
+    // the uniqueness is enforced by the unique index itself, not by an application-level check.
+    await expect(
+      payload.create({
+        collection: 'payments',
+        data: {
+          enrollmentId: enrollment.id,
+          studentId: student.id,
+          amount: 75000,
+          paymentMethod: 'BANK_TRANSFER',
+        },
+        overrideAccess: true,
+      } as Parameters<Payload['create']>[0]),
+    ).rejects.toThrow()
   })
 })

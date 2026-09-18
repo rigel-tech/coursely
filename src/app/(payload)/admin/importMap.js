@@ -12,6 +12,7 @@ import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c08
 import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { SlugField as SlugField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
+import { CreatedByField as CreatedByField_033a5247fe08db70fad3b09f2858d31d } from '@/collections/Enrollments/components/CreatedByField'
 import { EnrollmentCell as EnrollmentCell_838ca031aba78d5378ebeca1ca245fda } from '@/collections/Payments/components/EnrollmentCell'
 import { StudentCell as StudentCell_4d8fff6d508f27a6f34be67490c0cedb } from '@/collections/Payments/components/StudentCell'
 import { AmountCell as AmountCell_2a90d39d26c8a0d357edd5ae440afd3a } from '@/collections/Payments/components/AmountCell'
@@ -32,6 +33,7 @@ import { RowLabel as RowLabel_270b7d9937aa2c2d1f368b11b84742be } from '@/compone
 import { Icon as Icon_872e05b4d0186141f251eacaf629a691 } from '@/components/admin/Graphics/Icon'
 import { Logo as Logo_090c0bf0e6904f8c6248ef2a542779ac } from '@/components/admin/Graphics/Logo'
 import { NotificationBell as NotificationBell_a85350652356ec53eeb8176045ede954 } from '@/components/admin/NotificationBell'
+import { HidePaymentsCreateButton as HidePaymentsCreateButton_fc05fe35d5748c3edca5747f3eb2bcf3 } from '@/components/admin/HidePaymentsCreateButton'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
@@ -63,6 +65,8 @@ export const importMap = {
   '@payloadcms/plugin-seo/client#PreviewComponent':
     PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
   '@payloadcms/next/client#SlugField': SlugField_2b8867833a34864a02ddf429b0728a40,
+  '@/collections/Enrollments/components/CreatedByField#CreatedByField':
+    CreatedByField_033a5247fe08db70fad3b09f2858d31d,
   '@/collections/Payments/components/EnrollmentCell#EnrollmentCell':
     EnrollmentCell_838ca031aba78d5378ebeca1ca245fda,
   '@/collections/Payments/components/StudentCell#StudentCell':
@@ -94,5 +98,7 @@ export const importMap = {
   '@/components/admin/Graphics/Logo#Logo': Logo_090c0bf0e6904f8c6248ef2a542779ac,
   '@/components/admin/NotificationBell#NotificationBell':
     NotificationBell_a85350652356ec53eeb8176045ede954,
+  '@/components/admin/HidePaymentsCreateButton#HidePaymentsCreateButton':
+    HidePaymentsCreateButton_fc05fe35d5748c3edca5747f3eb2bcf3,
   '@payloadcms/next/rsc#CollectionCards': CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
 }

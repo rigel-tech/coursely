@@ -804,6 +804,23 @@ protection, all environments), `src/migrations/20260917_150000_convert_payments_
 `payments_proof_image_id_media_id_fk`, …) is still `SET NULL` in every environment — this is
 the only column with a stricter prod migration.
 
+### The one-payment-per-enrollment unique index is defined twice — keep both in sync
+
+**Rule** — Same trap as the entry above, second occurrence: `payments_enrollment_id_unique_idx`
+(an enrollment may have at most one payment, FR-030) is declared in `afterSchemaInit` in
+`src/payload.config.ts` for dev/test's drizzle-push, and separately as a hand-written migration
+(`src/migrations/20260918_100000_add_payments_enrollment_unique_idx.ts`) for prod. Nothing
+checks the two agree.
+
+**Why it breaks silently** — change the indexed column in one and not the other, and
+`pnpm test:int` keeps passing while prod either never gets the one-payment guard or gets a
+different one — no error, no failed migration, just silently divergent constraints between
+environments.
+
+**Where** — `src/payload.config.ts` (`afterSchemaInit`),
+`src/migrations/20260918_100000_add_payments_enrollment_unique_idx.ts` (the hand-written prod
+copy of the same index — change one, change both).
+
 ### `updateStudentProfile` no longer covers the enrollment-time profile write — `createEnrollmentAction` writes directly
 
 **Rule** — Two independent call sites write a student's `fullName`/`phone`:

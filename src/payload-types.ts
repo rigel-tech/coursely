@@ -524,11 +524,20 @@ export interface Class {
  */
 export interface Enrollment {
   id: number;
+  /**
+   * Selectable only when creating — cannot be changed once saved.
+   */
   student: number | Student;
+  /**
+   * Selectable only when creating — cannot be changed once saved.
+   */
   course: number | Course;
   class?: (number | null) | Class;
   enrollmentStatus: 'NEW' | 'CONFIRMED' | 'ATTENDED' | 'COMPLETED' | 'CANCELLED';
-  paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
+  /**
+   * Automatically derived: PAID once a payment exists, UNPAID otherwise — not manually selectable.
+   */
+  paymentStatus: 'UNPAID' | 'PAID';
   payments?: {
     docs?: (number | Payment)[];
     hasNextPage?: boolean;
@@ -539,6 +548,9 @@ export interface Enrollment {
   confirmedAt?: string | null;
   classAssignedAt?: string | null;
   cancelledAt?: string | null;
+  /**
+   * Automatically set to the admin account creating this enrollment — shown before saving, not manually selectable.
+   */
   createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;

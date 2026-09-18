@@ -64,10 +64,10 @@ describe('Admin Sidebar Grouping', () => {
     const visibleCollections = (config.collections || []).filter(
       (col) => !col.slug.startsWith('payload-') && !col.admin?.hidden,
     )
-    // 13 static collections, minus Payments (admin.hidden — only reachable from the
-    // Enrollment it belongs to), + 4 plugin collections (redirects, forms,
-    // form-submissions, search) = 16 visible collections
-    expect(visibleCollections.length).toBe(16)
+    // 13 static collections (Payments visible again — its own list view's "Create New"
+    // button is hidden via HidePaymentsCreateButton instead of admin.hidden) + 4 plugin
+    // collections (redirects, forms, form-submissions, search) = 17 visible collections
+    expect(visibleCollections.length).toBe(17)
     for (const col of visibleCollections) {
       expect(col.admin?.group, `Collection "${col.slug}" must have a group`).toBeDefined()
       expect(ALLOWED_GROUPS).toContain(groupName(col.admin?.group))

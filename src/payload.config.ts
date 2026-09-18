@@ -49,6 +49,7 @@ export default buildConfig({
         Icon: '@/components/admin/Graphics/Icon#Icon',
       },
       actions: ['@/components/admin/NotificationBell#NotificationBell'],
+      providers: ['@/components/admin/HidePaymentsCreateButton#HidePaymentsCreateButton'],
     },
     importMap: {
       baseDir: path.resolve(dirname),
@@ -99,6 +100,15 @@ export default buildConfig({
             enrollmentsActiveStudentCourseIdx: uniqueIndex('enrollments_active_student_course_idx')
               .on(table.student, table.course)
               .where(sql`${table.enrollmentStatus} <> 'CANCELLED'`),
+          }),
+        })
+
+        extendTable({
+          table: schema.tables.payments,
+          extraConfig: (table) => ({
+            paymentsEnrollmentIdUniqueIdx: uniqueIndex('payments_enrollment_id_unique_idx').on(
+              table.enrollmentId,
+            ),
           }),
         })
 
