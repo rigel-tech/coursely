@@ -110,7 +110,7 @@ describe('cancelStudentEnrollment — succeeds and marks CANCELLED', () => {
     })
 
     const before = Date.now()
-    await cancelStudentEnrollment({ enrollmentId, student: { id: studentId } as never })
+    await cancelStudentEnrollment(enrollmentId, studentId)
     const after = Date.now()
 
     const doc = await payload.findByID({ collection: 'enrollments', id: enrollmentId, depth: 0 })
@@ -130,7 +130,7 @@ describe('cancelStudentEnrollment — succeeds and marks CANCELLED', () => {
       paymentStatus: 'UNPAID',
     })
 
-    await cancelStudentEnrollment({ enrollmentId, student: { id: studentId } as never })
+    await cancelStudentEnrollment(enrollmentId, studentId)
 
     const doc = await payload.findByID({ collection: 'enrollments', id: enrollmentId, depth: 0 })
     expect(doc.enrollmentStatus).toBe('CANCELLED')
@@ -146,7 +146,7 @@ describe('cancelStudentEnrollment — succeeds and marks CANCELLED', () => {
       paymentStatus: 'UNPAID',
     })
 
-    await cancelStudentEnrollment({ enrollmentId, student: { id: studentId } as never })
+    await cancelStudentEnrollment(enrollmentId, studentId)
 
     const doc = await payload.findByID({ collection: 'enrollments', id: enrollmentId, depth: 0 })
     expect(doc.enrollmentStatus).toBe('CANCELLED')
@@ -163,9 +163,9 @@ describe('cancelStudentEnrollment — refused, enrollment unchanged', () => {
       paymentStatus: 'PARTIALLY_PAID',
     })
 
-    await expect(
-      cancelStudentEnrollment({ enrollmentId, student: { id: studentId } as never }),
-    ).rejects.toBeInstanceOf(EnrollmentHasPayment)
+    await expect(cancelStudentEnrollment(enrollmentId, studentId)).rejects.toBeInstanceOf(
+      EnrollmentHasPayment,
+    )
 
     const doc = await payload.findByID({ collection: 'enrollments', id: enrollmentId, depth: 0 })
     expect(doc.enrollmentStatus).toBe('NEW')
@@ -180,9 +180,9 @@ describe('cancelStudentEnrollment — refused, enrollment unchanged', () => {
       paymentStatus: 'PAID',
     })
 
-    await expect(
-      cancelStudentEnrollment({ enrollmentId, student: { id: studentId } as never }),
-    ).rejects.toBeInstanceOf(EnrollmentHasPayment)
+    await expect(cancelStudentEnrollment(enrollmentId, studentId)).rejects.toBeInstanceOf(
+      EnrollmentHasPayment,
+    )
   })
 
   it('refuses an ATTENDED enrollment', async () => {
@@ -194,9 +194,9 @@ describe('cancelStudentEnrollment — refused, enrollment unchanged', () => {
       paymentStatus: 'UNPAID',
     })
 
-    await expect(
-      cancelStudentEnrollment({ enrollmentId, student: { id: studentId } as never }),
-    ).rejects.toBeInstanceOf(EnrollmentNotCancellable)
+    await expect(cancelStudentEnrollment(enrollmentId, studentId)).rejects.toBeInstanceOf(
+      EnrollmentNotCancellable,
+    )
   })
 
   it('refuses a COMPLETED enrollment', async () => {
@@ -208,9 +208,9 @@ describe('cancelStudentEnrollment — refused, enrollment unchanged', () => {
       paymentStatus: 'UNPAID',
     })
 
-    await expect(
-      cancelStudentEnrollment({ enrollmentId, student: { id: studentId } as never }),
-    ).rejects.toBeInstanceOf(EnrollmentNotCancellable)
+    await expect(cancelStudentEnrollment(enrollmentId, studentId)).rejects.toBeInstanceOf(
+      EnrollmentNotCancellable,
+    )
   })
 
   it('refuses an already-CANCELLED enrollment', async () => {
@@ -222,9 +222,9 @@ describe('cancelStudentEnrollment — refused, enrollment unchanged', () => {
       paymentStatus: 'UNPAID',
     })
 
-    await expect(
-      cancelStudentEnrollment({ enrollmentId, student: { id: studentId } as never }),
-    ).rejects.toBeInstanceOf(EnrollmentAlreadyCancelled)
+    await expect(cancelStudentEnrollment(enrollmentId, studentId)).rejects.toBeInstanceOf(
+      EnrollmentAlreadyCancelled,
+    )
   })
 
   it('refuses an enrollment assigned to a class that has already started', async () => {
@@ -237,9 +237,9 @@ describe('cancelStudentEnrollment — refused, enrollment unchanged', () => {
       paymentStatus: 'UNPAID',
     })
 
-    await expect(
-      cancelStudentEnrollment({ enrollmentId, student: { id: studentId } as never }),
-    ).rejects.toBeInstanceOf(EnrollmentAlreadyStarted)
+    await expect(cancelStudentEnrollment(enrollmentId, studentId)).rejects.toBeInstanceOf(
+      EnrollmentAlreadyStarted,
+    )
   })
 
   it('refuses a student cancelling an enrollment that is not theirs', async () => {
@@ -252,9 +252,9 @@ describe('cancelStudentEnrollment — refused, enrollment unchanged', () => {
       paymentStatus: 'UNPAID',
     })
 
-    await expect(
-      cancelStudentEnrollment({ enrollmentId, student: { id: otherId } as never }),
-    ).rejects.toBeInstanceOf(EnrollmentNotFound)
+    await expect(cancelStudentEnrollment(enrollmentId, otherId)).rejects.toBeInstanceOf(
+      EnrollmentNotFound,
+    )
 
     const doc = await payload.findByID({ collection: 'enrollments', id: enrollmentId, depth: 0 })
     expect(doc.enrollmentStatus).toBe('NEW')
@@ -273,7 +273,7 @@ describe('cancelStudentEnrollment — notification and email (US on cancel)', ()
       paymentStatus: 'UNPAID',
     })
 
-    await cancelStudentEnrollment({ enrollmentId, student })
+    await cancelStudentEnrollment(enrollmentId, studentId)
 
     await waitFor(async () => {
       const found = await payload.find({
@@ -294,7 +294,6 @@ describe('cancelStudentEnrollment — notification and email (US on cancel)', ()
 describe('cancelStudentEnrollment — double-cancel race', () => {
   it('the second call sees CANCELLED and is refused, not double-processed', async () => {
     const studentId = await makeStudent('double-cancel')
-    const student = await payload.findByID({ collection: 'students', id: studentId })
     const enrollmentId = await makeEnrollment({
       student: studentId,
       course: courseId,
@@ -302,8 +301,8 @@ describe('cancelStudentEnrollment — double-cancel race', () => {
       paymentStatus: 'UNPAID',
     })
 
-    await cancelStudentEnrollment({ enrollmentId, student })
-    await expect(cancelStudentEnrollment({ enrollmentId, student })).rejects.toBeInstanceOf(
+    await cancelStudentEnrollment(enrollmentId, studentId)
+    await expect(cancelStudentEnrollment(enrollmentId, studentId)).rejects.toBeInstanceOf(
       EnrollmentAlreadyCancelled,
     )
   })

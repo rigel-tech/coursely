@@ -33,7 +33,7 @@ export async function cancelEnrollmentAction(enrollmentId: number): Promise<Canc
   }
 
   try {
-    await cancelStudentEnrollment({ enrollmentId, student })
+    await cancelStudentEnrollment(enrollmentId, student.id)
   } catch (error) {
     if (
       error instanceof EnrollmentNotFound ||

@@ -67,10 +67,7 @@ describe('cancelEnrollmentAction — the path that cancels', () => {
     const result = await cancelEnrollmentAction(99)
 
     expect(result.status).toBe('success')
-    expect(cancelStudentEnrollment).toHaveBeenCalledWith({
-      enrollmentId: 99,
-      student: studentWith('ACTIVE'),
-    })
+    expect(cancelStudentEnrollment).toHaveBeenCalledWith(99, 7)
   })
 })
 
