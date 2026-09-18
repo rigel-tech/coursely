@@ -2,11 +2,13 @@ import type { CollectionConfig } from 'payload'
 import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
 import { setCreatedBy } from './hooks/setCreatedBy'
+import { notifyOnStatusChange } from './hooks/notifyOnStatusChange'
 
 export const Enrollments: CollectionConfig<'enrollments'> = {
   slug: 'enrollments',
   hooks: {
     beforeChange: [setCreatedBy],
+    afterChange: [notifyOnStatusChange],
   },
   labels: {
     singular: { vi: 'Đơn đăng ký', en: 'Enrollment' },

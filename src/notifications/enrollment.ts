@@ -5,13 +5,19 @@
  */
 import type { Payload } from 'payload'
 
-import { sendEnrollmentCancellationEmail, sendEnrollmentConfirmationEmail } from '@/email/send'
+import {
+  sendEnrollmentCancellationEmail,
+  sendEnrollmentConfirmationEmail,
+  sendEnrollmentConfirmedEmail,
+} from '@/email/send'
 import { createStudentNotification } from '@/notifications/create'
 import { createStudentEnrolledNotificationTemplate } from '@/notifications/templates/enrollment-created'
 import { createStudentEnrollmentCancelledNotificationTemplate } from '@/notifications/templates/enrollment-cancelled'
+import { createStudentEnrollmentConfirmedNotificationTemplate } from '@/notifications/templates/enrollment-confirmed'
 import type { Course, Student } from '@/payload-types'
 
-type EnrollmentNotificationEvent = 'ENROLLMENT_CREATED' | 'ENROLLMENT_CANCELLED'
+type EnrollmentNotificationEvent =
+  'ENROLLMENT_CREATED' | 'ENROLLMENT_CANCELLED' | 'ENROLLMENT_CONFIRMED'
 
 type NotifyEnrollmentInput = {
   payload: Payload
@@ -34,6 +40,10 @@ const ENROLLMENT_NOTIFICATION_EVENTS: Record<
   ENROLLMENT_CANCELLED: {
     template: createStudentEnrollmentCancelledNotificationTemplate,
     sendEmail: sendEnrollmentCancellationEmail,
+  },
+  ENROLLMENT_CONFIRMED: {
+    template: createStudentEnrollmentConfirmedNotificationTemplate,
+    sendEmail: sendEnrollmentConfirmedEmail,
   },
 }
 

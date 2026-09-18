@@ -1017,7 +1017,7 @@ export interface Notification {
   id: number;
   student?: (number | null) | Student;
   user?: (number | null) | User;
-  type: 'ACCOUNT_CREATED' | 'ENROLLMENT_CREATED' | 'ENROLLMENT_CANCELLED';
+  type: 'ACCOUNT_CREATED' | 'ENROLLMENT_CREATED' | 'ENROLLMENT_CANCELLED' | 'ENROLLMENT_CONFIRMED';
   title: string;
   content: string;
   metadata?:

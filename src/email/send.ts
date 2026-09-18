@@ -11,6 +11,7 @@ import { createEnrollmentCreatedEmailTemplate } from '@/email/templates/enrollme
 import { createEnrollmentCancelledEmailTemplate } from '@/email/templates/enrollment-cancelled'
 import { verifyOtpEmail } from '@/email/templates/verify-otp'
 import { resetPasswordEmail } from '@/email/templates/reset-password'
+import { createEnrollmentConfirmedEmailTemplate } from '@/email/templates/enrollment-confirmed'
 
 export async function sendVerifyOtpEmail(payload: Payload, to: string, otp: string): Promise<void> {
   const { subject, html, text } = verifyOtpEmail(otp)
@@ -44,5 +45,13 @@ export async function sendEnrollmentCancellationEmail(
   { to, courseTitle }: { to: string; courseTitle: string },
 ): Promise<void> {
   const { subject, html, text } = createEnrollmentCancelledEmailTemplate(courseTitle)
+  await payload.sendEmail({ to, subject, html, text })
+}
+
+export async function sendEnrollmentConfirmedEmail(
+  payload: Payload,
+  { to, courseTitle }: { to: string; courseTitle: string },
+): Promise<void> {
+  const { subject, html, text } = createEnrollmentConfirmedEmailTemplate(courseTitle)
   await payload.sendEmail({ to, subject, html, text })
 }

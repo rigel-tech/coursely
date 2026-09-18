@@ -58,6 +58,10 @@ export const Notifications: CollectionConfig = {
           label: { vi: 'Đã hủy đăng ký khóa học', en: 'Enrollment Cancelled' },
           value: 'ENROLLMENT_CANCELLED',
         },
+        {
+          label: { vi: 'Đơn đăng ký đã được xác nhận', en: 'Enrollment Confirmed' },
+          value: 'ENROLLMENT_CONFIRMED',
+        },
       ],
       required: true,
     },
