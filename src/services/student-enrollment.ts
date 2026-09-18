@@ -208,20 +208,17 @@ export async function createStudentEnrollment({
 }
 
 /**
- * Cancels `enrollmentId` on behalf of `student` — re-validates ownership and every
+ * Cancels `enrollmentId` on behalf of `studentId` — re-validates ownership and every
  * eligibility rule server-side (never trusts a client-shown `canCancel`), then writes
  * `enrollmentStatus: 'CANCELLED'` and `cancelledAt`. `depth: 1` so the assigned class's
  * `startDate` and the student/course needed for the confirmation notification are already
  * on hand, no second round trip. A non-owner and a non-existent id throw the identical
  * `EnrollmentNotFound` — never confirms another student's enrollment exists.
  */
-export async function cancelStudentEnrollment({
-  enrollmentId,
-  student,
-}: {
-  enrollmentId: number
-  student: Pick<Student, 'id'>
-}): Promise<void> {
+export async function cancelStudentEnrollment(
+  enrollmentId: number,
+  studentId: number,
+): Promise<void> {
   const payload = await getPayload({ config: configPromise })
 
   const enrollment = await payload
@@ -238,7 +235,7 @@ export async function cancelStudentEnrollment({
       ? enrollment.student.id
       : enrollment?.student
 
-  if (!enrollment || ownerId !== student.id) {
+  if (!enrollment || ownerId !== studentId) {
     throw new EnrollmentNotFound()
   }
 
