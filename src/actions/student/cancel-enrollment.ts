@@ -9,10 +9,10 @@ import {
   EnrollmentNotCancellable,
   EnrollmentNotFound,
 } from '@/lib/errors/enrollment'
-import type { CancelEnrollmentState } from '@/lib/constants/cancel-enrollment-state'
 import type { Student } from '@/payload-types'
 
-export type { CancelEnrollmentState }
+export type CancelEnrollmentState =
+  { status: 'success'; message: string } | { status: 'error'; message: string }
 
 const STANDING_REFUSAL: Record<Exclude<Student['status'], 'ACTIVE'>, string> = {
   PENDING_VERIFICATION: 'Tài khoản chưa xác thực email. Vui lòng xác thực trước khi hủy đăng ký.',

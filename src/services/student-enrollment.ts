@@ -1,6 +1,5 @@
 import configPromise from '@payload-config'
 import { getPayload, type Payload } from 'payload'
-import { sendEnrollmentCancellationEmail, sendEnrollmentConfirmationEmail } from '@/email/send'
 import {
   CourseNotFound,
   EnrollmentAlreadyCancelled,
@@ -12,9 +11,7 @@ import {
   RegistrationClosed,
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
-import { createStudentNotification } from '@/notifications/create'
-import { createStudentEnrolledNotificationTemplate } from '@/notifications/templates/enrollment-created'
-import { createStudentEnrollmentCancelledNotificationTemplate } from '@/notifications/templates/enrollment-cancelled'
+import { notifyEnrollment } from '@/notifications/enrollment'
 import type { Course, Enrollment, Student } from '@/payload-types'
 
 /**
@@ -103,37 +100,20 @@ async function createEnrollment(
   return enrollment.id
 }
 
-function notifyEnrollmentCreated(
-  payload: Payload,
-  { studentId, studentEmail, course }: { studentId: number; studentEmail: string; course: Course },
-): void {
-  const { title, content } = createStudentEnrolledNotificationTemplate(course.title)
-  void createStudentNotification(payload, {
-    studentId,
-    type: 'ENROLLMENT_CREATED',
-    title,
-    content,
-    metadata: { course: course.id },
-  }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CREATED notification failed'))
-
-  void sendEnrollmentConfirmationEmail(payload, {
-    to: studentEmail,
-    courseTitle: course.title,
-  }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CONFIRMATION email failed'))
-}
-
 /**
  * The pure eligibility rule for student self-cancellation (specs/012): `NEW`/`CONFIRMED`,
  * fully unpaid, and — if assigned to a class — that class has not started yet. Shared by
  * `cancelStudentEnrollment` (which enforces it) and `getActiveEnrollmentStatus` (which only
  * uses it to decide whether to show a cancel control) so the rule is never duplicated.
  */
+type CancellableEnrollment = {
+  enrollmentStatus: Enrollment['enrollmentStatus']
+  paymentStatus: Enrollment['paymentStatus']
+  class?: Enrollment['class']
+}
+
 export function isEnrollmentCancellable(
-  enrollment: {
-    enrollmentStatus: Enrollment['enrollmentStatus']
-    paymentStatus: Enrollment['paymentStatus']
-    class?: Enrollment['class']
-  },
+  enrollment: CancellableEnrollment,
   now: Date = new Date(),
 ): boolean {
   if (enrollment.enrollmentStatus !== 'NEW' && enrollment.enrollmentStatus !== 'CONFIRMED') {
@@ -144,12 +124,10 @@ export function isEnrollmentCancellable(
   }
 
   const assignedClass = enrollment.class
-  if (
-    assignedClass &&
-    typeof assignedClass === 'object' &&
-    assignedClass.startDate &&
-    new Date(assignedClass.startDate) <= now
-  ) {
+  const startDate =
+    assignedClass && typeof assignedClass === 'object' ? assignedClass.startDate : undefined
+
+  if (startDate && new Date(startDate) <= now) {
     return false
   }
 
@@ -163,12 +141,17 @@ export function isEnrollmentCancellable(
  * `checkExistingEnrollment`, so a CANCELLED enrollment never blocks the form from showing
  * again (FR-008). `depth: 1` so `canCancel` can inspect an assigned class's `startDate`.
  */
+type ActiveEnrollmentStatus = {
+  id: number
+  enrollmentStatus: Enrollment['enrollmentStatus']
+  canCancel: boolean
+}
+
 export async function getActiveEnrollmentStatus(
   payload: Payload,
-  { studentId, courseId }: { studentId: number; courseId: number },
-): Promise<
-  { id: number; enrollmentStatus: Enrollment['enrollmentStatus']; canCancel: boolean } | undefined
-> {
+  studentId: number,
+  courseId: number,
+): Promise<ActiveEnrollmentStatus | undefined> {
   const result = await payload.find({
     collection: 'enrollments',
     where: {
@@ -219,28 +202,9 @@ export async function createStudentEnrollment({
 
   const enrollmentId = await createEnrollment(payload, { studentId: student.id, course })
 
-  notifyEnrollmentCreated(payload, { studentId: student.id, studentEmail: student.email, course })
+  notifyEnrollment({ payload, event: 'ENROLLMENT_CREATED', student, course })
 
   return enrollmentId
-}
-
-function notifyEnrollmentCancelled(
-  payload: Payload,
-  { studentId, studentEmail, course }: { studentId: number; studentEmail: string; course: Course },
-): void {
-  const { title, content } = createStudentEnrollmentCancelledNotificationTemplate(course.title)
-  void createStudentNotification(payload, {
-    studentId,
-    type: 'ENROLLMENT_CANCELLED',
-    title,
-    content,
-    metadata: { course: course.id },
-  }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CANCELLED notification failed'))
-
-  void sendEnrollmentCancellationEmail(payload, {
-    to: studentEmail,
-    courseTitle: course.title,
-  }).catch((err) => payload.logger.error({ err }, 'ENROLLMENT_CANCELLATION email failed'))
 }
 
 /**
@@ -261,7 +225,12 @@ export async function cancelStudentEnrollment({
   const payload = await getPayload({ config: configPromise })
 
   const enrollment = await payload
-    .findByID({ collection: 'enrollments', id: enrollmentId, depth: 1, overrideAccess: true })
+    .findByID({
+      collection: 'enrollments',
+      id: enrollmentId,
+      depth: 1,
+      overrideAccess: true,
+    })
     .catch(() => null)
 
   const ownerId =
@@ -301,9 +270,10 @@ export async function cancelStudentEnrollment({
   })
 
   if (typeof enrollment.student === 'object' && typeof enrollment.course === 'object') {
-    notifyEnrollmentCancelled(payload, {
-      studentId: student.id,
-      studentEmail: enrollment.student.email,
+    notifyEnrollment({
+      payload,
+      event: 'ENROLLMENT_CANCELLED',
+      student: enrollment.student,
       course: enrollment.course,
     })
   }

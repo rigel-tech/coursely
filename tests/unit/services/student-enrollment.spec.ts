@@ -157,9 +157,7 @@ describe('getActiveEnrollmentStatus', () => {
     vi.mocked(getPayload).mockResolvedValue(asPayload({ find }))
 
     const payload = await getPayload({} as never)
-    await expect(
-      getActiveEnrollmentStatus(payload, { studentId: 7, courseId: 12 }),
-    ).resolves.toBeUndefined()
+    await expect(getActiveEnrollmentStatus(payload, 7, 12)).resolves.toBeUndefined()
     expect(find).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: 'enrollments',
@@ -179,9 +177,11 @@ describe('getActiveEnrollmentStatus', () => {
     vi.mocked(getPayload).mockResolvedValue(asPayload({ find }))
 
     const payload = await getPayload({} as never)
-    await expect(
-      getActiveEnrollmentStatus(payload, { studentId: 7, courseId: 12 }),
-    ).resolves.toEqual({ id: 99, enrollmentStatus: 'CONFIRMED', canCancel: true })
+    await expect(getActiveEnrollmentStatus(payload, 7, 12)).resolves.toEqual({
+      id: 99,
+      enrollmentStatus: 'CONFIRMED',
+      canCancel: true,
+    })
   })
 
   it('reports canCancel: false when the enrollment is already paid', async () => {
@@ -191,9 +191,11 @@ describe('getActiveEnrollmentStatus', () => {
     vi.mocked(getPayload).mockResolvedValue(asPayload({ find }))
 
     const payload = await getPayload({} as never)
-    await expect(
-      getActiveEnrollmentStatus(payload, { studentId: 7, courseId: 12 }),
-    ).resolves.toEqual({ id: 99, enrollmentStatus: 'CONFIRMED', canCancel: false })
+    await expect(getActiveEnrollmentStatus(payload, 7, 12)).resolves.toEqual({
+      id: 99,
+      enrollmentStatus: 'CONFIRMED',
+      canCancel: false,
+    })
   })
 })
 

@@ -49,8 +49,9 @@ export function CourseRegistration({
       const result = await cancelEnrollmentAction(id)
       setMessage(result.message)
       if (result.status === 'success') {
-        setStatus('CANCELLED')
+        setStatus(undefined)
         setCancellable(false)
+        setId(undefined)
       }
     })
   }
@@ -81,15 +82,15 @@ export function CourseRegistration({
               {isPending ? 'Đang hủy...' : 'Hủy đăng ký'}
             </Button>
           ) : null}
-          {message ? (
-            <p aria-live="polite" className="text-muted-foreground text-sm" role="status">
-              {message}
-            </p>
-          ) : null}
         </div>
       ) : (
         <CourseRegistrationForm course={course} profile={profile} onSuccess={handleRegistered} />
       )}
+      {message ? (
+        <p aria-live="polite" className="text-muted-foreground text-sm mt-3" role="status">
+          {message}
+        </p>
+      ) : null}
     </div>
   )
 }
