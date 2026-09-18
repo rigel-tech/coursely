@@ -135,6 +135,25 @@ describe('Payments fields', () => {
       bilingual((field(Payments.fields, name) as { label?: unknown } | undefined)?.label)
     }
   })
+
+  it('locks paymentDate, userId, enrollmentId, and studentId against update through the API — only their beforeChange hooks set them, at create', () => {
+    for (const name of ['paymentDate', 'userId', 'enrollmentId', 'studentId']) {
+      const f = field(Payments.fields, name) as
+        { access?: { update?: (...args: never[]) => unknown } } | undefined
+      expect(f?.access?.update, `field ${name} should define access.update`).toBeTruthy()
+      expect(f?.access?.update?.()).toBe(false)
+    }
+  })
+})
+
+describe('Payments hooks', () => {
+  it('resolves list-view relationship cells in the Cell itself, not through an afterRead hook mutating every read', () => {
+    // `Payments` gets sanitized in place as a side effect of this file's own `configPromise`
+    // import (payload.config.ts calls buildConfig at module load), which normalizes a missing
+    // `afterRead` to `[]` rather than leaving it `undefined` — an empty list is the correct
+    // assertion, not a stand-in for "still undefined".
+    expect(Payments.hooks?.afterRead ?? []).toEqual([])
+  })
 })
 
 describe('Payments access', () => {

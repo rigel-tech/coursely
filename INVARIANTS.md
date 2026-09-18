@@ -287,10 +287,10 @@ no error anywhere.
 **Rule** — A custom list-view `Cell` for a `relationship` field cannot assume `cellData` is
 the populated document. Every other read path in this project (Local API default, REST
 default) populates at `depth: 2`, but `@payloadcms/next`'s List view hard-codes `depth: 0` for
-its own `find` call — not something a collection config can override. Either write the `Cell`
-to handle a bare id (numeric fallback), or resolve the relationship in a collection
-`afterRead` hook so it is always an object by the time any `Cell` runs, regardless of the
-caller's `depth`.
+its own `find` call — not something a collection config can override. Write the `Cell` to
+handle a bare numeric id itself — an `afterRead` collection hook that mutates the field into
+an object looks like a fix but corrupts every other read path instead (see below), so it is
+not an option.
 
 **Why it breaks silently** — `DefaultCellComponentProps['cellData']` is typed loosely enough
 that reading `cellData.email` compiles fine even though at runtime, in the list view only,
@@ -301,11 +301,17 @@ depth) because those paths really do populate.
 
 **Where** — `node_modules/@payloadcms/next/dist/views/List/index.js` (`depth: 0` in the list's
 `req.payload.find` call — not project code, so it cannot be patched, only worked around).
-Fixed for this collection by `src/collections/Payments/hooks/populatePaymentRelations.ts`
-(`afterRead`, mirrors `src/collections/Posts/hooks/populateAuthors.ts`), which resolves
-`studentId`, `userId`, and `enrollmentId` alike. `studentId`/`userId` are consumed by
-`src/collections/Payments/components/StudentCell.tsx` and `RecorderCell.tsx`; `enrollmentId`
-has no dedicated `Cell` yet and renders via Payload's default relationship display.
+Fixed for this collection by making `src/collections/Payments/components/StudentCell.tsx` and
+`RecorderCell.tsx` **server** components (no `use client`): given a bare number they call
+`payload.findByID` themselves, given an already-populated object they render it directly.
+`enrollmentId`'s `EnrollmentCell.tsx` needs no such fetch — it only ever displays the id,
+populated or not. An earlier version of this fix used an `afterRead` hook
+(`populatePaymentRelations`, mirroring `src/collections/Posts/hooks/populateAuthors.ts`) that
+mutated `studentId`/`userId`/`enrollmentId` in place; that changed the shape of _every_ read
+(REST, Local API, GraphQL) regardless of requested `depth`, and broke GraphQL outright — its
+relationship resolver reads the field's raw value as an id (`parseFloat`), so a pre-populated
+object resolved to `NaN` and the field came back `null`. Resolving only inside the two `Cell`s
+that need it keeps every other read path returning exactly what its own `depth` asked for.
 
 ## Server actions
 
@@ -771,6 +777,23 @@ guard that silently doesn't match between environments.
 **Where** — `src/payload.config.ts` (`afterSchemaInit`),
 `src/migrations/20260914_130000_add_enrollment_active_guard.ts` (the hand-written prod copy
 of the same index — change one, change both).
+
+### The one-payment-per-enrollment unique index is defined twice — keep both in sync
+
+**Rule** — Same trap as the entry above, second occurrence: `payments_enrollment_id_unique_idx`
+(an enrollment may have at most one payment, FR-030) is declared in `afterSchemaInit` in
+`src/payload.config.ts` for dev/test's drizzle-push, and separately as a hand-written migration
+(`src/migrations/20260918_100000_add_payments_enrollment_unique_idx.ts`) for prod. Nothing
+checks the two agree.
+
+**Why it breaks silently** — change the indexed column in one and not the other, and
+`pnpm test:int` keeps passing while prod either never gets the one-payment guard or gets a
+different one — no error, no failed migration, just silently divergent constraints between
+environments.
+
+**Where** — `src/payload.config.ts` (`afterSchemaInit`),
+`src/migrations/20260918_100000_add_payments_enrollment_unique_idx.ts` (the hand-written prod
+copy of the same index — change one, change both).
 
 ### `updateStudentProfile` no longer covers the enrollment-time profile write — `createEnrollmentAction` writes directly
 

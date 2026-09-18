@@ -1,7 +1,6 @@
 import type { CollectionConfig, Validate } from 'payload'
 import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
-import { populatePaymentRelations } from './hooks/populatePaymentRelations'
 import { setPaymentDate } from './hooks/setPaymentDate'
 import { setRecordedByUser } from './hooks/setRecordedByUser'
 import { setStudentFromEnrollment } from './hooks/setStudentFromEnrollment'
@@ -52,7 +51,6 @@ export const Payments: CollectionConfig = {
     beforeChange: [setPaymentDate, setRecordedByUser, setStudentFromEnrollment],
     afterChange: [syncEnrollmentPaymentStatusAfterChange],
     afterDelete: [syncEnrollmentPaymentStatusAfterDelete],
-    afterRead: [populatePaymentRelations],
   },
   fields: [
     {
@@ -61,6 +59,9 @@ export const Payments: CollectionConfig = {
       relationTo: 'enrollments',
       label: { vi: 'Mã đơn đăng ký', en: 'Enrollment ID' },
       required: true,
+      // `studentId` is derived from this at create and never revisited, so re-supplying a
+      // different enrollment on update would desync studentId from it — locked the same way.
+      access: { update: () => false },
       admin: {
         readOnly: true,
         description: {
@@ -83,6 +84,7 @@ export const Payments: CollectionConfig = {
       // this override, one unrelated field failing validation once locks the drawer, since
       // client-side re-validation then also flags this always-empty field as required.
       validate: (): true => true,
+      access: { update: () => false },
       admin: {
         readOnly: true,
         description: {
@@ -129,6 +131,7 @@ export const Payments: CollectionConfig = {
       // Same reasoning as `studentId`'s `validate` above: `setPaymentDate` fills this in a
       // beforeChange hook, after the default required check would already reject it empty.
       validate: (): true => true,
+      access: { update: () => false },
       admin: {
         readOnly: true,
         description: {
@@ -147,6 +150,7 @@ export const Payments: CollectionConfig = {
       type: 'relationship',
       relationTo: 'users',
       label: { vi: 'Người ghi nhận', en: 'Recorded By' },
+      access: { update: () => false },
       admin: {
         readOnly: true,
         description: {

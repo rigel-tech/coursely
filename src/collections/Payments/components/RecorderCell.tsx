@@ -1,6 +1,4 @@
-'use client'
-
-import type { DefaultCellComponentProps } from 'payload'
+import type { DefaultServerCellComponentProps } from 'payload'
 import type { User } from '@/payload-types'
 
 /**
@@ -9,14 +7,25 @@ import type { User } from '@/payload-types'
  * would show email here too — this favours the human name, falling back to
  * email for a staff account with no `fullName` set.
  */
-export const RecorderCell: React.FC<DefaultCellComponentProps> = ({ cellData }) => {
+export const RecorderCell = async ({ cellData, payload }: DefaultServerCellComponentProps) => {
   if (cellData && typeof cellData === 'object') {
     const user = cellData as User
     return <span>{user.fullName || user.email}</span>
   }
 
   if (typeof cellData === 'number') {
-    return <span>#{cellData}</span>
+    let user: User | null = null
+    try {
+      user = await payload.findByID({
+        collection: 'users',
+        id: cellData,
+        depth: 0,
+      })
+    } catch (err) {
+      payload.logger.error(err, `RecorderCell: failed to resolve user #${cellData}`)
+    }
+
+    return user ? <span>{user.fullName || user.email}</span> : <span>#{cellData}</span>
   }
 
   return <span>—</span>
