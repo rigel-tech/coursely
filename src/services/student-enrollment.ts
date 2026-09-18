@@ -168,3 +168,17 @@ export async function createStudentEnrollment({
 
   notifyEnrollmentCreated(payload, { studentId: student.id, studentEmail: student.email, course })
 }
+
+export async function getStudentEnrollments(payload: Payload, studentId: number) {
+  const result = await payload.find({
+    collection: 'enrollments',
+    where: {
+      student: { equals: studentId },
+    },
+    sort: '-createdAt',
+    depth: 1,
+    limit: 100,
+    overrideAccess: true,
+  })
+  return result.docs
+}
