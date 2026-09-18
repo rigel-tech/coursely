@@ -1,12 +1,14 @@
 import type { CollectionConfig } from 'payload'
 import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
+import { guardAgainstDeleteWithPayments } from './hooks/guardAgainstDeleteWithPayments'
 import { setCreatedBy } from './hooks/setCreatedBy'
 
 export const Enrollments: CollectionConfig<'enrollments'> = {
   slug: 'enrollments',
   hooks: {
     beforeChange: [setCreatedBy],
+    beforeDelete: [guardAgainstDeleteWithPayments],
   },
   labels: {
     singular: { vi: 'Đơn đăng ký', en: 'Enrollment' },

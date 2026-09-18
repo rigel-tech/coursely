@@ -778,6 +778,32 @@ guard that silently doesn't match between environments.
 `src/migrations/20260914_130000_add_enrollment_active_guard.ts` (the hand-written prod copy
 of the same index — change one, change both).
 
+### A relationship field's `ON DELETE` behavior can only be fixed for prod, never for dev/test
+
+**Rule** — Payload's postgres adapter exposes no per-field `onDelete` option — every
+relationship column it generates via `drizzle-push` (what dev/test runs on every schema
+change) gets `ON DELETE SET NULL`, unconditionally. A hand-written migration can still give
+prod a stricter FK (`payments_enrollment_id_id_enrollments_id_fk` is `ON DELETE restrict` as
+of `20260917_150000_convert_payments_enrollment_id_to_relationship.ts`), but dev/test's
+`drizzle-push` will regenerate `SET NULL` for that same column regardless — there is no
+config to make it match. The real protection has to live at the application layer
+(`Enrollments/hooks/guardAgainstDeleteWithPayments.ts`, a `beforeDelete` hook, which runs
+identically in every environment); the migration's `restrict` is a database-level backstop
+that only exists in prod.
+
+**Why it breaks silently** — a test against the dev/test database can never catch a
+regression in the app-level guard by relying on the database to also reject the delete —
+dev/test's `SET NULL` would silently null out the FK instead of erroring, while prod's
+`restrict` would (separately) reject it. The two environments only agree because the app
+hook runs first in both; remove that hook and they diverge with no error anywhere.
+
+**Where** — `src/collections/Enrollments/hooks/guardAgainstDeleteWithPayments.ts` (the actual
+protection, all environments), `src/migrations/20260917_150000_convert_payments_enrollment_id_to_relationship.ts`
+(prod-only DB backstop). Every other relationship FK in this schema
+(`payments_student_id_id_students_id_fk`, `payments_user_id_id_users_id_fk`,
+`payments_proof_image_id_media_id_fk`, …) is still `SET NULL` in every environment — this is
+the only column with a stricter prod migration.
+
 ### `updateStudentProfile` no longer covers the enrollment-time profile write — `createEnrollmentAction` writes directly
 
 **Rule** — Two independent call sites write a student's `fullName`/`phone`:
