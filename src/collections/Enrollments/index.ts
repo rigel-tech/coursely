@@ -2,10 +2,11 @@ import type { CollectionConfig } from 'payload'
 import { adminGroups } from '@/lib/constants/adminGroups'
 import { relationshipId } from '@/utilities/relationshipId'
 import { authenticated } from '../../access/authenticated'
-import { deriveClassAssignedAt } from './hooks/deriveClassAssignedAt'
 import { deriveEnrollmentPaymentStatus } from './hooks/deriveEnrollmentPaymentStatus'
 import { deriveEnrollmentStatusTimestamps } from './hooks/deriveEnrollmentStatusTimestamps'
 import { guardAgainstDeleteWithPayments } from './hooks/guardAgainstDeleteWithPayments'
+import { guardClassCapacity } from './hooks/guardClassCapacity'
+import { setClassAssignedAt } from './hooks/setClassAssignedAt'
 import { setCreatedBy } from './hooks/setCreatedBy'
 
 /** A class that has been cancelled or has already finished can take nobody new. */
@@ -18,7 +19,8 @@ export const Enrollments: CollectionConfig<'enrollments'> = {
       setCreatedBy,
       deriveEnrollmentPaymentStatus,
       deriveEnrollmentStatusTimestamps,
-      deriveClassAssignedAt,
+      guardClassCapacity,
+      setClassAssignedAt,
     ],
     beforeDelete: [guardAgainstDeleteWithPayments],
   },

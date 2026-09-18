@@ -804,8 +804,6 @@ guard that silently doesn't match between environments.
 `src/migrations/20260914_130000_add_enrollment_active_guard.ts` (the hand-written prod copy
 of the same index — change one, change both).
 
-<<<<<<< HEAD
-
 ### An advisory lock only guards a write that actually has a transaction
 
 **Rule** — `lockClassSeats` (`src/services/class-seats.ts`) takes a Postgres advisory lock
@@ -833,7 +831,6 @@ latter also depends on running inside the same transaction to see rows the batch
 written), `src/collections/Enrollments/hooks/guardClassCapacity.ts` (per-document caller,
 transaction supplied by Payload itself), `src/services/class-assignment.ts`
 (`assignStudentsToClass`, the batch caller — explicitly opens the transaction it passes in).
-=======
 
 ### A relationship field's `ON DELETE` behavior can only be fixed for prod, never for dev/test
 
