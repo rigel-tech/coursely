@@ -42,11 +42,12 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, siteSettings }
     >
       <div className="container mx-auto flex h-16 items-center justify-between gap-2 sm:gap-4 px-3 sm:px-4">
         {/* Left: SpeakEdge Logo */}
-        <Link href="/" className="shrink-0 flex items-center">
+        <Link href="/" className="min-w-0 flex items-center">
           <Logo
             logo={siteSettings?.logo as Media}
             siteName={siteSettings?.siteName}
             tagline={siteSettings?.tagline}
+            taglineClassName="hidden sm:block"
           />
         </Link>
 
@@ -54,7 +55,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, siteSettings }
         <HeaderNav data={data} />
 
         {/* Right: Hotline + Auth Controls + Theme Toggle + Mobile Menu Button */}
-        <div className="flex items-center gap-1.5 sm:gap-3">
+        <div className="shrink-0 flex items-center gap-1.5 sm:gap-3">
           <HeaderAuthControls />
           <button
             type="button"
