@@ -35,10 +35,30 @@ export class RegistrationClosed extends APIError {
 }
 
 /**
- * The enrollment id does not resolve, or resolves to a different student's enrollment.
- * Deliberately the same message/class for both — never confirms another student's
- * enrollment exists.
+ * The class has no seat left for this assignment. `remaining` rides in `APIError`'s own
+ * `data` rather than only inside the sentence, so a caller can show "còn N chỗ" without
+ * parsing the message back apart.
  */
+export class ClassFull extends APIError<{ remaining: number }> {
+  constructor({ remaining }: { remaining: number }) {
+    super(`Lớp học chỉ còn ${remaining} chỗ trống.`, 409, { remaining })
+  }
+}
+
+/** The chosen class belongs to a different course than the enrollment's own. */
+export class ClassCourseMismatch extends APIError {
+  constructor() {
+    super('Lớp học không thuộc khóa học của đơn đăng ký này.', 400)
+  }
+}
+
+/** The enrollment is not in a state that may be assigned to a class. */
+export class EnrollmentNotAssignable extends APIError {
+  constructor() {
+    super('Chỉ đơn đăng ký đã xác nhận và chưa xếp lớp mới được xếp vào lớp.', 400)
+  }
+}
+
 export class EnrollmentNotFound extends APIError {
   constructor() {
     super('Không tìm thấy đơn đăng ký.', 404)

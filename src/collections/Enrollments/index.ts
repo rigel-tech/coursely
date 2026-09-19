@@ -1,12 +1,17 @@
 import type { CollectionConfig } from 'payload'
 import { adminGroups } from '@/lib/constants/adminGroups'
+import { relationshipId } from '@/utilities/relationshipId'
 import { authenticated } from '../../access/authenticated'
-import { deriveClassAssignedAt } from './hooks/deriveClassAssignedAt'
 import { deriveEnrollmentPaymentStatus } from './hooks/deriveEnrollmentPaymentStatus'
 import { deriveEnrollmentStatusTimestamps } from './hooks/deriveEnrollmentStatusTimestamps'
 import { guardAgainstDeleteWithPayments } from './hooks/guardAgainstDeleteWithPayments'
+import { guardClassCapacity } from './hooks/guardClassCapacity'
+import { setClassAssignedAt } from './hooks/setClassAssignedAt'
 import { setCreatedBy } from './hooks/setCreatedBy'
 import { notifyOnStatusChange } from './hooks/notifyOnStatusChange'
+
+/** A class that has been cancelled or has already finished can take nobody new. */
+const DEAD_CLASS_STATUSES = ['CANCELLED', 'COMPLETED']
 
 export const Enrollments: CollectionConfig<'enrollments'> = {
   slug: 'enrollments',
@@ -16,7 +21,8 @@ export const Enrollments: CollectionConfig<'enrollments'> = {
       setCreatedBy,
       deriveEnrollmentPaymentStatus,
       deriveEnrollmentStatusTimestamps,
-      deriveClassAssignedAt,
+      guardClassCapacity,
+      setClassAssignedAt,
     ],
     beforeDelete: [guardAgainstDeleteWithPayments],
   },
@@ -72,6 +78,18 @@ export const Enrollments: CollectionConfig<'enrollments'> = {
       type: 'relationship',
       relationTo: 'classes',
       label: { vi: 'Lớp học', en: 'Class' },
+      // Narrows what the edit view offers; it is not the guard. Payload passes an empty
+      // `data` when this runs for a list-view filter, and a REST caller never runs it at all
+      // — `guardClassCapacity` is what actually refuses a class from another course.
+      filterOptions: ({ data }) => {
+        const course = relationshipId(data?.course)
+        if (!course) return false
+
+        return {
+          course: { equals: course },
+          status: { not_in: DEAD_CLASS_STATUSES },
+        }
+      },
     },
     {
       name: 'enrollmentStatus',
