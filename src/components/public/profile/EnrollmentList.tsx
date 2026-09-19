@@ -44,13 +44,13 @@ export function EnrollmentList({ enrollments }: EnrollmentListProps) {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between gap-4 space-y-0">
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between space-y-0">
         <div>
           <CardTitle className="text-heading-accent text-xl font-bold">Khóa học của tôi</CardTitle>
           <CardDescription>Danh sách khóa học bạn đã đăng ký tại Coursely.</CardDescription>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {COURSE_TABS.map((tab) => (
             <Button
               key={tab.key}
@@ -58,6 +58,7 @@ export function EnrollmentList({ enrollments }: EnrollmentListProps) {
               size="sm"
               variant={courseTab === tab.key ? 'default' : 'outline'}
               onClick={() => setCourseTab(tab.key)}
+              className="text-xs sm:text-sm px-2.5 sm:px-3"
             >
               {tab.label}
               {tab.key === 'all' && enrollments.length > 0 ? ` (${enrollments.length})` : ''}

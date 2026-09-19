@@ -182,7 +182,7 @@ export function PersonalInfoCard({
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Email đăng nhập
               </p>
-              <p className="font-medium text-foreground">{user.email}</p>
+              <p className="font-medium text-foreground break-all">{user.email}</p>
               <p className="text-muted-foreground-subtle text-xs">Không thể thay đổi</p>
             </div>
 
