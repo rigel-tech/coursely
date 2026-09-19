@@ -74,8 +74,9 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, siteSettings }
 
       {/* Mobile Navigation Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-border/60 bg-background/95 backdrop-blur-md px-4 py-3 shadow-lg animate-in slide-in-from-top-2 duration-150">
+        <div className="md:hidden border-t border-border/60 bg-background/95 backdrop-blur-md px-4 py-3 shadow-lg animate-in slide-in-from-top-2 duration-150 space-y-3">
           <HeaderNav data={data} isMobile onMobileSelect={() => setMobileMenuOpen(false)} />
+          <HeaderAuthControls isMobile onSelect={() => setMobileMenuOpen(false)} />
         </div>
       )}
     </header>
