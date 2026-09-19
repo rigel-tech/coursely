@@ -12,8 +12,9 @@ import {
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
 import { notifyEnrollment } from '@/notifications/enrollment'
-import type { Course, Enrollment, Student } from '@/payload-types'
+import type { Class, Course, Enrollment, Student } from '@/payload-types'
 
+const VISIBLE_CLASS_STATUSES: readonly Class['status'][] = ['OPEN', 'CLOSED', 'COMPLETED']
 /**
  * A plain `id` lookup (`findByID`) does not filter by publish status — a course that has
  * never been published still resolves. Filtering `_status` explicitly is what actually
@@ -276,7 +277,34 @@ export async function cancelStudentEnrollment(
   }
 }
 
-export async function getStudentEnrollments(payload: Payload, studentId: number) {
+export interface AssignedClassSummary {
+  code: string
+  startDate: string
+  endDate?: string | null
+  scheduleTime?: string | null
+  location?: string | null
+}
+
+export interface StudentEnrollmentItem {
+  id: number
+  course: {
+    id: number
+    title: string
+    slug: string
+    duration?: string | null
+  }
+  class?: AssignedClassSummary | null
+  enrollmentStatus: Enrollment['enrollmentStatus']
+  paymentStatus: Enrollment['paymentStatus']
+  registeredAt?: string | null
+  createdAt: string
+}
+
+/** Safe, serialized enrollment summaries for the student profile (public fields only). */
+export async function getStudentEnrollments(
+  payload: Payload,
+  studentId: number,
+): Promise<StudentEnrollmentItem[]> {
   const result = await payload.find({
     collection: 'enrollments',
     where: {
@@ -286,6 +314,64 @@ export async function getStudentEnrollments(payload: Payload, studentId: number)
     depth: 1,
     limit: 100,
     overrideAccess: true,
+    joins: false,
+    select: {
+      course: true,
+      class: true,
+      enrollmentStatus: true,
+      paymentStatus: true,
+      registeredAt: true,
+      createdAt: true,
+    },
+    populate: {
+      courses: {
+        title: true,
+        slug: true,
+        duration: true,
+      },
+      classes: {
+        code: true,
+        startDate: true,
+        endDate: true,
+        scheduleTime: true,
+        location: true,
+        status: true,
+      },
+    },
   })
+
   return result.docs
+    .map((doc): StudentEnrollmentItem | null => {
+      const course = typeof doc.course === 'object' && doc.course !== null ? doc.course : null
+      if (!course) return null
+
+      const assignedClass: AssignedClassSummary | null =
+        typeof doc.class === 'object' &&
+        doc.class !== null &&
+        VISIBLE_CLASS_STATUSES.includes(doc.class.status)
+          ? {
+              code: doc.class.code,
+              startDate: doc.class.startDate,
+              endDate: doc.class.endDate,
+              scheduleTime: doc.class.scheduleTime,
+              location: doc.class.location,
+            }
+          : null
+
+      return {
+        id: doc.id,
+        course: {
+          id: course.id,
+          title: course.title,
+          slug: course.slug,
+          duration: course.duration,
+        },
+        class: assignedClass,
+        enrollmentStatus: doc.enrollmentStatus,
+        paymentStatus: doc.paymentStatus,
+        registeredAt: doc.registeredAt,
+        createdAt: doc.createdAt,
+      }
+    })
+    .filter((item): item is StudentEnrollmentItem => item !== null)
 }

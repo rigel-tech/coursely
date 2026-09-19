@@ -18,14 +18,14 @@ const MAX_AVATAR_SIZE = 5 * 1024 * 1024 // 5MB
  * validates, and reports the outcome.
  *
  * Takes `FormData`, not a plain object: `avatar` is a `File`, and Next's documented
- * Server Action pattern for a file is `FormData`, so `<ProfileForm>` builds one inside
+ * Server Action pattern for a file is `FormData`, so `<PersonalInfoCard>` builds one inside
  * its `react-hook-form` submit handler rather than relying on `<form action>`.
- * `profileSchema.safeParse` runs directly here, the same one `<ProfileForm>`'s
+ * `profileSchema.safeParse` runs directly here, the same one `<PersonalInfoCard>`'s
  * `zodResolver` runs — the type says nothing at runtime about what a hand-built request
  * sends.
  *
  * An unexpected failure — the avatar upload, or the save itself — leaves by `throw`, the
- * same way `registerAction`/`resetPasswordAction` do. `<ProfileForm>` catches it and
+ * same way `registerAction`/`resetPasswordAction` do. `<PersonalInfoCard>` catches it and
  * shows a system-failure banner.
  */
 export async function updateProfileAction(formData: FormData): Promise<ProfileState> {

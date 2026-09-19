@@ -3,8 +3,6 @@
 import { AlertCircle, BookOpenIcon } from 'lucide-react'
 import * as React from 'react'
 
-import type { Student } from '@/payload-types'
-
 import { Alert, AlertDescription, AlertTitle } from '@/components/public/ui/alert'
 
 import { ClassRoster } from '@/components/design/blocks/class-roster'
@@ -19,7 +17,6 @@ import { CourseRegistrationForm } from '@/components/public/forms/CourseRegistra
 import { ForgotPasswordForm } from '@/components/public/forms/ForgotPasswordForm'
 import { LoginForm } from '@/components/public/forms/LoginForm'
 import { OtpForm } from '@/components/public/forms/OtpForm'
-import { ProfileForm } from '@/components/public/forms/ProfileForm'
 import { RegisterForm } from '@/components/public/forms/RegisterForm'
 import { ResetPasswordForm } from '@/components/public/forms/ResetPasswordForm'
 import { Avatar } from '@/components/public/ui/avatar'
@@ -69,19 +66,6 @@ type Entry = {
 }
 
 const noop = () => {}
-
-/** `ProfileForm` takes a real `Student` — a stand-in for the gallery, not any real account. */
-const SHOWCASE_STUDENT: Student = {
-  id: 1,
-  email: 'mai.tran@example.com',
-  fullName: 'Trần Thị Mai',
-  phone: '0912345678',
-  status: 'ACTIVE',
-  collection: 'students',
-  verifiedAt: '2026-08-01T00:10:00.000Z',
-  createdAt: '2026-08-01T00:00:00.000Z',
-  updatedAt: '2026-08-01T00:00:00.000Z',
-}
 
 const COURSES = [
   {
@@ -575,17 +559,6 @@ const READY_FORMS: Entry[] = [
     preview: (
       <div className="max-w-sm">
         <OtpForm />
-      </div>
-    ),
-  },
-  {
-    name: 'ProfileForm',
-    path: '@/components/public/forms/ProfileForm',
-    origin: 'public',
-    note: 'Trang /tai-khoan. Học viên minh hoạ, không phải tài khoản thật.',
-    preview: (
-      <div className="max-w-2xl">
-        <ProfileForm user={SHOWCASE_STUDENT} />
       </div>
     ),
   },

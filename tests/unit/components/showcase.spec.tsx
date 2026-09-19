@@ -27,7 +27,7 @@ describe('/components', () => {
     // A crash inside any entry takes the whole tree down, so reaching the last section is
     // the assertion. Checking a few landmarks keeps the failure message useful.
     //
-    // More than one level-1 heading is expected here, not a bug: `ProfileForm` is a full
+    // More than one level-1 heading is expected here, not a bug: `StudentAccount` is a full
     // page in its own right and owns its own `<h1>` (the student's name), which now
     // renders nested inside the gallery's own `<h1>Thư viện component</h1>`.
     expect(screen.getAllByRole('heading', { level: 1 }).length).toBeGreaterThan(0)

@@ -6,6 +6,7 @@ import {
   createStudentEnrollment,
   findCourseSlug,
   getActiveEnrollmentStatus,
+  getStudentEnrollments,
   isEnrollmentCancellable,
 } from '@/services/student-enrollment'
 import {
@@ -265,5 +266,112 @@ describe('findCourseSlug', () => {
         where: expect.objectContaining({ _status: { equals: 'published' } }),
       }),
     )
+  })
+})
+
+describe('getStudentEnrollments', () => {
+  it('queries with selective fields, joins: false, and narrows class document to 5 public fields', async () => {
+    const rawEnrollment = {
+      id: 50,
+      student: 7,
+      course: {
+        id: 12,
+        title: 'Frontend cơ bản',
+        slug: 'frontend-co-ban',
+        duration: '6 tuần',
+      },
+      class: {
+        id: 999,
+        code: 'FE-01',
+        course: 12,
+        status: 'OPEN',
+        startDate: '2026-10-01T00:00:00.000Z',
+        endDate: '2026-11-15T00:00:00.000Z',
+        scheduleTime: 'Tối 2-4-6',
+        location: 'Phòng 101',
+        maxStudents: 30, // Internal field — must be stripped
+        createdAt: '2026-09-01T00:00:00.000Z', // Internal field — must be stripped
+        updatedAt: '2026-09-01T00:00:00.000Z', // Internal field — must be stripped
+      },
+      enrollmentStatus: 'CONFIRMED',
+      paymentStatus: 'PAID',
+      registeredAt: '2026-09-10T00:00:00.000Z',
+      createdAt: '2026-09-10T00:00:00.000Z',
+    }
+
+    const find = vi.fn().mockResolvedValue({ docs: [rawEnrollment] })
+    const payload = asPayload({ find })
+
+    const result = await getStudentEnrollments(payload, 7)
+
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'enrollments',
+        depth: 1,
+        where: { student: { equals: 7 } },
+        joins: false,
+        select: {
+          course: true,
+          class: true,
+          enrollmentStatus: true,
+          paymentStatus: true,
+          registeredAt: true,
+          createdAt: true,
+        },
+        populate: {
+          courses: {
+            title: true,
+            slug: true,
+            duration: true,
+          },
+          classes: {
+            code: true,
+            startDate: true,
+            endDate: true,
+            scheduleTime: true,
+            location: true,
+            status: true,
+          },
+        },
+      }),
+    )
+
+    expect(result).toHaveLength(1)
+    expect(result[0].class).toEqual({
+      code: 'FE-01',
+      startDate: '2026-10-01T00:00:00.000Z',
+      endDate: '2026-11-15T00:00:00.000Z',
+      scheduleTime: 'Tối 2-4-6',
+      location: 'Phòng 101',
+    })
+    expect(result[0].class).not.toHaveProperty('maxStudents')
+    expect(result[0].class).not.toHaveProperty('status')
+  })
+
+  it('sets class to null for disallowed or unexpected statuses (allowlist: OPEN, CLOSED, COMPLETED)', async () => {
+    const invalidStatuses = ['DRAFT', 'CANCELLED', 'ARCHIVED', 'UNKNOWN']
+
+    for (const status of invalidStatuses) {
+      const doc = {
+        id: 51,
+        student: 7,
+        course: { id: 12, title: 'Frontend', slug: 'frontend' },
+        class: {
+          id: 1000,
+          code: 'CLS-01',
+          status,
+          startDate: '2026-10-01T00:00:00.000Z',
+        },
+        enrollmentStatus: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        createdAt: '2026-09-10T00:00:00.000Z',
+      }
+
+      const find = vi.fn().mockResolvedValue({ docs: [doc] })
+      const payload = asPayload({ find })
+
+      const result = await getStudentEnrollments(payload, 7)
+      expect(result[0].class).toBeNull()
+    }
   })
 })
