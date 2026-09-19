@@ -6,14 +6,18 @@
 import type { Payload } from 'payload'
 
 import {
+  sendAdminEnrollmentCancelledEmail,
+  sendAdminEnrollmentCreatedEmail,
   sendEnrollmentCancellationEmail,
   sendEnrollmentConfirmationEmail,
   sendEnrollmentConfirmedEmail,
 } from '@/email/send'
-import { createStudentNotification } from '@/notifications/create'
-import { createStudentEnrolledNotificationTemplate } from '@/notifications/templates/enrollment-created'
+import { createStaffNotification, createStudentNotification } from '@/notifications/create'
+import { createAdminEnrollmentCancelledNotificationTemplate } from '@/notifications/templates/admin-enrollment-cancelled'
+import { createAdminEnrollmentCreatedNotificationTemplate } from '@/notifications/templates/admin-enrollment-created'
 import { createStudentEnrollmentCancelledNotificationTemplate } from '@/notifications/templates/enrollment-cancelled'
 import { createStudentEnrollmentConfirmedNotificationTemplate } from '@/notifications/templates/enrollment-confirmed'
+import { createStudentEnrolledNotificationTemplate } from '@/notifications/templates/enrollment-created'
 import type { Course, Student } from '@/payload-types'
 
 type EnrollmentNotificationEvent =
@@ -22,7 +26,7 @@ type EnrollmentNotificationEvent =
 type NotifyEnrollmentInput = {
   payload: Payload
   event: EnrollmentNotificationEvent
-  student: Pick<Student, 'id' | 'email'>
+  student: Pick<Student, 'id' | 'email'> & { fullName?: string | null }
   course: Course
 }
 
@@ -48,6 +52,7 @@ const ENROLLMENT_NOTIFICATION_EVENTS: Record<
 }
 
 export function notifyEnrollment({ payload, event, student, course }: NotifyEnrollmentInput): void {
+  // 1. Gửi thông báo & Email cho Học viên
   const { template, sendEmail } = ENROLLMENT_NOTIFICATION_EVENTS[event]
   const { title, content } = template(course.title)
 
@@ -62,4 +67,49 @@ export function notifyEnrollment({ payload, event, student, course }: NotifyEnro
   void sendEmail(payload, { to: student.email, courseTitle: course.title }).catch((err) =>
     payload.logger.error({ err }, `${event} email failed`),
   )
+
+  const studentIdentifier = student.fullName || student.email
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL
+
+  if (event === 'ENROLLMENT_CREATED') {
+    const adminTpl = createAdminEnrollmentCreatedNotificationTemplate(
+      studentIdentifier,
+      course.title,
+    )
+
+    void createStaffNotification(payload, {
+      type: event,
+      title: adminTpl.title,
+      content: adminTpl.content,
+      metadata: { course: course.id, student: student.id },
+    }).catch((err) => payload.logger.error({ err }, `${event} admin notification failed`))
+
+    if (adminEmail) {
+      void sendAdminEnrollmentCreatedEmail(payload, {
+        to: adminEmail,
+        studentNameOrEmail: studentIdentifier,
+        courseTitle: course.title,
+      }).catch((err) => payload.logger.error({ err }, `${event} admin email failed`))
+    }
+  } else if (event === 'ENROLLMENT_CANCELLED') {
+    const adminTpl = createAdminEnrollmentCancelledNotificationTemplate(
+      studentIdentifier,
+      course.title,
+    )
+
+    void createStaffNotification(payload, {
+      type: event,
+      title: adminTpl.title,
+      content: adminTpl.content,
+      metadata: { course: course.id, student: student.id },
+    }).catch((err) => payload.logger.error({ err }, `${event} admin notification failed`))
+
+    if (adminEmail) {
+      void sendAdminEnrollmentCancelledEmail(payload, {
+        to: adminEmail,
+        studentNameOrEmail: studentIdentifier,
+        courseTitle: course.title,
+      }).catch((err) => payload.logger.error({ err }, `${event} admin email failed`))
+    }
+  }
 }

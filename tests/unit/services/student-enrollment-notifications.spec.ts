@@ -12,6 +12,7 @@ vi.mock('payload', async (importOriginal) => ({
 vi.mock('@/email/send', () => ({
   sendEnrollmentConfirmationEmail: vi.fn().mockResolvedValue(undefined),
   sendEnrollmentCancellationEmail: vi.fn().mockResolvedValue(undefined),
+  sendEnrollmentConfirmedEmail: vi.fn().mockResolvedValue(undefined),
 }))
 
 describe('student enrollment notifications', () => {

@@ -36,3 +36,15 @@ export async function createUserNotification(
     overrideAccess: true,
   })
 }
+
+export async function createStaffNotification(
+  payload: Payload,
+  input: NotificationFields,
+): Promise<void> {
+  const { content, metadata, title, type } = input
+  await payload.create({
+    collection: 'notifications',
+    data: { type, title, content, metadata, isRead: false },
+    overrideAccess: true,
+  })
+}
