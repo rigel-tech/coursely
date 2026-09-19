@@ -117,19 +117,19 @@ export const HeaderAuthControls: React.FC<HeaderAuthControlsProps> = ({
           </Link>
         </div>
       ) : (
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="hidden md:flex items-center gap-1.5 sm:gap-2 shrink-0">
           <Button
             asChild
             size="sm"
             variant="ghost"
-            className="px-2 sm:px-3 text-xs sm:text-sm h-8 sm:h-9 whitespace-nowrap"
+            className="px-2.5 sm:px-3 text-xs sm:text-sm h-8 sm:h-9 whitespace-nowrap"
           >
             <Link href="/dang-nhap">Đăng nhập</Link>
           </Button>
           <Button
             asChild
             size="sm"
-            className="px-2.5 sm:px-3.5 text-xs sm:text-sm h-8 sm:h-9 whitespace-nowrap font-medium"
+            className="px-3 sm:px-3.5 text-xs sm:text-sm h-8 sm:h-9 whitespace-nowrap font-medium"
           >
             <Link href="/dang-ky">Đăng ký</Link>
           </Button>
