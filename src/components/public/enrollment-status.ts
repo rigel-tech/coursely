@@ -12,3 +12,6 @@ export const ENROLLMENT_STATUS: Record<
   COMPLETED: { label: 'Đã hoàn thành', variant: 'success' },
   CANCELLED: { label: 'Đã hủy', variant: 'error' },
 }
+
+export const isEnrollmentInProgress = (status: Enrollment['enrollmentStatus']): boolean =>
+  status === 'CONFIRMED' || status === 'ATTENDED'

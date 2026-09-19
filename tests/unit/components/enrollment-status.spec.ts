@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Field } from 'payload'
 
 import { Enrollments } from '@/collections/Enrollments'
-import { ENROLLMENT_STATUS } from '@/components/public/enrollment-status'
+import { ENROLLMENT_STATUS, isEnrollmentInProgress } from '@/components/public/enrollment-status'
 
 const enrollmentStatusOptions = () => {
   const field = Enrollments.fields.find(
@@ -24,5 +24,18 @@ describe('ENROLLMENT_STATUS', () => {
         option.label.vi,
       )
     }
+  })
+})
+
+describe('isEnrollmentInProgress', () => {
+  it('returns true only for CONFIRMED and ATTENDED statuses', () => {
+    expect(isEnrollmentInProgress('CONFIRMED')).toBe(true)
+    expect(isEnrollmentInProgress('ATTENDED')).toBe(true)
+  })
+
+  it('returns false for NEW, COMPLETED, and CANCELLED statuses', () => {
+    expect(isEnrollmentInProgress('NEW')).toBe(false)
+    expect(isEnrollmentInProgress('COMPLETED')).toBe(false)
+    expect(isEnrollmentInProgress('CANCELLED')).toBe(false)
   })
 })

@@ -141,7 +141,7 @@ describe('updateProfileAction — invalid input', () => {
 
 describe('updateProfileAction — a genuine failure', () => {
   // A save failure used to be swallowed and logged with console.error. It now propagates,
-  // the same as registerAction/resetPasswordAction/forgotPasswordAction — `<ProfileForm>`
+  // the same as registerAction/resetPasswordAction/forgotPasswordAction — `<PersonalInfoCard>`
   // catches it and shows a system-failure banner instead of the page crashing silently.
   it('propagates instead of being logged and reported as a generic message', async () => {
     await seedStudent()

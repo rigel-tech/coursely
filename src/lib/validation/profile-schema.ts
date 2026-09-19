@@ -1,6 +1,6 @@
 /**
  * Zod schema for a student's own profile fields (full name, phone), used by `/tai-khoan`'s
- * `<ProfileForm>` — blank allowed, untrimmed. `create-enrollment-schema.ts` has its own,
+ * `<PersonalInfoCard>` — blank allowed, untrimmed. `create-enrollment-schema.ts` has its own,
  * stricter, required version for the registration screen; it is not derived from this one.
  */
 import { z } from 'zod'

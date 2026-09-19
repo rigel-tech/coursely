@@ -79,7 +79,7 @@ export class EnrollmentNotCancellable extends APIError {
   }
 }
 
-/** `paymentStatus` is `PARTIALLY_PAID` or `PAID` — a transaction already exists. */
+/** `paymentStatus` is `PAID` — a transaction already exists. */
 export class EnrollmentHasPayment extends APIError {
   constructor() {
     super('Đơn đăng ký đã có giao dịch thanh toán, vui lòng liên hệ trung tâm để được hỗ trợ.', 400)
