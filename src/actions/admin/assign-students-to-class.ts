@@ -10,19 +10,15 @@ import type { AssignStudentsState } from '@/lib/constants/assign-students-state'
 
 export type { AssignStudentsState }
 
-/**
- * Staff-only — `payload.auth` resolves `user` from the incoming request's own cookies via
- * `headers()`, the same mechanism `src/app/(frontend)/next/preview/route.ts` already uses to
- * authenticate outside a REST request. Every refusal is returned, never thrown, so the
- * client's `.catch()` never flattens it into a generic message (see INVARIANTS.md).
- */
+export type AssignStudentsParams = {
+  classId: number
+  enrollmentIds: number[]
+}
+
 export async function assignStudentsToClassAction({
   classId,
   enrollmentIds,
-}: {
-  classId: number
-  enrollmentIds: number[]
-}): Promise<AssignStudentsState> {
+}: AssignStudentsParams): Promise<AssignStudentsState> {
   const payload = await getPayload({ config: configPromise })
   const { user } = await payload.auth({ headers: await headers() })
 
@@ -44,4 +40,35 @@ export async function assignStudentsToClassAction({
   }
 
   return { status: 'success', assigned: enrollmentIds.length }
+}
+
+export const getClassRosterAction = async ({ classId }: { classId: number }) => {
+  try {
+    const payload = await getPayload({ config: configPromise })
+    const { docs } = await payload.find({
+      collection: 'enrollments',
+      where: { class: { equals: classId } },
+      depth: 1,
+      limit: 100,
+    })
+
+    return { status: 'success' as const, docs }
+  } catch {
+    return { status: 'error' as const, message: 'Không thể tải danh sách học viên', docs: [] }
+  }
+}
+
+export const removeStudentFromClassAction = async ({ enrollmentId }: { enrollmentId: number }) => {
+  try {
+    const payload = await getPayload({ config: configPromise })
+    await payload.update({
+      collection: 'enrollments',
+      id: enrollmentId,
+      data: { class: null },
+    })
+
+    return { status: 'success' as const }
+  } catch {
+    return { status: 'error' as const, message: 'Không thể xóa học viên khỏi lớp' }
+  }
 }
