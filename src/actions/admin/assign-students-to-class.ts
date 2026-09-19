@@ -6,10 +6,9 @@ import { getPayload } from 'payload'
 
 import { assignStudentsToClass } from '@/services/class-assignment'
 import { ClassCourseMismatch, ClassFull, EnrollmentNotAssignable } from '@/lib/errors/enrollment'
-import type { AssignStudentsState } from '@/lib/constants/assign-students-state'
 
-export type { AssignStudentsState }
-
+export type AssignStudentsState =
+  { status: 'success'; assigned: number } | { status: 'error'; message: string }
 export type AssignStudentsParams = {
   classId: number
   enrollmentIds: number[]
@@ -27,7 +26,7 @@ export async function assignStudentsToClassAction({
   }
 
   try {
-    await assignStudentsToClass({ classId, enrollmentIds })
+    await assignStudentsToClass(classId, enrollmentIds)
   } catch (error) {
     if (
       error instanceof ClassFull ||
@@ -42,7 +41,7 @@ export async function assignStudentsToClassAction({
   return { status: 'success', assigned: enrollmentIds.length }
 }
 
-export const getClassRosterAction = async ({ classId }: { classId: number }) => {
+export const getClassRosterAction = async (classId: number) => {
   try {
     const payload = await getPayload({ config: configPromise })
     const { docs } = await payload.find({
@@ -52,9 +51,9 @@ export const getClassRosterAction = async ({ classId }: { classId: number }) => 
       limit: 100,
     })
 
-    return { status: 'success' as const, docs }
+    return { status: 'success', docs }
   } catch {
-    return { status: 'error' as const, message: 'Không thể tải danh sách học viên', docs: [] }
+    return { status: 'error', message: 'Không thể tải danh sách học viên', docs: [] }
   }
 }
 

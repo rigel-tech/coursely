@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, useDocumentInfo, useListDrawer } from '@payloadcms/ui'
 import type { CollectionSlug, Where } from 'payload'
-
 import {
   assignStudentsToClassAction,
   getClassRosterAction,
@@ -35,14 +34,14 @@ export const ClassRoster: React.FC = () => {
   const loadRoster = useCallback(async () => {
     if (!classId) return
 
-    const result = await getClassRosterAction({ classId: Number(classId) })
+    const result = await getClassRosterAction(Number(classId))
 
     if (result.status === 'error') {
-      setMessage(result.message)
+      setMessage(result.message ?? '')
       return
     }
 
-    setRoster(result.docs as RosterEntry[])
+    setRoster(result.docs)
   }, [classId])
 
   useEffect(() => {

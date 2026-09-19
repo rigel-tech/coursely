@@ -1,12 +1,6 @@
 import type { PayloadRequest } from 'payload'
 
-export const lockClassSeats = async ({
-  classId,
-  req,
-}: {
-  classId: number
-  req: PayloadRequest
-}): Promise<void> => {
+export const lockClassSeats = async (classId: number, req: PayloadRequest): Promise<void> => {
   if (!req.transactionID) return
 
   await req.payload.update({
@@ -19,13 +13,10 @@ export const lockClassSeats = async ({
   })
 }
 
-export const countClassOccupancy = async ({
-  classId,
-  req,
-}: {
-  classId: number
-  req: PayloadRequest
-}): Promise<number> => {
+export const countClassOccupancy = async (
+  classId: number,
+  req: PayloadRequest,
+): Promise<number> => {
   const { totalDocs } = await req.payload.count({
     collection: 'enrollments',
     where: {
