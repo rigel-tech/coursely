@@ -7,6 +7,8 @@ import {
 import { handleGoogleStudentAuth } from '@/services/student-google-auth'
 import { setSessionCookies } from '@/lib/auth/session-cookies'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')

@@ -72,8 +72,16 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // A renewal must reach the browser even if the request then redirects for an
   // unrelated reason. `resolveIdentity` never sets both — one is the renewed branch and
   // the other the failed one — so these are two independent guards, not a chain.
-  if (renew) await refreshAccessCookie(response.cookies, renew)
-  if (clear) clearSessionCookies(response.cookies)
+  if (renew || clear) {
+    if (renew) await refreshAccessCookie(response.cookies, renew)
+    if (clear) clearSessionCookies(response.cookies)
+
+    // CRITICAL: Prevent the CDN or Next.js from caching this specific response.
+    // If a static page is served and middleware attaches a Set-Cookie header,
+    // the CDN might cache the response WITH the Set-Cookie header, leaking the
+    // session to subsequent visitors.
+    response.headers.set('Cache-Control', 'no-store, max-age=0')
+  }
 
   return response
 }
