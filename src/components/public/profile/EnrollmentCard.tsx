@@ -1,19 +1,11 @@
 import Link from 'next/link'
 import { Badge } from '@/components/public/ui/badge'
 import { ENROLLMENT_STATUS } from '@/components/public/enrollment-status'
+import { PAYMENT_STATUS_LABELS } from '@/components/public/payment-status'
 import { formatDate } from '@/utilities/formatDateTime'
 import { AssignedClassDetails } from './AssignedClassDetails'
 import type { StudentEnrollmentItem } from '@/services/student-enrollment'
 
-export const PAYMENT_STATUS_LABELS: Record<
-  StudentEnrollmentItem['paymentStatus'],
-  { label: string; variant: 'success' | 'warning' | 'error' | 'outline' | 'default' | 'brand' }
-> = {
-  UNPAID: { label: 'Chưa thanh toán', variant: 'warning' },
-  PARTIALLY_PAID: { label: 'Thanh toán một phần', variant: 'brand' },
-  PAID: { label: 'Đã thanh toán', variant: 'success' },
-  CANCELLED: { label: 'Đã hủy / Hoàn tiền', variant: 'error' },
-}
 
 interface EnrollmentCardProps {
   enrollment: StudentEnrollmentItem
@@ -21,17 +13,8 @@ interface EnrollmentCardProps {
 
 export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
   const course = enrollment.course
-  if (!course) return null
-
-  const enrollmentStatusInfo = ENROLLMENT_STATUS[enrollment.enrollmentStatus] || {
-    label: enrollment.enrollmentStatus,
-    variant: 'outline' as const,
-  }
-  const paymentStatusInfo = PAYMENT_STATUS_LABELS[enrollment.paymentStatus] || {
-    label: enrollment.paymentStatus,
-    variant: 'outline' as const,
-  }
-
+  const enrollmentStatusInfo = ENROLLMENT_STATUS[enrollment.enrollmentStatus]
+  const paymentStatusInfo = PAYMENT_STATUS_LABELS[enrollment.paymentStatus]
   const formattedDate = formatDate(enrollment.registeredAt || enrollment.createdAt)
 
   return (

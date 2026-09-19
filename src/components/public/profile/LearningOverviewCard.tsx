@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/public/ui/card'
 import type { StudentEnrollmentItem } from '@/services/student-enrollment'
 
@@ -7,23 +6,19 @@ interface LearningOverviewCardProps {
 }
 
 export function LearningOverviewCard({ enrollments }: LearningOverviewCardProps) {
-  const { completedCount, inProgressCount, pendingCount } = useMemo(() => {
-    let completed = 0
-    let inProgress = 0
-    let pending = 0
+  let completedCount = 0
+  let inProgressCount = 0
+  let pendingCount = 0
 
-    for (const enrollment of enrollments) {
-      if (enrollment.enrollmentStatus === 'COMPLETED') completed++
-      else if (
-        enrollment.enrollmentStatus === 'ATTENDED' ||
-        enrollment.enrollmentStatus === 'CONFIRMED'
-      )
-        inProgress++
-      else if (enrollment.enrollmentStatus === 'NEW') pending++
-    }
-
-    return { completedCount: completed, inProgressCount: inProgress, pendingCount: pending }
-  }, [enrollments])
+  for (const enrollment of enrollments) {
+    if (enrollment.enrollmentStatus === 'COMPLETED') completedCount++
+    else if (
+      enrollment.enrollmentStatus === 'ATTENDED' ||
+      enrollment.enrollmentStatus === 'CONFIRMED'
+    )
+      inProgressCount++
+    else if (enrollment.enrollmentStatus === 'NEW') pendingCount++
+  }
 
   return (
     <Card>

@@ -1,7 +1,7 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ProfileForm } from '@/components/public/forms/ProfileForm'
+import { StudentAccount } from '@/components/public/profile/StudentAccount'
 import type { Student } from '@/payload-types'
 import type { StudentEnrollmentItem } from '@/services/student-enrollment'
 
@@ -35,7 +35,7 @@ afterEach(() => {
   cleanup()
 })
 
-describe('ProfileForm — Assigned and Unassigned Class Rendering', () => {
+describe('StudentAccount — Assigned and Unassigned Class Rendering', () => {
   it('renders assigned class code, dates, schedule time, location, and badge', () => {
     const enrollmentWithClass: StudentEnrollmentItem = {
       id: 1,
@@ -53,7 +53,7 @@ describe('ProfileForm — Assigned and Unassigned Class Rendering', () => {
       createdAt: '2026-09-10T08:00:00.000Z',
     }
 
-    render(<ProfileForm user={mockStudent} enrollments={[enrollmentWithClass]} />)
+    render(<StudentAccount user={mockStudent} enrollments={[enrollmentWithClass]} />)
 
     // Asserts class code and badge
     expect(screen.getByText('REACT-K26-01')).toBeDefined()
@@ -78,7 +78,7 @@ describe('ProfileForm — Assigned and Unassigned Class Rendering', () => {
       createdAt: '2026-09-10T08:00:00.000Z',
     }
 
-    render(<ProfileForm user={mockStudent} enrollments={[unassignedEnrollment]} />)
+    render(<StudentAccount user={mockStudent} enrollments={[unassignedEnrollment]} />)
 
     expect(screen.getByText('Chưa xếp lớp')).toBeDefined()
     expect(screen.getByText('Coursely sẽ thông báo khi có lịch xếp lớp')).toBeDefined()
@@ -91,14 +91,14 @@ describe('ProfileForm — Assigned and Unassigned Class Rendering', () => {
       course: baseCourse,
       class: null,
       enrollmentStatus: 'CANCELLED',
-      paymentStatus: 'CANCELLED',
+      paymentStatus: 'UNPAID',
       registeredAt: '2026-09-10T08:00:00.000Z',
       createdAt: '2026-09-10T08:00:00.000Z',
     }
 
-    render(<ProfileForm user={mockStudent} enrollments={[cancelledEnrollment]} />)
+    render(<StudentAccount user={mockStudent} enrollments={[cancelledEnrollment]} />)
 
-    expect(screen.getByText('Đã hủy / Hoàn tiền')).toBeDefined()
+    expect(screen.getByText('Đã hủy')).toBeDefined()
     expect(screen.queryByText('Chưa xếp lớp')).toBeNull()
     expect(screen.queryByText('Coursely sẽ thông báo khi có lịch xếp lớp')).toBeNull()
   })
@@ -117,12 +117,44 @@ describe('ProfileForm — Assigned and Unassigned Class Rendering', () => {
       createdAt: '2026-09-10T08:00:00.000Z',
     }
 
-    render(<ProfileForm user={mockStudent} enrollments={[minimalClassEnrollment]} />)
+    render(<StudentAccount user={mockStudent} enrollments={[minimalClassEnrollment]} />)
 
     expect(screen.getByText('MINIMAL-01')).toBeDefined()
     expect(screen.getByText('Đã xếp lớp')).toBeDefined()
     expect(screen.getByText(/01\/10\/2026/)).toBeDefined()
     expect(screen.queryByText('Khung giờ:')).toBeNull()
     expect(screen.queryByText('Địa điểm:')).toBeNull()
+  })
+
+  it('guards avatar file selection with isEditing mode', () => {
+    const { container } = render(<StudentAccount user={mockStudent} enrollments={[]} />)
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+
+    // 1. In read-only mode: file input is disabled and clicking avatar does nothing
+    expect(fileInput.disabled).toBe(true)
+    const clickSpy = vi.spyOn(fileInput, 'click')
+
+    const avatarWrapper = fileInput.parentElement as HTMLElement
+    fireEvent.click(avatarWrapper)
+    expect(clickSpy).not.toHaveBeenCalled()
+
+    // 2. In edit mode: file input is enabled and clicking avatar triggers click
+    fireEvent.click(screen.getByRole('button', { name: 'Chỉnh sửa thông tin' }))
+    expect(fileInput.disabled).toBe(false)
+
+    fireEvent.click(avatarWrapper)
+    expect(clickSpy).toHaveBeenCalled()
+  })
+
+  it('resets file input value when canceling profile edit', () => {
+    const { container } = render(<StudentAccount user={mockStudent} enrollments={[]} />)
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    expect(fileInput).toBeDefined()
+
+    // Simulate clicking edit and then cancel
+    fireEvent.click(screen.getByRole('button', { name: 'Chỉnh sửa thông tin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hủy' }))
+
+    expect(fileInput.value).toBe('')
   })
 })

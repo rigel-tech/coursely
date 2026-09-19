@@ -27,7 +27,12 @@ describe('formatDate / formatDateTime — shared vi-VN timezone-pinned date form
     expect(formatDate('invalid-date-string')).toBe('—')
   })
 
-  it('formatDateTime is an alias for formatDate', () => {
-    expect(formatDateTime('2026-09-30T17:00:00.000Z')).toBe('01/10/2026')
+  it('formatDateTime keeps the original MM/DD/YYYY format for blog display', () => {
+    // Server-local time: the exact output depends on the runner's timezone,
+    // but the format is always MM/DD/YYYY (month first).
+    const result = formatDateTime('2026-06-15T12:00:00.000Z')
+    expect(result).toMatch(/^\d{2}\/\d{2}\/\d{4}$/)
+    // Month comes first — June is 06
+    expect(result.startsWith('06/')).toBe(true)
   })
 })

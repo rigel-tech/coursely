@@ -5,13 +5,7 @@ const VN_DATE = new Intl.DateTimeFormat('vi-VN', {
   timeZone: 'Asia/Ho_Chi_Minh',
 })
 
-/**
- * Định dạng chuỗi ngày tháng sang định dạng DD/MM/YYYY chuẩn tiếng Việt theo múi giờ 'Asia/Ho_Chi_Minh'.
- * Cố định múi giờ để tránh hiện tượng React hydration mismatch giữa Node.js SSR (mặc định UTC) và trình duyệt.
- *
- * @example
- * formatDate('2026-09-30T17:00:00.000Z') // '01/10/2026'
- */
+/** Formats date to DD/MM/YYYY in Asia/Ho_Chi_Minh timezone to avoid SSR hydration mismatch. */
 export function formatDate(dateStr?: string | Date | null): string {
   if (!dateStr) return '—'
   const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
@@ -21,5 +15,9 @@ export function formatDate(dateStr?: string | Date | null): string {
 }
 
 export const formatDateTime = (timestamp: string): string => {
-  return formatDate(timestamp)
+  const date = timestamp ? new Date(timestamp) : new Date()
+  const MM = String(date.getMonth() + 1).padStart(2, '0')
+  const DD = String(date.getDate()).padStart(2, '0')
+  const YYYY = date.getFullYear()
+  return `${MM}/${DD}/${YYYY}`
 }

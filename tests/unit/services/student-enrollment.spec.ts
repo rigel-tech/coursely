@@ -270,7 +270,7 @@ describe('findCourseSlug', () => {
 })
 
 describe('getStudentEnrollments', () => {
-  it('queries with depth: 1 and narrows class document to 5 public fields without internal metadata', async () => {
+  it('queries with selective fields, joins: false, and narrows class document to 5 public fields', async () => {
     const rawEnrollment = {
       id: 50,
       student: 7,
@@ -309,6 +309,30 @@ describe('getStudentEnrollments', () => {
         collection: 'enrollments',
         depth: 1,
         where: { student: { equals: 7 } },
+        joins: false,
+        select: {
+          course: true,
+          class: true,
+          enrollmentStatus: true,
+          paymentStatus: true,
+          registeredAt: true,
+          createdAt: true,
+        },
+        populate: {
+          courses: {
+            title: true,
+            slug: true,
+            duration: true,
+          },
+          classes: {
+            code: true,
+            startDate: true,
+            endDate: true,
+            scheduleTime: true,
+            location: true,
+            status: true,
+          },
+        },
       }),
     )
 
@@ -324,28 +348,30 @@ describe('getStudentEnrollments', () => {
     expect(result[0].class).not.toHaveProperty('status')
   })
 
-  it('sets class to null if the assigned class is DRAFT or CANCELLED', async () => {
-    const draftClassEnrollment = {
-      id: 51,
-      student: 7,
-      course: { id: 12, title: 'Frontend', slug: 'frontend' },
-      class: {
-        id: 1000,
-        code: 'DRAFT-01',
-        status: 'DRAFT',
-        startDate: '2026-10-01T00:00:00.000Z',
-        maxStudents: 30,
-      },
-      enrollmentStatus: 'CONFIRMED',
-      paymentStatus: 'PAID',
-      createdAt: '2026-09-10T00:00:00.000Z',
+  it('sets class to null for disallowed or unexpected statuses (allowlist: OPEN, CLOSED, COMPLETED)', async () => {
+    const invalidStatuses = ['DRAFT', 'CANCELLED', 'ARCHIVED', 'UNKNOWN']
+
+    for (const status of invalidStatuses) {
+      const doc = {
+        id: 51,
+        student: 7,
+        course: { id: 12, title: 'Frontend', slug: 'frontend' },
+        class: {
+          id: 1000,
+          code: 'CLS-01',
+          status,
+          startDate: '2026-10-01T00:00:00.000Z',
+        },
+        enrollmentStatus: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        createdAt: '2026-09-10T00:00:00.000Z',
+      }
+
+      const find = vi.fn().mockResolvedValue({ docs: [doc] })
+      const payload = asPayload({ find })
+
+      const result = await getStudentEnrollments(payload, 7)
+      expect(result[0].class).toBeNull()
     }
-
-    const find = vi.fn().mockResolvedValue({ docs: [draftClassEnrollment] })
-    const payload = asPayload({ find })
-
-    const result = await getStudentEnrollments(payload, 7)
-
-    expect(result[0].class).toBeNull()
   })
 })

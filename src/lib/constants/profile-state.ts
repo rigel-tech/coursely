@@ -1,5 +1,5 @@
 /**
- * Outcome surfaced to `<ProfileForm>`. One message, no per-field map — the client already
+ * Outcome surfaced to `<PersonalInfoCard>`. One message, no per-field map — the client already
  * validated through `profileSchema`, so a server-side rejection means a caller bypassed
  * the form.
  *

@@ -12,8 +12,9 @@ import {
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
 import { notifyEnrollment } from '@/notifications/enrollment'
-import type { Course, Enrollment, Student } from '@/payload-types'
+import type { Class, Course, Enrollment, Student } from '@/payload-types'
 
+const VISIBLE_CLASS_STATUSES: readonly Class['status'][] = ['OPEN', 'CLOSED', 'COMPLETED']
 /**
  * A plain `id` lookup (`findByID`) does not filter by publish status — a course that has
  * never been published still resolves. Filtering `_status` explicitly is what actually
@@ -299,13 +300,7 @@ export interface StudentEnrollmentItem {
   createdAt: string
 }
 
-/**
- * Lấy danh sách đơn đăng ký của học viên đã được làm sạch để an toàn khi serialize về phía client.
- * Yêu cầu `depth: 1` để populate `course` và `class`.
- * Chỉ chọn lọc 5 trường công khai của lớp học (`code`, `startDate`, `endDate`, `scheduleTime`, `location`),
- * đồng thời lọc bỏ các lớp DRAFT/CANCELLED nhằm bảo mật thông tin nội bộ của `Classes`.
- * Xem INVARIANTS.md ("ProfileForm and getStudentEnrollments depend on depth: 1").
- */
+/** Safe, serialized enrollment summaries for the student profile (public fields only). */
 export async function getStudentEnrollments(
   payload: Payload,
   studentId: number,
@@ -319,6 +314,30 @@ export async function getStudentEnrollments(
     depth: 1,
     limit: 100,
     overrideAccess: true,
+    joins: false,
+    select: {
+      course: true,
+      class: true,
+      enrollmentStatus: true,
+      paymentStatus: true,
+      registeredAt: true,
+      createdAt: true,
+    },
+    populate: {
+      courses: {
+        title: true,
+        slug: true,
+        duration: true,
+      },
+      classes: {
+        code: true,
+        startDate: true,
+        endDate: true,
+        scheduleTime: true,
+        location: true,
+        status: true,
+      },
+    },
   })
 
   return result.docs
@@ -329,8 +348,7 @@ export async function getStudentEnrollments(
       const assignedClass: AssignedClassSummary | null =
         typeof doc.class === 'object' &&
         doc.class !== null &&
-        doc.class.status !== 'DRAFT' &&
-        doc.class.status !== 'CANCELLED'
+        VISIBLE_CLASS_STATUSES.includes(doc.class.status)
           ? {
               code: doc.class.code,
               startDate: doc.class.startDate,

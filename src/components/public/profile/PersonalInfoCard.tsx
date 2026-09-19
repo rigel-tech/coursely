@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, CheckCircle2, Phone, ShieldCheck, User as UserIcon } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { Badge } from '@/components/public/ui/badge'
@@ -33,11 +33,22 @@ interface PersonalInfoCardProps {
   user: Student
   avatarFile: File | null
   onAvatarReset: () => void
+  isEditing?: boolean
+  setIsEditing?: (isEditing: boolean) => void
 }
 
-export function PersonalInfoCard({ user, avatarFile, onAvatarReset }: PersonalInfoCardProps) {
+export function PersonalInfoCard({
+  user,
+  avatarFile,
+  onAvatarReset,
+  isEditing: controlledIsEditing,
+  setIsEditing: setControlledIsEditing,
+}: PersonalInfoCardProps) {
   const [state, setState] = useState<ProfileState>(initialProfileState)
-  const [isEditing, setIsEditing] = useState(false)
+  const [uncontrolledIsEditing, setUncontrolledIsEditing] = useState(false)
+
+  const isEditing = controlledIsEditing !== undefined ? controlledIsEditing : uncontrolledIsEditing
+  const setIsEditing = setControlledIsEditing ?? setUncontrolledIsEditing
 
   const {
     formState: { errors, isSubmitting },
@@ -48,6 +59,10 @@ export function PersonalInfoCard({ user, avatarFile, onAvatarReset }: PersonalIn
     resolver: zodResolver(profileSchema),
     defaultValues: { fullName: user.fullName ?? '', phone: user.phone ?? '' },
   })
+
+  useEffect(() => {
+    reset({ fullName: user.fullName ?? '', phone: user.phone ?? '' })
+  }, [user.fullName, user.phone, reset])
 
   const statusInfo = STATUS_LABELS[user.status || 'ACTIVE'] || {
     label: user.status || 'Hoạt động',
@@ -62,7 +77,11 @@ export function PersonalInfoCard({ user, avatarFile, onAvatarReset }: PersonalIn
 
     const result = await updateProfileAction(formData).catch(() => SYSTEM_FAILURE)
     setState(result)
-    if (result.status === 'success') setIsEditing(false)
+    if (result.status === 'success') {
+      onAvatarReset()
+      reset({ fullName: values.fullName, phone: values.phone })
+      setIsEditing(false)
+    }
   }
 
   return (
@@ -142,7 +161,7 @@ export function PersonalInfoCard({ user, avatarFile, onAvatarReset }: PersonalIn
                 disabled={isSubmitting}
                 onClick={() => {
                   onAvatarReset()
-                  reset()
+                  reset({ fullName: user.fullName ?? '', phone: user.phone ?? '' })
                   setIsEditing(false)
                 }}
               >

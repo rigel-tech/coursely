@@ -33,7 +33,11 @@ export function EnrollmentList({ enrollments }: EnrollmentListProps) {
   const filteredEnrollments = useMemo(() => {
     return enrollments.filter((e) => {
       if (courseTab === 'in-progress') {
-        return e.enrollmentStatus === 'ATTENDED' || e.enrollmentStatus === 'CONFIRMED'
+        return (
+          e.enrollmentStatus === 'NEW' ||
+          e.enrollmentStatus === 'ATTENDED' ||
+          e.enrollmentStatus === 'CONFIRMED'
+        )
       }
       if (courseTab === 'completed') {
         return e.enrollmentStatus === 'COMPLETED'

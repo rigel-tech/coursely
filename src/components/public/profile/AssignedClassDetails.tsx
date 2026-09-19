@@ -12,7 +12,7 @@ export function AssignedClassDetails({
   assignedClass,
   enrollmentStatus,
 }: AssignedClassDetailsProps) {
-  if (assignedClass) {
+  if (assignedClass && enrollmentStatus !== 'CANCELLED') {
     return (
       <div className="rounded-md border border-border/80 bg-muted/30 p-3.5 sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2.5 mb-3">
@@ -68,7 +68,7 @@ export function AssignedClassDetails({
     )
   }
 
-  if (enrollmentStatus !== 'CANCELLED') {
+  if (enrollmentStatus === 'NEW' || enrollmentStatus === 'CONFIRMED') {
     return (
       <div className="flex items-center justify-between gap-3 rounded-md border border-dashed border-border/70 bg-muted/15 px-3.5 py-2.5 text-xs">
         <div className="flex items-center gap-2 text-muted-foreground">

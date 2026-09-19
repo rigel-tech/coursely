@@ -187,6 +187,24 @@ stating it plays no part in audience determination), `src/components/admin/Notif
 (`loadList`, fetches every row regardless of `user`), `src/access/authenticated.ts`
 (`Notifications.access`, unchanged).
 
+### `getStudentEnrollments` must query at `depth: 1` with `select`/`populate`/`joins: false` and sanitize into `StudentEnrollmentItem`
+
+**Rule** — `getStudentEnrollments` queries with `depth: 1`, `select` (6 enrollment fields),
+`populate` (course: 3 fields, class: 6 fields), and `joins: false`. Its mapper strips classes
+whose `status` is not in `VISIBLE_CLASS_STATUSES` and emits only `AssignedClassSummary`'s 5
+public fields. Callers must never widen `depth`, remove `select`/`populate`, or serialize a raw
+`Class` document to the student's browser.
+
+**Why it breaks silently** — At `depth: 0` Payload returns bare foreign-key numbers instead of
+objects; `typeof doc.class === 'object'` is `false`, so every enrollment renders "Chưa xếp lớp"
+even when a class is assigned. Removing `select`/`populate` exposes internal fields
+(`maxStudents`, timestamps) of an `authenticated`-only collection in the RSC payload. Neither
+throws, neither fails a build — the page renders a 200 with the wrong data.
+
+**Where** — `src/services/student-enrollment.ts` (`getStudentEnrollments`, `VISIBLE_CLASS_STATUSES`,
+`StudentEnrollmentItem`, `AssignedClassSummary`), consumed by
+`src/components/public/profile/StudentAccount.tsx` (`StudentAccountProps`).
+
 ## Cache invalidation
 
 ### Every `revalidateTag(X)` must match an `unstable_cache` tag `X` character for character
@@ -890,14 +908,6 @@ declared `id: string` throughout until it was regenerated.
 `src/payload-types.ts` (`defaultIDType: number`). Two branches that can no longer run:
 `src/components/public/PayloadRedirects/index.tsx:26` (`PayloadRedirects`) and
 `src/blocks/RelatedPosts/Component.tsx:25` (`RelatedPosts`).
-
-### `ProfileForm` and `getStudentEnrollments` depend on `depth: 1` and narrowed `StudentEnrollmentItem` shape
-
-**Rule** — `getStudentEnrollments` must query with `depth: 1` to resolve class/course relationships and must sanitize docs into `StudentEnrollmentItem` (narrowing `class` to only `{ code, startDate, endDate, scheduleTime, location }` and stripping `DRAFT`/`CANCELLED` classes). Callers must never serialize raw `Class` documents to the student's browser.
-
-**Why it breaks silently** — `Enrollment['class']` is typed as `(number | null) | Class`. At `depth: 0`, Payload returns unpopulated foreign key IDs as plain `number`s, causing the client to treat the student as unassigned ("Chưa xếp lớp") without throwing. Conversely, serializing raw `Class` docs leaks internal operational fields (`status: 'DRAFT'`, `maxStudents`, timestamps) to client RSC payloads for an `authenticated`-only collection.
-
-**Where** — `src/services/student-enrollment.ts` (`getStudentEnrollments`, `StudentEnrollmentItem`, `AssignedClassSummary`), `src/components/public/forms/ProfileForm.tsx` (`ProfileFormProps`).
 
 ## Agent tooling
 
