@@ -141,7 +141,10 @@ export function NotificationBell() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-11 z-50 w-80 rounded-md border border-border bg-card shadow-lg">
+        // Below sm the bell sits too far right for a 320px panel anchored to it, so the panel
+        // pins to the viewport instead. `fixed` resolves against the header here, not the
+        // viewport: its backdrop-filter makes it the containing block.
+        <div className="fixed inset-x-4 top-18 z-50 rounded-md border border-border bg-card shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-80">
           {items === null ? (
             <p className="px-4 py-6 text-center text-sm text-muted-foreground">Đang tải...</p>
           ) : items.length === 0 ? (
