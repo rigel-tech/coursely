@@ -18,11 +18,12 @@ let classFutureId: number
 let classPastId: number
 const madeStudents: number[] = []
 const madeEnrollments: number[] = []
+const madePayments: number[] = []
 
 type LooseData = Record<string, unknown>
 type LooseDoc = Record<string, unknown> & { id: number }
 const createDoc = (
-  collection: 'courses' | 'classes' | 'students' | 'enrollments',
+  collection: 'courses' | 'classes' | 'students' | 'enrollments' | 'payments',
   data: LooseData,
 ) =>
   payload.create({ collection, data } as Parameters<
@@ -88,6 +89,9 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  for (const id of madePayments.splice(0)) {
+    await payload.delete({ collection: 'payments', id }).catch(() => {})
+  }
   for (const id of madeEnrollments.splice(0)) {
     await payload.delete({ collection: 'enrollments', id }).catch(() => {})
   }
@@ -154,31 +158,20 @@ describe('cancelStudentEnrollment — succeeds and marks CANCELLED', () => {
 })
 
 describe('cancelStudentEnrollment — refused, enrollment unchanged', () => {
-  it('refuses a PARTIALLY_PAID enrollment', async () => {
-    const studentId = await makeStudent('partially-paid')
-    const enrollmentId = await makeEnrollment({
-      student: studentId,
-      course: courseId,
-      enrollmentStatus: 'NEW',
-      paymentStatus: 'PARTIALLY_PAID',
-    })
-
-    await expect(cancelStudentEnrollment(enrollmentId, studentId)).rejects.toBeInstanceOf(
-      EnrollmentHasPayment,
-    )
-
-    const doc = await payload.findByID({ collection: 'enrollments', id: enrollmentId, depth: 0 })
-    expect(doc.enrollmentStatus).toBe('NEW')
-  })
-
   it('refuses a PAID enrollment', async () => {
     const studentId = await makeStudent('paid')
     const enrollmentId = await makeEnrollment({
       student: studentId,
       course: courseId,
       enrollmentStatus: 'CONFIRMED',
-      paymentStatus: 'PAID',
     })
+
+    const payment = await createDoc('payments', {
+      enrollmentId,
+      amount: 50000,
+      paymentMethod: 'CASH',
+    })
+    madePayments.push(payment.id as number)
 
     await expect(cancelStudentEnrollment(enrollmentId, studentId)).rejects.toBeInstanceOf(
       EnrollmentHasPayment,

@@ -75,6 +75,7 @@ export interface Config {
     'course-phases': CoursePhase;
     'course-objectives': CourseObjective;
     categories: Category;
+    payments: Payment;
     pages: Page;
     posts: Post;
     media: Media;
@@ -96,6 +97,9 @@ export interface Config {
       objectives: 'course-objectives';
       phases: 'course-phases';
     };
+    enrollments: {
+      payments: 'payments';
+    };
     'payload-folders': {
       documentsAndFolders: 'payload-folders' | 'media';
     };
@@ -108,6 +112,7 @@ export interface Config {
     'course-phases': CoursePhasesSelect<false> | CoursePhasesSelect<true>;
     'course-objectives': CourseObjectivesSelect<false> | CourseObjectivesSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    payments: PaymentsSelect<false> | PaymentsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -200,13 +205,13 @@ export interface Student {
   phone?: string | null;
   avatar?: (number | null) | Media;
   /**
-   * Trạng thái tài khoản học viên
+   * Student account status
    */
   status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'DISABLED';
   verifiedAt?: string | null;
   lastLoginAt?: string | null;
   /**
-   * Nhân sự đã tạo tài khoản này. Trống với tài khoản tự đăng ký.
+   * Staff member who created this account. Empty for self-registered accounts.
    */
   createdBy?: (number | null) | User;
   updatedAt: string;
@@ -519,17 +524,69 @@ export interface Class {
  */
 export interface Enrollment {
   id: number;
+  /**
+   * Selectable only when creating — cannot be changed once saved.
+   */
   student: number | Student;
+  /**
+   * Selectable only when creating — cannot be changed once saved.
+   */
   course: number | Course;
   class?: (number | null) | Class;
   enrollmentStatus: 'NEW' | 'CONFIRMED' | 'ATTENDED' | 'COMPLETED' | 'CANCELLED';
-  paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
+  /**
+   * Automatically derived: PAID once a payment exists, UNPAID otherwise — not manually selectable.
+   */
+  paymentStatus: 'UNPAID' | 'PAID';
+  payments?: {
+    docs?: (number | Payment)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   registrationSource: 'SELF_REGISTRATION' | 'ADMIN_CREATED';
   registeredAt: string;
   confirmedAt?: string | null;
   classAssignedAt?: string | null;
   cancelledAt?: string | null;
+  /**
+   * Automatically set to the admin account creating this enrollment — shown before saving, not manually selectable.
+   */
   createdBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payments".
+ */
+export interface Payment {
+  id: number;
+  /**
+   * Pre-filled from the enrollment being viewed — not manually selectable.
+   */
+  enrollmentId: number | Enrollment;
+  /**
+   * Automatically taken from the enrollment’s own student — not manually selectable.
+   */
+  studentId: number | Student;
+  amount: number;
+  paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CARD' | 'OTHER';
+  /**
+   * Automatically set to the moment the record is saved — not manually entered.
+   */
+  paymentDate: string;
+  /**
+   * Automatically set to the staff account creating this record — not manually selectable.
+   */
+  userId?: (number | null) | User;
+  /**
+   * Receipt number, transfer memo, or other supplementary note.
+   */
+  referenceNote?: string | null;
+  /**
+   * Screenshot of a successful transfer or a receipt photo.
+   */
+  proofImage?: (number | null) | Media;
   updatedAt: string;
   createdAt: string;
 }
@@ -1252,6 +1309,10 @@ export interface PayloadLockedDocument {
         value: number | Category;
       } | null)
     | ({
+        relationTo: 'payments';
+        value: number | Payment;
+      } | null)
+    | ({
         relationTo: 'pages';
         value: number | Page;
       } | null)
@@ -1427,6 +1488,7 @@ export interface EnrollmentsSelect<T extends boolean = true> {
   class?: T;
   enrollmentStatus?: T;
   paymentStatus?: T;
+  payments?: T;
   registrationSource?: T;
   registeredAt?: T;
   confirmedAt?: T;
@@ -1477,6 +1539,22 @@ export interface CategoriesSelect<T extends boolean = true> {
         label?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payments_select".
+ */
+export interface PaymentsSelect<T extends boolean = true> {
+  enrollmentId?: T;
+  studentId?: T;
+  amount?: T;
+  paymentMethod?: T;
+  paymentDate?: T;
+  userId?: T;
+  referenceNote?: T;
+  proofImage?: T;
   updatedAt?: T;
   createdAt?: T;
 }

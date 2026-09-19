@@ -60,7 +60,7 @@ type CourseTab = (typeof COURSE_TABS)[number]['key']
 
 // Mapping nhãn tiếng Việt cho trạng thái học phí
 export const PAYMENT_STATUS_LABELS: Record<
-  Enrollment['paymentStatus'],
+  string,
   { label: string; variant: 'success' | 'warning' | 'error' | 'outline' | 'default' | 'brand' }
 > = {
   UNPAID: { label: 'Chưa thanh toán', variant: 'warning' },

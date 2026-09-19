@@ -10,8 +10,12 @@ import * as migration_20260914_120000_add_enrollments_collection from './2026091
 import * as migration_20260914_130000_add_enrollment_active_guard from './20260914_130000_add_enrollment_active_guard'
 import * as migration_20260914_140000_make_notification_student_optional from './20260914_140000_make_notification_student_optional'
 import * as migration_20260915_064125 from './20260915_064125'
+import * as migration_20260915_220048_add_payments_collection from './20260915_220048_add_payments_collection'
 import * as migration_20260917_070000_add_notifications_user_field from './20260917_070000_add_notifications_user_field'
+import * as migration_20260917_150000_convert_payments_enrollment_id_to_relationship from './20260917_150000_convert_payments_enrollment_id_to_relationship'
 import * as migration_20260917_210000_add_enrollment_cancelled_notification_type from './20260917_210000_add_enrollment_cancelled_notification_type'
+import * as migration_20260918_100000_add_payments_enrollment_unique_idx from './20260918_100000_add_payments_enrollment_unique_idx'
+import * as migration_20260918_120000_shrink_enrollments_payment_status_enum from './20260918_120000_shrink_enrollments_payment_status_enum'
 
 export const migrations = [
   {
@@ -75,13 +79,33 @@ export const migrations = [
     name: '20260915_064125',
   },
   {
+    up: migration_20260915_220048_add_payments_collection.up,
+    down: migration_20260915_220048_add_payments_collection.down,
+    name: '20260915_220048_add_payments_collection',
+  },
+  {
     up: migration_20260917_070000_add_notifications_user_field.up,
     down: migration_20260917_070000_add_notifications_user_field.down,
     name: '20260917_070000_add_notifications_user_field',
   },
   {
+    up: migration_20260917_150000_convert_payments_enrollment_id_to_relationship.up,
+    down: migration_20260917_150000_convert_payments_enrollment_id_to_relationship.down,
+    name: '20260917_150000_convert_payments_enrollment_id_to_relationship',
+  },
+  {
     up: migration_20260917_210000_add_enrollment_cancelled_notification_type.up,
     down: migration_20260917_210000_add_enrollment_cancelled_notification_type.down,
     name: '20260917_210000_add_enrollment_cancelled_notification_type',
+  },
+  {
+    up: migration_20260918_100000_add_payments_enrollment_unique_idx.up,
+    down: migration_20260918_100000_add_payments_enrollment_unique_idx.down,
+    name: '20260918_100000_add_payments_enrollment_unique_idx',
+  },
+  {
+    up: migration_20260918_120000_shrink_enrollments_payment_status_enum.up,
+    down: migration_20260918_120000_shrink_enrollments_payment_status_enum.down,
+    name: '20260918_120000_shrink_enrollments_payment_status_enum',
   },
 ]

@@ -1,14 +1,24 @@
 import type { CollectionConfig } from 'payload'
 import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
+import { deriveClassAssignedAt } from './hooks/deriveClassAssignedAt'
+import { deriveEnrollmentPaymentStatus } from './hooks/deriveEnrollmentPaymentStatus'
+import { deriveEnrollmentStatusTimestamps } from './hooks/deriveEnrollmentStatusTimestamps'
+import { guardAgainstDeleteWithPayments } from './hooks/guardAgainstDeleteWithPayments'
 import { setCreatedBy } from './hooks/setCreatedBy'
 import { notifyOnStatusChange } from './hooks/notifyOnStatusChange'
 
 export const Enrollments: CollectionConfig<'enrollments'> = {
   slug: 'enrollments',
   hooks: {
-    beforeChange: [setCreatedBy],
     afterChange: [notifyOnStatusChange],
+    beforeChange: [
+      setCreatedBy,
+      deriveEnrollmentPaymentStatus,
+      deriveEnrollmentStatusTimestamps,
+      deriveClassAssignedAt,
+    ],
+    beforeDelete: [guardAgainstDeleteWithPayments],
   },
   labels: {
     singular: { vi: 'Đơn đăng ký', en: 'Enrollment' },
@@ -32,6 +42,15 @@ export const Enrollments: CollectionConfig<'enrollments'> = {
       relationTo: 'students',
       label: { vi: 'Học viên', en: 'Student' },
       required: true,
+      // Settable only at creation — locked afterward so an enrollment can never be
+      // silently re-pointed at a different student post-hoc.
+      access: { update: () => false },
+      admin: {
+        description: {
+          vi: 'Chỉ chọn được khi tạo mới — không đổi được sau khi đã lưu.',
+          en: 'Selectable only when creating — cannot be changed once saved.',
+        },
+      },
     },
     {
       name: 'course',
@@ -39,6 +58,14 @@ export const Enrollments: CollectionConfig<'enrollments'> = {
       relationTo: 'courses',
       label: { vi: 'Khóa học', en: 'Course' },
       required: true,
+      // Settable only at creation — see `student` above.
+      access: { update: () => false },
+      admin: {
+        description: {
+          vi: 'Chỉ chọn được khi tạo mới — không đổi được sau khi đã lưu.',
+          en: 'Selectable only when creating — cannot be changed once saved.',
+        },
+      },
     },
     {
       name: 'class',
@@ -68,13 +95,22 @@ export const Enrollments: CollectionConfig<'enrollments'> = {
       defaultValue: 'UNPAID',
       options: [
         { label: { vi: 'Chưa thanh toán', en: 'Unpaid' }, value: 'UNPAID' },
-        {
-          label: { vi: 'Đã thanh toán một phần', en: 'Partially paid' },
-          value: 'PARTIALLY_PAID',
-        },
-        { label: { vi: 'Đã thanh toán đủ', en: 'Paid' }, value: 'PAID' },
-        { label: { vi: 'Đã hủy / hoàn tiền', en: 'Cancelled / Refunded' }, value: 'CANCELLED' },
+        { label: { vi: 'Đã thanh toán', en: 'Paid' }, value: 'PAID' },
       ],
+      admin: {
+        readOnly: true,
+        description: {
+          vi: 'Tự động suy ra: có thanh toán thì "Đã thanh toán", chưa có thì "Chưa thanh toán" — không chọn tay được.',
+          en: 'Automatically derived: PAID once a payment exists, UNPAID otherwise — not manually selectable.',
+        },
+      },
+    },
+    {
+      name: 'payments',
+      type: 'join',
+      collection: 'payments',
+      on: 'enrollmentId',
+      label: { vi: 'Thanh toán', en: 'Payments' },
     },
     {
       name: 'registrationSource',
@@ -151,6 +187,13 @@ export const Enrollments: CollectionConfig<'enrollments'> = {
       label: { vi: 'Admin tạo đơn', en: 'Created By' },
       admin: {
         readOnly: true,
+        description: {
+          vi: 'Tự động lấy theo tài khoản admin đang tạo đơn — hiện sẵn trước khi lưu, không chọn tay được.',
+          en: 'Automatically set to the admin account creating this enrollment — shown before saving, not manually selectable.',
+        },
+        components: {
+          Field: '@/collections/Enrollments/components/CreatedByField#CreatedByField',
+        },
       },
     },
   ],
