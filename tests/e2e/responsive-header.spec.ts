@@ -68,7 +68,9 @@ test.describe('Header on narrow screens', () => {
     await page.setViewportSize({ width: 1024, height: 800 })
     await page.goto(SITE)
 
-    await expect(page.locator('header').getByText('Anh ngữ công sở thực chiến')).toBeVisible()
+    // Assert the display rule, not the text: CI runs migrations only, so the tagline is empty
+    // there and an empty block has no size for `toBeVisible` to see.
+    await expect(page.locator('header a[href="/"] span.uppercase')).toHaveCSS('display', 'block')
     await expect(page.getByRole('button', { name: 'Menu' })).toBeHidden()
   })
 })
