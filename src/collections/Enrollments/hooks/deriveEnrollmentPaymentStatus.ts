@@ -1,5 +1,6 @@
 import type { CollectionBeforeChangeHook } from 'payload'
 import { derivePaymentStatus } from '../derivePaymentStatus'
+import { Enrollment } from '@/payload-types'
 
 /**
  * `paymentStatus` is never staff-chosen (FR-032) — recomputed on every save from the
@@ -8,7 +9,7 @@ import { derivePaymentStatus } from '../derivePaymentStatus'
  * payment yet — a payment can only be added to an already-saved enrollment — so it is
  * always UNPAID.
  */
-export const deriveEnrollmentPaymentStatus: CollectionBeforeChangeHook = async ({
+export const deriveEnrollmentPaymentStatus: CollectionBeforeChangeHook<Enrollment> = async ({
   data,
   operation,
   originalDoc,

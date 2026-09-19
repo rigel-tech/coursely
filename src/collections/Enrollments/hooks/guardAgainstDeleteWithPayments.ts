@@ -7,10 +7,17 @@ import { APIError } from 'payload'
  * so Postgres would otherwise reject this delete with a raw constraint-violation error.
  * Reject it here first with a message staff can act on.
  */
-export const guardAgainstDeleteWithPayments: CollectionBeforeDeleteHook = async ({ id, req }) => {
+export const guardAgainstDeleteWithPayments: CollectionBeforeDeleteHook = async ({
+  id,
+  req,
+}): Promise<void> => {
   const { totalDocs } = await req.payload.count({
     collection: 'payments',
-    where: { enrollmentId: { equals: id } },
+    where: {
+      enrollmentId: {
+        equals: id,
+      },
+    },
     req,
   })
 

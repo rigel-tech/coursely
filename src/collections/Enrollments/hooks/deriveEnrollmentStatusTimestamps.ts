@@ -1,3 +1,4 @@
+import { Enrollment } from '@/payload-types'
 import type { CollectionBeforeChangeHook } from 'payload'
 
 /**
@@ -6,7 +7,7 @@ import type { CollectionBeforeChangeHook } from 'payload'
  * edit, and freshly on every re-entry (e.g. CONFIRMED → CANCELLED → CONFIRMED updates
  * `confirmedAt` again rather than keeping the first one).
  */
-export const deriveEnrollmentStatusTimestamps: CollectionBeforeChangeHook = ({
+export const deriveEnrollmentStatusTimestamps: CollectionBeforeChangeHook<Enrollment> = ({
   data,
   operation,
   originalDoc,
