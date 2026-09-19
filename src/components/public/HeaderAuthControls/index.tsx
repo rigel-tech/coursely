@@ -37,12 +37,12 @@ export const HeaderAuthControls: React.FC = () => {
   }, [])
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-1.5 sm:gap-3">
       {/* Theme Toggle Button */}
       <ThemeToggle />
 
       {/* Hotline block */}
-      <div className="hidden sm:flex flex-col items-end text-right leading-none select-none pr-1">
+      <div className="hidden lg:flex flex-col items-end text-right leading-none select-none pr-1">
         <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
           HOTLINE
         </span>
@@ -52,24 +52,31 @@ export const HeaderAuthControls: React.FC = () => {
       </div>
 
       {authenticated === true ? (
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
           <NotificationBell />
 
           {/* User profile pill */}
           <Link
             href="/tai-khoan"
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 hover:bg-muted py-1 pl-1 pr-3.5 transition-colors"
+            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 hover:bg-muted p-1 sm:pr-3.5 transition-colors"
           >
             <Avatar name={user?.name || 'Tài khoản'} size="sm" className="size-7 text-xs" />
-            <span className="text-sm font-medium text-foreground">{user?.name || 'Tài khoản'}</span>
+            <span className="hidden sm:inline-block text-sm font-medium text-foreground max-w-[120px] truncate">
+              {user?.name || 'Tài khoản'}
+            </span>
           </Link>
         </div>
       ) : (
-        <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="ghost">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="px-2 sm:px-3 text-xs sm:text-sm h-8 sm:h-9"
+          >
             <Link href="/dang-nhap">Đăng nhập</Link>
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="px-2.5 sm:px-3 text-xs sm:text-sm h-8 sm:h-9">
             <Link href="/dang-ky">Đăng ký</Link>
           </Button>
         </div>

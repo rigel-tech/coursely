@@ -151,12 +151,12 @@ export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
   })
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="bg-hero-accent">
-        <div className="container mx-auto flex flex-col gap-6 px-4 py-8 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-5">
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <div className="bg-hero-accent py-6 sm:py-8">
+        <div className="container mx-auto flex flex-col gap-6 px-4 sm:flex-row sm:items-center sm:justify-between text-center sm:text-left">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-5">
             <div
-              className="relative group"
+              className="relative group shrink-0"
               onClick={() => isEditing && fileInputRef.current?.click()}
             >
               <Avatar
@@ -178,21 +178,25 @@ export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <h1 className="text-2xl font-bold text-primary-foreground sm:text-3xl">
+            <div className="flex flex-col gap-1.5 items-center sm:items-start">
+              <h1 className="text-xl font-bold text-primary-foreground sm:text-3xl">
                 {user.fullName || 'Học viên'}
               </h1>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-primary-foreground/80">
-                <span>{user.email}</span>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 sm:gap-x-3 gap-y-1 text-xs sm:text-sm text-primary-foreground/80">
+                <span className="break-all">{user.email}</span>
                 {user.phone && (
                   <>
-                    <span aria-hidden>·</span>
+                    <span aria-hidden className="hidden sm:inline">
+                      ·
+                    </span>
                     <span>{user.phone}</span>
                   </>
                 )}
                 {user.verifiedAt && (
                   <>
-                    <span aria-hidden>·</span>
+                    <span aria-hidden className="hidden sm:inline">
+                      ·
+                    </span>
                     <span className="inline-flex items-center gap-1">
                       <span className="size-1.5 rounded-full bg-success" />
                       Đã xác minh email
@@ -203,20 +207,20 @@ export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-3">
-            <Button asChild variant="brand">
+          <div className="flex shrink-0 flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
+            <Button asChild variant="brand" className="w-full sm:w-auto">
               <Link href="/khoa-hoc">Đăng ký khóa mới</Link>
             </Button>
             <LogoutCta
               variant="outline"
-              className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              className="w-full sm:w-auto border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
             />
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto grid grid-cols-1 gap-8 px-4 lg:grid-cols-12">
-        <div className="flex flex-col gap-8 lg:col-span-4">
+      <div className="container mx-auto grid grid-cols-1 gap-6 sm:gap-8 px-4 lg:grid-cols-12">
+        <div className="flex flex-col gap-6 sm:gap-8 lg:col-span-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-heading-accent text-xl font-bold">
@@ -287,14 +291,15 @@ export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3 pt-2">
-                    <Button type="submit" disabled={isSubmitting} className="flex-1">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-2">
+                    <Button type="submit" disabled={isSubmitting} className="w-full sm:flex-1">
                       {isSubmitting ? 'Đang lưu…' : 'Lưu thay đổi'}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       disabled={isSubmitting}
+                      className="w-full sm:w-auto"
                       onClick={() => {
                         setAvatarFile(null)
                         setAvatarPreview(initialAvatarUrl)
@@ -318,7 +323,7 @@ export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
                     <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       Email đăng nhập
                     </p>
-                    <p className="font-medium text-foreground">{user.email}</p>
+                    <p className="font-medium text-foreground break-all">{user.email}</p>
                     <p className="text-muted-foreground-subtle text-xs">Không thể thay đổi</p>
                   </div>
 
@@ -372,7 +377,7 @@ export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
 
         <div className="lg:col-span-8">
           <Card>
-            <CardHeader className="flex-row items-center justify-between gap-4 space-y-0">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 space-y-0 pb-4">
               <div>
                 <CardTitle className="text-heading-accent text-xl font-bold">
                   Khóa học của tôi
@@ -380,7 +385,7 @@ export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
                 <CardDescription>Danh sách khóa học bạn đã đăng ký tại Coursely.</CardDescription>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none shrink-0 w-full sm:w-auto">
                 {COURSE_TABS.map((tab) => (
                   <Button
                     key={tab.key}
@@ -388,6 +393,7 @@ export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
                     size="sm"
                     variant={courseTab === tab.key ? 'default' : 'outline'}
                     onClick={() => setCourseTab(tab.key)}
+                    className="whitespace-nowrap px-2.5 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-initial"
                   >
                     {tab.label}
                     {tab.key === 'all' &&
@@ -436,16 +442,16 @@ export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
                     return (
                       <div
                         key={enrollment.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-border/60 bg-card p-4 sm:p-5 transition-colors hover:border-border"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-lg border border-border/60 bg-card p-3.5 sm:p-5 transition-colors hover:border-border"
                       >
-                        <div className="space-y-1.5 flex-1">
+                        <div className="space-y-1.5 flex-1 min-w-0">
                           <Link
                             href={`/khoa-hoc/${course.slug}`}
-                            className="text-base font-semibold text-foreground hover:text-primary transition-colors line-clamp-1"
+                            className="text-base font-semibold text-foreground hover:text-primary transition-colors line-clamp-2 sm:line-clamp-1"
                           >
                             {course.title}
                           </Link>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1 text-xs text-muted-foreground">
                             <span>
                               Ngày đăng ký:{' '}
                               <strong className="text-foreground font-medium">
@@ -463,11 +469,11 @@ export function ProfileForm({ user, enrollments = [] }: ProfileFormProps) {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 sm:self-center">
-                          <Badge variant={enrollmentStatusInfo.variant}>
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
+                          <Badge variant={enrollmentStatusInfo.variant} className="text-xs">
                             {enrollmentStatusInfo.label}
                           </Badge>
-                          <Badge variant={paymentStatusInfo.variant}>
+                          <Badge variant={paymentStatusInfo.variant} className="text-xs">
                             {paymentStatusInfo.label}
                           </Badge>
                         </div>
