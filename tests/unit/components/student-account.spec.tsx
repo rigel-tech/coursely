@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { StudentAccount } from '@/components/public/profile/StudentAccount'
@@ -156,5 +156,84 @@ describe('StudentAccount — Assigned and Unassigned Class Rendering', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Hủy' }))
 
     expect(fileInput.value).toBe('')
+  })
+
+  it('synchronizes "Đang học" count on LearningOverviewCard with "Đang học" tab in EnrollmentList', () => {
+    const mixedEnrollments: StudentEnrollmentItem[] = [
+      {
+        id: 1,
+        course: { id: 1, title: 'Course 1 (NEW)', slug: 'c1', duration: '4 tuần' },
+        class: null,
+        enrollmentStatus: 'NEW',
+        paymentStatus: 'UNPAID',
+        registeredAt: '2026-09-01T00:00:00.000Z',
+        createdAt: '2026-09-01T00:00:00.000Z',
+      },
+      {
+        id: 2,
+        course: { id: 2, title: 'Course 2 (CONFIRMED)', slug: 'c2', duration: '6 tuần' },
+        class: { code: 'CLASS-02', startDate: '2026-10-01T00:00:00.000Z' },
+        enrollmentStatus: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        registeredAt: '2026-09-02T00:00:00.000Z',
+        createdAt: '2026-09-02T00:00:00.000Z',
+      },
+      {
+        id: 3,
+        course: { id: 3, title: 'Course 3 (ATTENDED)', slug: 'c3', duration: '8 tuần' },
+        class: { code: 'CLASS-03', startDate: '2026-10-01T00:00:00.000Z' },
+        enrollmentStatus: 'ATTENDED',
+        paymentStatus: 'PAID',
+        registeredAt: '2026-09-03T00:00:00.000Z',
+        createdAt: '2026-09-03T00:00:00.000Z',
+      },
+      {
+        id: 4,
+        course: { id: 4, title: 'Course 4 (COMPLETED)', slug: 'c4', duration: '8 tuần' },
+        class: null,
+        enrollmentStatus: 'COMPLETED',
+        paymentStatus: 'PAID',
+        registeredAt: '2026-09-04T00:00:00.000Z',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+      {
+        id: 5,
+        course: { id: 5, title: 'Course 5 (CANCELLED)', slug: 'c5', duration: '4 tuần' },
+        class: null,
+        enrollmentStatus: 'CANCELLED',
+        paymentStatus: 'UNPAID',
+        registeredAt: '2026-09-05T00:00:00.000Z',
+        createdAt: '2026-09-05T00:00:00.000Z',
+      },
+    ]
+
+    render(<StudentAccount user={mockStudent} enrollments={mixedEnrollments} />)
+
+    // Initial overview card counts
+    // NEW (1) -> Chờ xác nhận: 1
+    // CONFIRMED (1) + ATTENDED (1) -> Đang học: 2
+    // COMPLETED (1) -> Khóa đã hoàn thành: 1
+    const overviewCard = screen.getByText('Tổng quan học tập').closest('[data-slot="card"]')!
+    const overview = within(overviewCard as HTMLElement)
+
+    const inProgressOverviewRow = overview.getByText('Đang học').closest('p')
+    expect(inProgressOverviewRow?.textContent).toContain('2')
+
+    const pendingOverviewRow = overview.getByText('Chờ xác nhận').closest('p')
+    expect(pendingOverviewRow?.textContent).toContain('1')
+
+    const completedOverviewRow = overview.getByText('Khóa đã hoàn thành').closest('p')
+    expect(completedOverviewRow?.textContent).toContain('1')
+
+    // Click "Đang học" tab in EnrollmentList
+    const inProgressTabButton = screen.getByRole('button', { name: 'Đang học' })
+    fireEvent.click(inProgressTabButton)
+
+    // Only Course 2 (CONFIRMED) and Course 3 (ATTENDED) should be displayed
+    expect(screen.getByText('Course 2 (CONFIRMED)')).toBeDefined()
+    expect(screen.getByText('Course 3 (ATTENDED)')).toBeDefined()
+    expect(screen.queryByText('Course 1 (NEW)')).toBeNull()
+    expect(screen.queryByText('Course 4 (COMPLETED)')).toBeNull()
+    expect(screen.queryByText('Course 5 (CANCELLED)')).toBeNull()
   })
 })

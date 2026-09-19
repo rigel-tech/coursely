@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/public/ui/card'
 import type { StudentEnrollmentItem } from '@/services/student-enrollment'
+import { isEnrollmentInProgress } from '@/components/public/enrollment-status'
 
 interface LearningOverviewCardProps {
   enrollments: StudentEnrollmentItem[]
@@ -12,11 +13,7 @@ export function LearningOverviewCard({ enrollments }: LearningOverviewCardProps)
 
   for (const enrollment of enrollments) {
     if (enrollment.enrollmentStatus === 'COMPLETED') completedCount++
-    else if (
-      enrollment.enrollmentStatus === 'ATTENDED' ||
-      enrollment.enrollmentStatus === 'CONFIRMED'
-    )
-      inProgressCount++
+    else if (isEnrollmentInProgress(enrollment.enrollmentStatus)) inProgressCount++
     else if (enrollment.enrollmentStatus === 'NEW') pendingCount++
   }
 

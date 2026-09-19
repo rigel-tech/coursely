@@ -14,7 +14,7 @@ import {
 import { EmptyState } from '@/components/public/ui/empty-state'
 import { EnrollmentCard } from './EnrollmentCard'
 import type { StudentEnrollmentItem } from '@/services/student-enrollment'
-
+import { isEnrollmentInProgress } from '@/components/public/enrollment-status'
 const COURSE_TABS = [
   { key: 'all', label: 'Tất cả' },
   { key: 'in-progress', label: 'Đang học' },
@@ -33,11 +33,7 @@ export function EnrollmentList({ enrollments }: EnrollmentListProps) {
   const filteredEnrollments = useMemo(() => {
     return enrollments.filter((e) => {
       if (courseTab === 'in-progress') {
-        return (
-          e.enrollmentStatus === 'NEW' ||
-          e.enrollmentStatus === 'ATTENDED' ||
-          e.enrollmentStatus === 'CONFIRMED'
-        )
+        return isEnrollmentInProgress(e.enrollmentStatus)
       }
       if (courseTab === 'completed') {
         return e.enrollmentStatus === 'COMPLETED'
