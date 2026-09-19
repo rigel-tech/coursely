@@ -55,7 +55,7 @@ describe('assignStudentsToClassAction — the path that assigns', () => {
     const result = await assignStudentsToClassAction({ classId: 4, enrollmentIds: [1, 2, 3] })
 
     expect(result).toEqual({ status: 'success', assigned: 3 })
-    expect(assignStudentsToClass).toHaveBeenCalledWith({ classId: 4, enrollmentIds: [1, 2, 3] })
+    expect(assignStudentsToClass).toHaveBeenCalledWith(4, [1, 2, 3])
   })
 })
 
