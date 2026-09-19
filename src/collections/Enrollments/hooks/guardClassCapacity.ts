@@ -18,15 +18,15 @@ export const guardClassCapacity: CollectionBeforeChangeHook<Enrollment> = async 
   originalDoc,
   req,
 }) => {
-  const nextClass = relationshipId(data.class)
+  const classId = relationshipId(data.class)
 
-  if (!nextClass) return data
-  if (nextClass === relationshipId(originalDoc?.class)) return data
+  if (!classId) return data
+  if (classId === relationshipId(originalDoc?.class)) return data
 
   const { payload } = req
   const classDoc = await payload.findByID({
     collection: 'classes',
-    id: nextClass,
+    id: classId,
     depth: 0,
     overrideAccess: true,
     req,
@@ -35,9 +35,9 @@ export const guardClassCapacity: CollectionBeforeChangeHook<Enrollment> = async 
   const course = relationshipId(data.course) ?? relationshipId(originalDoc?.course)
   if (course !== relationshipId(classDoc.course)) throw new ClassCourseMismatch()
 
-  await lockClassSeats({ classId: nextClass, req })
+  await lockClassSeats(classId, req)
 
-  const taken = await countClassOccupancy({ classId: nextClass, req })
+  const taken = await countClassOccupancy(classId, req)
   if (taken >= classDoc.maxStudents) throw new ClassFull({ remaining: 0 })
 
   return data

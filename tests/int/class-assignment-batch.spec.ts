@@ -98,7 +98,7 @@ describe('assignStudentsToClass — the happy batch', () => {
     const classId = await makeClass(10)
     const enrollmentIds = await Promise.all([makeEnrollment(), makeEnrollment(), makeEnrollment()])
 
-    await assignStudentsToClass({ classId, enrollmentIds })
+    await assignStudentsToClass(classId, enrollmentIds)
 
     const docs = await Promise.all(enrollmentIds.map(readEnrollment))
     for (const doc of docs) {
@@ -112,13 +112,11 @@ describe('assignStudentsToClass — refuses the whole batch, not a partial one',
   it('seats nobody when the batch would exceed the remaining seats', async () => {
     const classId = await makeClass(2)
     const alreadySeated = await makeEnrollment()
-    await assignStudentsToClass({ classId, enrollmentIds: [alreadySeated] })
+    await assignStudentsToClass(classId, [alreadySeated])
 
     const candidates = await Promise.all([makeEnrollment(), makeEnrollment()])
 
-    await expect(
-      assignStudentsToClass({ classId, enrollmentIds: candidates }),
-    ).rejects.toBeInstanceOf(ClassFull)
+    await expect(assignStudentsToClass(classId, candidates)).rejects.toBeInstanceOf(ClassFull)
 
     expect(await countSeated(classId)).toBe(1)
     const docs = await Promise.all(candidates.map(readEnrollment))
@@ -130,12 +128,12 @@ describe('assignStudentsToClass — refuses the whole batch, not a partial one',
   it('rejects a batch that includes an enrollment already in a class', async () => {
     const classId = await makeClass(10)
     const alreadyPlacedElsewhere = await makeEnrollment()
-    await assignStudentsToClass({ classId, enrollmentIds: [alreadyPlacedElsewhere] })
+    await assignStudentsToClass(classId, [alreadyPlacedElsewhere])
 
     const freshOne = await makeEnrollment()
 
     await expect(
-      assignStudentsToClass({ classId, enrollmentIds: [freshOne, alreadyPlacedElsewhere] }),
+      assignStudentsToClass(classId, [freshOne, alreadyPlacedElsewhere]),
     ).rejects.toBeInstanceOf(EnrollmentNotAssignable)
 
     expect((await readEnrollment(freshOne)).class).toBeNull()
@@ -146,9 +144,9 @@ describe('assignStudentsToClass — refuses the whole batch, not a partial one',
     const confirmed = await makeEnrollment()
     const unconfirmed = await makeEnrollment({ enrollmentStatus: 'NEW' })
 
-    await expect(
-      assignStudentsToClass({ classId, enrollmentIds: [confirmed, unconfirmed] }),
-    ).rejects.toBeInstanceOf(EnrollmentNotAssignable)
+    await expect(assignStudentsToClass(classId, [confirmed, unconfirmed])).rejects.toBeInstanceOf(
+      EnrollmentNotAssignable,
+    )
 
     expect((await readEnrollment(confirmed)).class).toBeNull()
   })
@@ -160,8 +158,8 @@ describe('assignStudentsToClass — closes the race between two concurrent assig
     const [candidateA, candidateB] = await Promise.all([makeEnrollment(), makeEnrollment()])
 
     const results = await Promise.allSettled([
-      assignStudentsToClass({ classId, enrollmentIds: [candidateA] }),
-      assignStudentsToClass({ classId, enrollmentIds: [candidateB] }),
+      assignStudentsToClass(classId, [candidateA]),
+      assignStudentsToClass(classId, [candidateB]),
     ])
 
     const fulfilled = results.filter((result) => result.status === 'fulfilled')
