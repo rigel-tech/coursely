@@ -187,6 +187,24 @@ stating it plays no part in audience determination), `src/components/admin/Notif
 (`loadList`, fetches every row regardless of `user`), `src/access/authenticated.ts`
 (`Notifications.access`, unchanged).
 
+### `getStudentEnrollments` must query at `depth: 1` with `select`/`populate`/`joins: false` and sanitize into `StudentEnrollmentItem`
+
+**Rule** — `getStudentEnrollments` queries with `depth: 1`, `select` (6 enrollment fields),
+`populate` (course: 3 fields, class: 6 fields), and `joins: false`. Its mapper strips classes
+whose `status` is not in `VISIBLE_CLASS_STATUSES` and emits only `AssignedClassSummary`'s 5
+public fields. Callers must never widen `depth`, remove `select`/`populate`, or serialize a raw
+`Class` document to the student's browser.
+
+**Why it breaks silently** — At `depth: 0` Payload returns bare foreign-key numbers instead of
+objects; `typeof doc.class === 'object'` is `false`, so every enrollment renders "Chưa xếp lớp"
+even when a class is assigned. Removing `select`/`populate` exposes internal fields
+(`maxStudents`, timestamps) of an `authenticated`-only collection in the RSC payload. Neither
+throws, neither fails a build — the page renders a 200 with the wrong data.
+
+**Where** — `src/services/student-enrollment.ts` (`getStudentEnrollments`, `VISIBLE_CLASS_STATUSES`,
+`StudentEnrollmentItem`, `AssignedClassSummary`), consumed by
+`src/components/public/profile/StudentAccount.tsx` (`StudentAccountProps`).
+
 ## Cache invalidation
 
 ### Every `revalidateTag(X)` must match an `unstable_cache` tag `X` character for character

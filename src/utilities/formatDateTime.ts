@@ -1,3 +1,19 @@
+const VN_DATE = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: 'Asia/Ho_Chi_Minh',
+})
+
+/** Formats date to DD/MM/YYYY in Asia/Ho_Chi_Minh timezone to avoid SSR hydration mismatch. */
+export function formatDate(dateStr?: string | Date | null): string {
+  if (!dateStr) return '—'
+  const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
+  if (isNaN(date.getTime())) return '—'
+
+  return VN_DATE.format(date)
+}
+
 export const formatDateTime = (timestamp: string): string => {
   const now = new Date()
   let date = now

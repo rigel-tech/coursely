@@ -5,7 +5,7 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { getSessionStudent } from '@/lib/auth/session-student'
-import { ProfileForm } from '../../../../components/public/forms/ProfileForm'
+import { StudentAccount } from '@/components/public/profile'
 import { getStudentEnrollments } from '@/services/student-enrollment'
 
 export const dynamic = 'force-dynamic'
@@ -33,7 +33,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="pt-24 pb-24">
-      <ProfileForm user={student} enrollments={enrollments} />
+      <StudentAccount user={student} enrollments={enrollments} />
     </div>
   )
 }
