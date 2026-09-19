@@ -637,6 +637,32 @@ first moving the signed-in read to the client (a dedicated status route, the sam
 work was scoped out of PR #47 as a larger change than the review comment (2.9) that flagged
 this warranted on its own.
 
+### An admin component's arguments to `useListDrawer` must be referentially stable, or it refetches on every render
+
+**Rule** — `useListDrawer({ collectionSlugs, filterOptions, ... })`'s internal memoization
+compares these arguments by reference, not by value (`@payloadcms/ui/dist/elements/ListDrawer/index.js`'s
+React-Compiler-generated cache: `$[22] !== collectionSlugs`, `$[24] !== filterOptions`).
+Passing an array or object literal built inline in the render body — `collectionSlugs:
+['enrollments']`, `filterOptions: { enrollments: someWhere }` — creates a new reference every
+render, so the cache never hits. Hoist a constant array to module scope; wrap a computed
+filter object in `useMemo`, keyed on whatever value should actually change it.
+
+**Why it breaks silently** — nothing throws, nothing warns, `pnpm typecheck` and `pnpm lint`
+both pass, and the drawer renders correctly the first time. What actually happens is the
+drawer's list refetches (`POST /admin/collections/<slug>` — logged as a `render-list` server
+action call) on **every render of the parent component**, not only when the filter's meaning
+changes — including renders triggered by state updates that have nothing to do with the
+drawer at all. Under a fast-refreshing parent (e.g. one polling or re-rendering on its own
+state) this floods the network tab and the dev server log with the same request, with no
+error to point at the cause. Found while building `ClassRoster` (specs/013): its
+`filterOptions` was a fresh object every render, and the drawer spammed `render-list` calls
+continuously the moment the component mounted.
+
+**Where** — `src/components/admin/ClassRoster/index.tsx` (`ENROLLMENTS_COLLECTION_SLUGS`
+hoisted to module scope, `filterOptions` wrapped in `useMemo` keyed on `courseId`) — the one
+admin component in this codebase that calls `useListDrawer` today. Any future one must follow
+the same shape.
+
 ## Theming
 
 ### A region that must stay dark sets `data-theme="dark"`; it never reaches for `bg-black`
@@ -796,6 +822,34 @@ guard that silently doesn't match between environments.
 `src/migrations/20260914_130000_add_enrollment_active_guard.ts` (the hand-written prod copy
 of the same index — change one, change both).
 
+### An advisory lock only guards a write that actually has a transaction
+
+**Rule** — `lockClassSeats` (`src/services/class-seats.ts`) takes a Postgres advisory lock
+scoped to the caller's transaction (`pg_advisory_xact_lock`, via
+`payload.db.sessions[req.transactionID].db`). If `req.transactionID` is falsy — no
+transaction — it silently returns without taking any lock at all; there is no fallback
+locking strategy. Every ordinary Payload write path (`create`, `update`, `updateByID`) opens
+a transaction before running `beforeChange` hooks, so `guardClassCapacity` and
+`assignStudentsToClass` get real protection today. The moment a caller passes
+`disableTransaction: true`, or hand-builds a `req` object without a `transactionID` the way
+`assignStudentsToClass` itself does (`{ payload, transactionID } as PayloadRequest`), the
+seat count this lock protects goes back to a plain read-then-write with no guard — the exact
+race this pattern exists to close.
+
+**Why it breaks silently** — `lockClassSeats` never throws when it has nothing to lock;
+compiles, runs, returns `void` either way. Two concurrent writers into the same class still
+each get a count and still each may write — nothing errors, nothing logs, the class just
+quietly ends up over `maxStudents` under whatever code path skipped the transaction. The
+same trap awaits any future caller who reaches for this exact "count seats, then act" shape
+for a different resource and copies the lock call without also guaranteeing a transaction
+wraps it.
+
+**Where** — `src/services/class-seats.ts` (`lockClassSeats`, `countClassOccupancy` — the
+latter also depends on running inside the same transaction to see rows the batch has already
+written), `src/collections/Enrollments/hooks/guardClassCapacity.ts` (per-document caller,
+transaction supplied by Payload itself), `src/services/class-assignment.ts`
+(`assignStudentsToClass`, the batch caller — explicitly opens the transaction it passes in).
+
 ### A relationship field's `ON DELETE` behavior can only be fixed for prod, never for dev/test
 
 **Rule** — Payload's postgres adapter exposes no per-field `onDelete` option — every
@@ -838,6 +892,8 @@ environments.
 **Where** — `src/payload.config.ts` (`afterSchemaInit`),
 `src/migrations/20260918_100000_add_payments_enrollment_unique_idx.ts` (the hand-written prod
 copy of the same index — change one, change both).
+
+> > > > > > > origin/main
 
 ### `updateStudentProfile` no longer covers the enrollment-time profile write — `createEnrollmentAction` writes directly
 

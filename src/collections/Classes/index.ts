@@ -1,7 +1,25 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, Validate } from 'payload'
 
 import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
+
+type ClassEndDateSiblingData = {
+  startDate?: Date | string | null
+}
+
+export const validateClassEndDate: Validate<
+  Date | string | null | undefined,
+  unknown,
+  ClassEndDateSiblingData
+> = (value, { siblingData }) => {
+  if (!value) return true
+  const startDate = siblingData?.startDate
+  if (!startDate) return true
+  if (new Date(value).getTime() < new Date(startDate).getTime()) {
+    return 'Ngày kết thúc không được sớm hơn ngày khai giảng.'
+  }
+  return true
+}
 
 /**
  * Lớp học (classes) — một buổi/khoá mở lớp cụ thể của một `courses`, do Admin xếp
@@ -88,6 +106,7 @@ export const Classes: CollectionConfig<'classes'> = {
           name: 'endDate',
           type: 'date',
           label: { vi: 'Ngày kết thúc dự kiến', en: 'End Date' },
+          validate: validateClassEndDate,
           admin: {
             date: { pickerAppearance: 'dayOnly' },
             width: '50%',
@@ -119,6 +138,16 @@ export const Classes: CollectionConfig<'classes'> = {
       admin: {
         position: 'sidebar',
         step: 1,
+      },
+    },
+    {
+      name: 'roster',
+      type: 'ui',
+      label: { vi: 'Xếp lớp', en: 'Roster' },
+      admin: {
+        components: {
+          Field: '@/components/admin/ClassRoster#ClassRoster',
+        },
       },
     },
   ],
