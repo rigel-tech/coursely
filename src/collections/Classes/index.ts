@@ -2,6 +2,7 @@ import type { CollectionConfig, Validate } from 'payload'
 
 import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
+import { notifyOnClassChange } from './hooks/notifyOnClassChange'
 
 type ClassEndDateSiblingData = {
   startDate?: Date | string | null
@@ -47,6 +48,9 @@ export const Classes: CollectionConfig<'classes'> = {
     group: adminGroups.academic,
     defaultColumns: ['code', 'course', 'status', 'startDate', 'maxStudents', 'updatedAt'],
     useAsTitle: 'code',
+  },
+  hooks: {
+    afterChange: [notifyOnClassChange],
   },
   fields: [
     {

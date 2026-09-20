@@ -108,7 +108,7 @@ describe('NotificationBell (admin) — the count', () => {
 })
 
 describe('NotificationBell (admin) — opening the list', () => {
-  it("fetches the whole collection's list, not just staff-only rows", async () => {
+  it('fetches only staff-facing rows (notifications where student does not exist)', async () => {
     jsonOnce({ totalDocs: 1 })
     render(<NotificationBell />)
     await screen.findByText('1')
@@ -124,7 +124,9 @@ describe('NotificationBell (admin) — opening the list', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
 
     const [listUrl] = fetchMock.mock.calls[1] as [string]
-    expect(listUrl).toBe('/api/notifications?sort=-createdAt&limit=20&depth=0')
+    expect(listUrl).toBe(
+      '/api/notifications?sort=-createdAt&limit=20&depth=0&where%5Bstudent%5D%5Bexists%5D=false',
+    )
   })
 
   it("marks only the rows without a student as read — a student's own notification is left untouched", async () => {

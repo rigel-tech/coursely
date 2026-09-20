@@ -62,6 +62,22 @@ export const Notifications: CollectionConfig = {
           label: { vi: 'Đơn đăng ký đã được xác nhận', en: 'Enrollment Confirmed' },
           value: 'ENROLLMENT_CONFIRMED',
         },
+        {
+          label: { vi: 'Đã xếp lớp học', en: 'Class Assigned' },
+          value: 'CLASS_ASSIGNED',
+        },
+        {
+          label: { vi: 'Ghi nhận thanh toán', en: 'Payment Recorded' },
+          value: 'PAYMENT_RECORDED',
+        },
+        {
+          label: { vi: 'Thay đổi lịch học', en: 'Class Rescheduled' },
+          value: 'CLASS_RESCHEDULED',
+        },
+        {
+          label: { vi: 'Lớp học đã bị hủy', en: 'Class Cancelled' },
+          value: 'CLASS_CANCELLED',
+        },
       ],
       required: true,
     },

@@ -8,6 +8,7 @@ import {
   syncEnrollmentPaymentStatusAfterChange,
   syncEnrollmentPaymentStatusAfterDelete,
 } from './hooks/syncEnrollmentPaymentStatus'
+import { notifyOnPaymentRecorded } from './hooks/notifyOnPaymentRecorded'
 
 export const validatePaymentAmount: Validate<number> = (value) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return 'Số tiền là bắt buộc.'
@@ -49,7 +50,7 @@ export const Payments: CollectionConfig = {
   },
   hooks: {
     beforeChange: [setPaymentDate, setRecordedByUser, setStudentFromEnrollment],
-    afterChange: [syncEnrollmentPaymentStatusAfterChange],
+    afterChange: [syncEnrollmentPaymentStatusAfterChange, notifyOnPaymentRecorded],
     afterDelete: [syncEnrollmentPaymentStatusAfterDelete],
   },
   fields: [

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createStudentNotification, createUserNotification } from '@/notifications/create'
+import { createStaffNotification, createStudentNotification } from '@/notifications/create'
 import type { Payload } from 'payload'
 
 describe('createStudentNotification', () => {
@@ -21,20 +21,24 @@ describe('createStudentNotification', () => {
   })
 })
 
-describe('createUserNotification', () => {
-  it('writes the user and omits student', async () => {
+describe('createStaffNotification', () => {
+  it('writes general notification for staff without specifying student or user', async () => {
     const create = vi.fn().mockResolvedValue(undefined)
     const payload = { create } as unknown as Payload
 
-    await createUserNotification(payload, {
-      userId: 9,
-      type: 'ACCOUNT_CREATED',
-      title: 'Có người dùng đăng ký tài khoản mới',
-      content: 'Nội dung',
+    await createStaffNotification(payload, {
+      type: 'ENROLLMENT_CREATED',
+      title: 'Có đơn đăng ký khóa học mới',
+      content: 'Nội dung thông báo cho staff',
     })
 
     const { data } = create.mock.calls[0][0]
-    expect(data).toMatchObject({ user: 9 })
+    expect(data).toMatchObject({
+      type: 'ENROLLMENT_CREATED',
+      title: 'Có đơn đăng ký khóa học mới',
+      content: 'Nội dung thông báo cho staff',
+    })
     expect(data).not.toHaveProperty('student')
+    expect(data).not.toHaveProperty('user')
   })
 })

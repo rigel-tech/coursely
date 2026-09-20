@@ -11,40 +11,27 @@ import type { Payload } from 'payload'
 
 type NotificationFields = Pick<Notification, 'content' | 'metadata' | 'title' | 'type'>
 
-export async function createStudentNotification(
+async function createNotification(
   payload: Payload,
-  input: NotificationFields & { studentId: number },
+  data: Partial<Notification> & NotificationFields,
 ): Promise<void> {
-  const { content, metadata, studentId, title, type } = input
-
   await payload.create({
     collection: 'notifications',
-    data: { student: studentId, type, title, content, metadata, isRead: false },
+    data: { isRead: false, ...data },
     overrideAccess: true,
   })
 }
 
-export async function createUserNotification(
+export async function createStudentNotification(
   payload: Payload,
-  input: NotificationFields & { userId: number },
+  { studentId, ...input }: NotificationFields & { studentId: number },
 ): Promise<void> {
-  const { content, metadata, title, type, userId } = input
-
-  await payload.create({
-    collection: 'notifications',
-    data: { user: userId, type, title, content, metadata, isRead: false },
-    overrideAccess: true,
-  })
+  await createNotification(payload, { student: studentId, ...input })
 }
 
 export async function createStaffNotification(
   payload: Payload,
   input: NotificationFields,
 ): Promise<void> {
-  const { content, metadata, title, type } = input
-  await payload.create({
-    collection: 'notifications',
-    data: { type, title, content, metadata, isRead: false },
-    overrideAccess: true,
-  })
+  await createNotification(payload, input)
 }

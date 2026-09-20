@@ -1074,7 +1074,15 @@ export interface Notification {
   id: number;
   student?: (number | null) | Student;
   user?: (number | null) | User;
-  type: 'ACCOUNT_CREATED' | 'ENROLLMENT_CREATED' | 'ENROLLMENT_CANCELLED' | 'ENROLLMENT_CONFIRMED';
+  type:
+    | 'ACCOUNT_CREATED'
+    | 'ENROLLMENT_CREATED'
+    | 'ENROLLMENT_CANCELLED'
+    | 'ENROLLMENT_CONFIRMED'
+    | 'CLASS_ASSIGNED'
+    | 'PAYMENT_RECORDED'
+    | 'CLASS_RESCHEDULED'
+    | 'CLASS_CANCELLED';
   title: string;
   content: string;
   metadata?:
