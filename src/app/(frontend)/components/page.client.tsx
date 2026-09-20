@@ -17,6 +17,7 @@ import { CourseRegistrationForm } from '@/components/public/forms/CourseRegistra
 import { ForgotPasswordForm } from '@/components/public/forms/ForgotPasswordForm'
 import { LoginForm } from '@/components/public/forms/LoginForm'
 import { OtpForm } from '@/components/public/forms/OtpForm'
+import { ProfileForm } from '@/components/public/forms/ProfileForm'
 import { RegisterForm } from '@/components/public/forms/RegisterForm'
 import { ResetPasswordForm } from '@/components/public/forms/ResetPasswordForm'
 import { Avatar } from '@/components/public/ui/avatar'
@@ -560,6 +561,27 @@ const READY_FORMS: Entry[] = [
       <div className="max-w-sm">
         <OtpForm />
       </div>
+    ),
+  },
+  {
+    name: 'ProfileForm',
+    path: '@/components/public/forms/ProfileForm',
+    origin: 'public',
+    note: 'Trang hồ sơ học viên: xem và sửa thông tin cá nhân, kèm danh sách khóa học. Là cả một trang nên tự có <h1>.',
+    preview: (
+      <ProfileForm
+        user={{
+          id: 1,
+          fullName: 'Trần Thị Mai',
+          email: 'mai@example.com',
+          phone: '0912345678',
+          status: 'ACTIVE',
+          verifiedAt: '2026-01-01T00:00:00.000Z',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          collection: 'students',
+        }}
+      />
     ),
   },
 ]

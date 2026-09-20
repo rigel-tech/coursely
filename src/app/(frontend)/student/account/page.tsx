@@ -32,7 +32,7 @@ export default async function ProfilePage() {
   const enrollments = await getStudentEnrollments(payload, student.id)
 
   return (
-    <div className="pt-24 pb-24">
+    <div className="pt-6 pb-12 sm:pt-16 sm:pb-24">
       <StudentAccount user={student} enrollments={enrollments} />
     </div>
   )

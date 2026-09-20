@@ -11,6 +11,9 @@ import 'dotenv/config'
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  // The seed helpers block on `payload run`, which loads the whole Payload config; a cold
+  // start on Windows overruns the 30s default and the `beforeAll` hook dies with "Test ended".
+  timeout: 120_000,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
