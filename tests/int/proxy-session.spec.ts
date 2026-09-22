@@ -152,3 +152,35 @@ describe('proxy — identity is never forwarded as a request header', () => {
     expect(payload.config.collections.some((c) => c.slug === 'students')).toBe(true)
   })
 })
+
+// BUG-08. A response that carries a session `Set-Cookie` belongs to one browser, but a
+// prerendered page's own `Cache-Control: s-maxage=31536000` rides along on it and invites
+// every *shared* cache in front — a CDN, an nginx `proxy_cache` — to store the pair and
+// replay one visitor's token to the next. Next does not downgrade the page's header when
+// middleware sets a cookie, so the downgrade has to be written here, on exactly the
+// responses that carry a cookie and on no others.
+describe('proxy — a response carrying a session cookie is never shared-cacheable', () => {
+  it('renewal: the response that mints an access cookie is private, no-store', async () => {
+    const refresh = await signRefreshToken(activeStudent, REFRESH_TTL_SEC)
+
+    const res = await proxy(req(`${REFRESH_COOKIE}=${refresh}`))
+
+    expect(res.cookies.get(ACCESS_COOKIE)?.value).toBeTruthy()
+    expect(res.headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  it('clearing: the redirect that drops both cookies is private, no-store', async () => {
+    const res = await proxy(req(`${REFRESH_COOKIE}=not.a.token`))
+
+    expect(res.cookies.get(ACCESS_COOKIE)?.value).toBe('')
+    expect(res.headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  it('no cookie written: Cache-Control is left to the page, so static pages still cache', async () => {
+    const signedIn = await proxy(req(`${ACCESS_COOKIE}=${await signAccessToken(activeStudent)}`))
+    const anonymous = await proxy(new NextRequest('http://localhost/'))
+
+    expect(signedIn.headers.get('cache-control')).toBeNull()
+    expect(anonymous.headers.get('cache-control')).toBeNull()
+  })
+})

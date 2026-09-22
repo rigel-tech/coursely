@@ -551,6 +551,42 @@ Nothing in the type system or the build says a word.
 `src/` mentions one of these names; the proxy behaviour is pinned in
 `tests/int/proxy-session.spec.ts` § "identity is never forwarded as a request header".
 
+### A response that carries a session `Set-Cookie` must be `private, no-store`
+
+**Rule** — Whenever `proxy` writes a session cookie — renewing `coursely-access`, or clearing
+both on a refresh token that no longer verifies — it must also set
+`Cache-Control: private, no-store` on that response. The condition is "this response carries a
+cookie", never a pathname or a method: the redirect that clears the cookies needs it just as
+much as the `next()` that renews them. A response `proxy` writes no cookie on must be left
+alone, so ordinary pages keep the cacheable header Next gave them.
+
+**Why it breaks silently** — Next does not downgrade a page's own `Cache-Control` when
+middleware sets a cookie. A prerendered page carries `s-maxage=31536000`, so the renewal
+response leaves the server with one visitor's JWT and a year-long _shared_-cache directive on
+it at the same time. Every layer in between is then behaving correctly when it stores the pair
+and hands that token to the next person who asks for the URL — and the next person is signed
+in as someone else, on a browser that has done nothing but open the home page. Nothing throws,
+`pnpm lint` and `tsc` are clean, and it is invisible in dev: `next dev` forces `no-cache` on
+every response, and a single-origin staging without a CDN in front never reproduces it either.
+On a CDN it surfaces per-POP, so it reads as an intermittent regional glitch rather than a
+credential leak. This was BUG-08 — reproduced 100% against a production build behind an nginx
+`proxy_cache`.
+
+**Where** — `src/proxy.ts`, the `renew || clear` guard after both cookie branches. Pinned by
+`tests/int/proxy-session.spec.ts` § "a response carrying a session cookie is never
+shared-cacheable" — three tests: the renewal, the clearing redirect, and the one that fails if
+the header ever escapes onto a response with no cookie on it.
+
+**The part the tests do not prove** — that Next honours a `Cache-Control` set here over the
+page's own. It does, on the self-hosted Node path, because the header reaches `res` before the
+render (`server/lib/router-utils/resolve-routes.js` copies proxy headers into `resHeaders`,
+`server/lib/router-server.js` applies them) and `server/send-payload.js` only writes the page's
+own when `!res.getHeader('Cache-Control')`. Verified against Next 16.3.0; recheck it on a Next
+upgrade, because the three tests above stay green even if that order changes. The edge runtime
+uses `appendHeader` instead and would leave both values present — so this reasoning does not
+carry to a Vercel-style deployment, and the cache layer in front must refuse to store responses
+bearing `Set-Cookie` regardless.
+
 ## Key–value storage
 
 ### Anything written to `payload.kv` carries its own expiry and deletes itself on read
