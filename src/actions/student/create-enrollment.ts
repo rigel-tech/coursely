@@ -3,7 +3,7 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 import { createStudentEnrollment } from '@/services/student-enrollment'
-import { getSessionStudent } from '@/lib/auth/session-student'
+import { ensureSessionStudent } from '@/lib/auth/session-student'
 import {
   CourseNotFound,
   EnrollmentAlreadyExists,
@@ -35,7 +35,7 @@ export async function createEnrollmentAction(
   }
 
   const { courseId, fullName, phone } = parsed.data
-  const student = await getSessionStudent()
+  const student = await ensureSessionStudent()
   if (!student) {
     return {
       status: 'error',

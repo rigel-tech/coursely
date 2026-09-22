@@ -21,7 +21,7 @@ vi.mock('@/services/student-enrollment', () => ({
 }))
 
 vi.mock('@/lib/auth/session-student', () => ({
-  getSessionStudent: vi.fn(),
+  ensureSessionStudent: vi.fn(),
 }))
 
 vi.mock('payload', async (importOriginal) => ({
@@ -29,7 +29,7 @@ vi.mock('payload', async (importOriginal) => ({
   getPayload: vi.fn(),
 }))
 
-import { getSessionStudent } from '@/lib/auth/session-student'
+import { ensureSessionStudent } from '@/lib/auth/session-student'
 import { createStudentEnrollment } from '@/services/student-enrollment'
 
 const updateStudentProfile = vi.fn()
@@ -51,7 +51,7 @@ beforeEach(() => {
 
 describe('createEnrollmentAction — the sign-in gate', () => {
   it('refuses a signed-out visitor and enrols nobody', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(null)
+    vi.mocked(ensureSessionStudent).mockResolvedValue(null)
 
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
 
@@ -72,14 +72,14 @@ describe('createEnrollmentAction — the sign-in gate', () => {
       message:
         'Vui lòng nhập họ và tên. Vui lòng nhập số điện thoại. Số điện thoại không hợp lệ (10 chữ số, ví dụ 0912345678)',
     })
-    expect(getSessionStudent).not.toHaveBeenCalled()
+    expect(ensureSessionStudent).not.toHaveBeenCalled()
     expect(updateStudentProfile).not.toHaveBeenCalled()
   })
 })
 
 describe('createEnrollmentAction — an account that may not enrol', () => {
   it('tells an unverified account to verify, and does not bounce it to sign-in', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('PENDING_VERIFICATION'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('PENDING_VERIFICATION'))
 
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
 
@@ -91,7 +91,7 @@ describe('createEnrollmentAction — an account that may not enrol', () => {
   })
 
   it('tells a disabled account it is disabled, and does not bounce it to sign-in', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('DISABLED'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('DISABLED'))
 
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
 
@@ -105,7 +105,7 @@ describe('createEnrollmentAction — an account that may not enrol', () => {
 
 describe('createEnrollmentAction — the path that enrols', () => {
   it('validates the course id and delegates valid input', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await expect(createEnrollmentAction({ courseId: 12, ...validProfile })).resolves.toEqual({
@@ -124,7 +124,7 @@ describe('createEnrollmentAction — the path that enrols', () => {
       status: 'error',
       message: 'Khóa học không hợp lệ.',
     })
-    expect(getSessionStudent).not.toHaveBeenCalled()
+    expect(ensureSessionStudent).not.toHaveBeenCalled()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 
@@ -135,14 +135,14 @@ describe('createEnrollmentAction — the path that enrols', () => {
       status: 'error',
       message: 'Khóa học không hợp lệ.',
     })
-    expect(getSessionStudent).not.toHaveBeenCalled()
+    expect(ensureSessionStudent).not.toHaveBeenCalled()
     expect(createStudentEnrollment).not.toHaveBeenCalled()
   })
 })
 
 describe('createEnrollmentAction — already enrolled', () => {
   it('shows its own message, not the generic fallback or another refusal', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(createStudentEnrollment).mockRejectedValue(new EnrollmentAlreadyExists())
 
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
@@ -156,7 +156,7 @@ describe('createEnrollmentAction — already enrolled', () => {
 
 describe('createEnrollmentAction — course refusals reach their own message', () => {
   it('shows the course-not-found message, not the generic fallback', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(createStudentEnrollment).mockRejectedValue(new CourseNotFound())
 
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
@@ -165,7 +165,7 @@ describe('createEnrollmentAction — course refusals reach their own message', (
   })
 
   it('shows the registration-not-open message, not the generic fallback', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(createStudentEnrollment).mockRejectedValue(new RegistrationNotOpen())
 
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
@@ -177,7 +177,7 @@ describe('createEnrollmentAction — course refusals reach their own message', (
   })
 
   it('shows the registration-closed message, not the generic fallback', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(createStudentEnrollment).mockRejectedValue(new RegistrationClosed())
 
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
@@ -189,7 +189,7 @@ describe('createEnrollmentAction — course refusals reach their own message', (
   })
 
   it('still rethrows an error none of the refusal classes recognise', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(createStudentEnrollment).mockRejectedValue(new Error('db unreachable'))
 
     await expect(createEnrollmentAction({ courseId: 12, ...validProfile })).rejects.toThrow(
@@ -200,7 +200,7 @@ describe('createEnrollmentAction — course refusals reach their own message', (
 
 describe('createEnrollmentAction — profile completeness (specs/009)', () => {
   it('refuses a signed-in ACTIVE student with a blank full name', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
 
     const result = await createEnrollmentAction({ courseId: 12, fullName: '', phone: '0987654321' })
 
@@ -211,7 +211,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
   })
 
   it('refuses a signed-in ACTIVE student with an invalid phone number', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
 
     const result = await createEnrollmentAction({
       courseId: 12,
@@ -225,7 +225,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
   })
 
   it('saves the profile before attempting the enrollment, in that order', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(createStudentEnrollment).mockResolvedValue(31)
     const callOrder: string[] = []
     updateStudentProfile.mockImplementation(async () => {
@@ -249,7 +249,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
   })
 
   it('keeps the profile save even when the enrollment attempt fails for an unrelated reason (FR-005)', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(createStudentEnrollment).mockRejectedValue(new EnrollmentAlreadyExists())
 
     const result = await createEnrollmentAction({ courseId: 12, ...validProfile })
@@ -267,7 +267,7 @@ describe('createEnrollmentAction — profile completeness (specs/009)', () => {
 describe('createEnrollmentAction — skips the profile write when nothing changed', () => {
   it('does not call updateStudentProfile when the submitted profile matches the stored one', async () => {
     const student = studentWith('ACTIVE', validProfile)
-    vi.mocked(getSessionStudent).mockResolvedValue(student)
+    vi.mocked(ensureSessionStudent).mockResolvedValue(student)
     vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await createEnrollmentAction({ courseId: 12, ...validProfile })
@@ -277,7 +277,7 @@ describe('createEnrollmentAction — skips the profile write when nothing change
 
   it('still enrols when the profile write is skipped', async () => {
     const student = studentWith('ACTIVE', validProfile)
-    vi.mocked(getSessionStudent).mockResolvedValue(student)
+    vi.mocked(ensureSessionStudent).mockResolvedValue(student)
     vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await createEnrollmentAction({ courseId: 12, ...validProfile })
@@ -287,7 +287,7 @@ describe('createEnrollmentAction — skips the profile write when nothing change
 
   it('still calls updateStudentProfile when the stored profile differs', async () => {
     const student = studentWith('ACTIVE', validProfile)
-    vi.mocked(getSessionStudent).mockResolvedValue(student)
+    vi.mocked(ensureSessionStudent).mockResolvedValue(student)
     vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await createEnrollmentAction({ courseId: 12, fullName: 'Trần Thị B', phone: '0912345678' })
@@ -302,7 +302,7 @@ describe('createEnrollmentAction — skips the profile write when nothing change
 
   it('still calls updateStudentProfile with both fields when only the phone differs', async () => {
     const student = studentWith('ACTIVE', validProfile)
-    vi.mocked(getSessionStudent).mockResolvedValue(student)
+    vi.mocked(ensureSessionStudent).mockResolvedValue(student)
     vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await createEnrollmentAction({
@@ -321,7 +321,7 @@ describe('createEnrollmentAction — skips the profile write when nothing change
 
   it('still calls updateStudentProfile with both fields when only the full name differs', async () => {
     const student = studentWith('ACTIVE', validProfile)
-    vi.mocked(getSessionStudent).mockResolvedValue(student)
+    vi.mocked(ensureSessionStudent).mockResolvedValue(student)
     vi.mocked(createStudentEnrollment).mockResolvedValue(31)
 
     await createEnrollmentAction({
