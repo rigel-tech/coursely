@@ -25,6 +25,8 @@ import { Header } from './globals/Header/config'
 import { SiteSettings } from './globals/SiteSettings/config'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
+import { notificationTasks } from '@/notifications/jobs'
+import { NOTIFICATIONS_QUEUE } from '@/notifications/queue'
 import { getServerSideURL } from './utilities/getURL'
 import { en } from 'payload/i18n/en'
 import { vi } from 'payload/i18n/vi'
@@ -175,7 +177,15 @@ export default buildConfig({
         return authHeader === `Bearer ${secret}`
       },
     },
-    tasks: [],
+    tasks: notificationTasks,
+    // Only the notifications queue: `schedulePublish` jobs sit on `default`, and nothing
+    // has ever run that queue here.
+    autoRun: [{ cron: '* * * * *', queue: NOTIFICATIONS_QUEUE }],
+    // Same exclusions as `onInit` — a test run or a build must never start sending.
+    shouldAutoRun: () =>
+      process.env.NODE_ENV !== 'test' &&
+      !process.env.VITEST &&
+      process.env.NEXT_PHASE !== 'phase-production-build',
   },
   onInit: async (payload) => {
     if (

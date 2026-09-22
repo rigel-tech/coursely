@@ -11,7 +11,6 @@ import {
   RegistrationClosed,
   RegistrationNotOpen,
 } from '@/lib/errors/enrollment'
-import { notifyEnrollment } from '@/notifications/enrollment'
 import type { Class, Course, Enrollment, Student } from '@/payload-types'
 
 const VISIBLE_CLASS_STATUSES: readonly Class['status'][] = ['OPEN', 'CLOSED', 'COMPLETED']
@@ -196,25 +195,21 @@ export async function createStudentEnrollment({
   student,
 }: {
   courseId: number
-  student: Pick<Student, 'id' | 'email'>
+  student: Pick<Student, 'id'>
 }): Promise<number> {
   const payload = await getPayload({ config: configPromise })
   const course = await validateCourseForEnrollment(payload, courseId)
 
-  const enrollmentId = await createEnrollment(payload, { studentId: student.id, course })
-
-  notifyEnrollment({ payload, event: 'ENROLLMENT_CREATED', student, course })
-
-  return enrollmentId
+  return createEnrollment(payload, { studentId: student.id, course })
 }
 
 /**
  * Cancels `enrollmentId` on behalf of `studentId` — re-validates ownership and every
  * eligibility rule server-side (never trusts a client-shown `canCancel`), then writes
  * `enrollmentStatus: 'CANCELLED'` and `cancelledAt`. `depth: 1` so the assigned class's
- * `startDate` and the student/course needed for the confirmation notification are already
- * on hand, no second round trip. A non-owner and a non-existent id throw the identical
- * `EnrollmentNotFound` — never confirms another student's enrollment exists.
+ * `startDate` is already on hand, no second round trip. A non-owner and a non-existent id
+ * throw the identical `EnrollmentNotFound` — never confirms another student's enrollment
+ * exists.
  */
 export async function cancelStudentEnrollment(
   enrollmentId: number,
@@ -266,15 +261,6 @@ export async function cancelStudentEnrollment(
     data: { enrollmentStatus: 'CANCELLED', cancelledAt: new Date().toISOString() },
     overrideAccess: true,
   })
-
-  if (typeof enrollment.student === 'object' && typeof enrollment.course === 'object') {
-    notifyEnrollment({
-      payload,
-      event: 'ENROLLMENT_CANCELLED',
-      student: enrollment.student,
-      course: enrollment.course,
-    })
-  }
 }
 
 export interface AssignedClassSummary {

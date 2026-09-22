@@ -68,6 +68,7 @@ import { createClassCancelledEmailTemplate } from '@/email/templates/class-cance
 import { createClassRescheduledEmailTemplate } from '@/email/templates/class-rescheduled'
 import { createEnrollmentConfirmedEmailTemplate } from '@/email/templates/enrollment-confirmed'
 import { createPaymentRecordedEmailTemplate } from '@/email/templates/payment-recorded'
+import { escapeHtml } from '@/email/templates/escape-html'
 
 describe('createAdminEnrollmentCreatedEmailTemplate', () => {
   it('embeds student identifier and course title', () => {
@@ -127,6 +128,7 @@ describe('createPaymentRecordedEmailTemplate', () => {
       courseTitle: 'Node.js Backend',
       amount: 2500000,
       paymentMethod: 'BANK_TRANSFER',
+      paymentDate: '2026-09-19T00:00:00.000Z',
       referenceNote: 'REF123456',
     })
     expect(subject).toContain('Node.js Backend')
@@ -164,5 +166,34 @@ describe('createClassRescheduledEmailTemplate', () => {
     expect(html).toContain('Tối 3-5-7')
     expect(html).toContain('Phòng 202')
     expect(text).toContain('PY-02')
+  })
+})
+
+describe('escapeHtml', () => {
+  it('escapes every character that could open a tag or an entity', () => {
+    expect(escapeHtml('<b>Tom & Jerry</b>')).toBe('&lt;b&gt;Tom &amp; Jerry&lt;/b&gt;')
+  })
+})
+
+describe('class schedule emails', () => {
+  it.each([
+    ['createClassAssignedEmailTemplate', createClassAssignedEmailTemplate],
+    ['createClassRescheduledEmailTemplate', createClassRescheduledEmailTemplate],
+  ] as const)('%s escapes student- and staff-entered text in its HTML only', (_name, render) => {
+    const { html, text } = render({
+      studentNameOrEmail: '<i>Nguyễn</i> & Co',
+      courseTitle: 'C++ <Pro>',
+      classCode: 'CPP-01',
+      startDate: '2026-10-01T00:00:00.000Z',
+      scheduleTime: 'Tối <2-4-6>',
+      location: 'Phòng & 101',
+    })
+
+    expect(html).toContain('&lt;i&gt;Nguyễn&lt;/i&gt; &amp; Co')
+    expect(html).toContain('C++ &lt;Pro&gt;')
+    expect(html).toContain('Tối &lt;2-4-6&gt;')
+    expect(html).toContain('Phòng &amp; 101')
+    expect(html).not.toContain('<i>Nguyễn</i>')
+    expect(text).toContain('<i>Nguyễn</i> & Co')
   })
 })

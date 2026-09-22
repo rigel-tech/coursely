@@ -1,19 +1,9 @@
 import { formatAmountDisplay } from '@/collections/Payments/formatAmount'
+import { PAYMENT_METHOD_LABELS } from '@/collections/Payments/paymentMethods'
 import type { PaymentRecordedTemplateInput } from '@/notifications/types'
 import { formatDate } from '@/utilities/formatDateTime'
+import { escapeHtml } from './escape-html'
 import type { EmailBody } from './verify-otp'
-
-export type { PaymentRecordedTemplateInput }
-
-const escapeHtml = (value: string): string =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: 'Tiền mặt',
-  BANK_TRANSFER: 'Chuyển khoản ngân hàng',
-  CARD: 'Quẹt thẻ tại quầy',
-  OTHER: 'Khác',
-}
 
 export function createPaymentRecordedEmailTemplate({
   studentNameOrEmail,
@@ -23,9 +13,9 @@ export function createPaymentRecordedEmailTemplate({
   paymentDate,
   referenceNote,
 }: PaymentRecordedTemplateInput): EmailBody {
-  const methodLabel = PAYMENT_METHOD_LABELS[paymentMethod] || paymentMethod
+  const methodLabel = PAYMENT_METHOD_LABELS[paymentMethod].vi
   const formattedAmount = `${formatAmountDisplay(amount)} VND`
-  const formattedDate = formatDate(paymentDate || new Date())
+  const formattedDate = formatDate(paymentDate)
 
   return {
     subject: `[Coursely] Biên nhận thanh toán: ${courseTitle}`,

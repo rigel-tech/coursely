@@ -9,6 +9,7 @@ import {
   syncEnrollmentPaymentStatusAfterDelete,
 } from './hooks/syncEnrollmentPaymentStatus'
 import { notifyOnPaymentRecorded } from './hooks/notifyOnPaymentRecorded'
+import { PAYMENT_METHOD_LABELS } from './paymentMethods'
 
 export const validatePaymentAmount: Validate<number> = (value) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return 'Số tiền là bắt buộc.'
@@ -117,12 +118,7 @@ export const Payments: CollectionConfig = {
       type: 'select',
       label: { vi: 'Phương thức thanh toán', en: 'Payment Method' },
       required: true,
-      options: [
-        { label: { vi: 'Tiền mặt', en: 'Cash' }, value: 'CASH' },
-        { label: { vi: 'Chuyển khoản ngân hàng', en: 'Bank Transfer' }, value: 'BANK_TRANSFER' },
-        { label: { vi: 'Quẹt thẻ tại quầy', en: 'Card' }, value: 'CARD' },
-        { label: { vi: 'Khác', en: 'Other' }, value: 'OTHER' },
-      ],
+      options: Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => ({ label, value })),
     },
     {
       name: 'paymentDate',

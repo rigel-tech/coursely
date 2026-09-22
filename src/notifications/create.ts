@@ -1,6 +1,7 @@
 /**
- * Two reusable writes for every notification, whatever raises it — one per target
- * (`student` or a staff `user`), mirroring `src/email/send.ts`'s split: a template
+ * Two reusable writes for every notification, whatever raises it — one per audience (a
+ * student's own, or the staff broadcast: `notifications.user` scopes nothing, see
+ * INVARIANTS.md), mirroring `src/email/send.ts`'s split: a template
  * (`templates/`) says what the message reads; these say how it gets recorded. A caller
  * supplies its own `title`/`content` (usually from a template) and, for a status/kind
  * that isn't in `Notification['type']` yet, extends that union first — neither function
@@ -13,7 +14,7 @@ type NotificationFields = Pick<Notification, 'content' | 'metadata' | 'title' | 
 
 async function createNotification(
   payload: Payload,
-  data: Partial<Notification> & NotificationFields,
+  data: NotificationFields & { student?: number },
 ): Promise<void> {
   await payload.create({
     collection: 'notifications',

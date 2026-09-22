@@ -1,10 +1,6 @@
 import type { ClassCancelledTemplateInput } from '@/notifications/types'
+import { escapeHtml } from './escape-html'
 import type { EmailBody } from './verify-otp'
-
-export type { ClassCancelledTemplateInput }
-
-const escapeHtml = (value: string): string =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 export function createClassCancelledEmailTemplate({
   studentNameOrEmail,

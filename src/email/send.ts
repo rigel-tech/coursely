@@ -1,8 +1,9 @@
 /**
- * Thin wrappers over `payload.sendEmail` for the registration flow. The caller
- * fires these after the DB transaction commits (§5.1 step 7) — never before, or a
- * rolled-back registration would still have emailed a code for a user that does
- * not exist.
+ * Thin wrappers over `payload.sendEmail`, one per email. Every caller sends only after the
+ * write it reports on has committed — the registration flow by ordering (§5.1 step 7), a
+ * notification by running in a job queued with that write's `req` (`notifications/queue.ts`)
+ * — never before, or a rolled-back write would still have emailed about something that
+ * does not exist.
  */
 import type { Payload } from 'payload'
 
@@ -20,9 +21,8 @@ import { resetPasswordEmail } from '@/email/templates/reset-password'
 import { verifyOtpEmail } from '@/email/templates/verify-otp'
 import type {
   AdminEnrollmentEmailInput,
-  ClassAssignedEmailInput,
   ClassCancelledEmailInput,
-  ClassRescheduledEmailInput,
+  ClassScheduleEmailInput,
   PaymentRecordedEmailInput,
 } from '@/notifications/types'
 
@@ -93,7 +93,7 @@ export async function sendAdminEnrollmentCancelledEmail(
 
 export async function sendClassAssignedEmail(
   payload: Payload,
-  input: ClassAssignedEmailInput,
+  input: ClassScheduleEmailInput,
 ): Promise<void> {
   const { subject, html, text } = createClassAssignedEmailTemplate(input)
   await payload.sendEmail({ to: input.to, subject, html, text })
@@ -117,7 +117,7 @@ export async function sendClassCancelledEmail(
 
 export async function sendClassRescheduledEmail(
   payload: Payload,
-  input: ClassRescheduledEmailInput,
+  input: ClassScheduleEmailInput,
 ): Promise<void> {
   const { subject, html, text } = createClassRescheduledEmailTemplate(input)
   await payload.sendEmail({ to: input.to, subject, html, text })

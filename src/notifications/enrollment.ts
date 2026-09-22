@@ -1,9 +1,10 @@
 /**
- * The in-app notification + confirmation email pair for an enrollment lifecycle event —
- * shared by every caller that raises one (registration, self-cancellation, and future
- * admin-driven changes), so the fire-and-forget + log-on-failure shape is written once.
+ * The `notifyEnrollmentEvent` task's body: an enrollment lifecycle event — or the class the
+ * enrollment was just placed in — as an in-app notification and email to the student and,
+ * for a registration or cancellation the student made themselves, to staff as well. Every
+ * trigger lives in `Enrollments`' `notifyOnStatusChange` hook; nothing else raises these.
  */
-import type { Payload } from 'payload'
+import type { Payload, TypedJobs } from 'payload'
 
 import {
   sendAdminEnrollmentCancelledEmail,
@@ -12,6 +13,8 @@ import {
   sendEnrollmentConfirmationEmail,
   sendEnrollmentConfirmedEmail,
 } from '@/email/send'
+import { attempt } from '@/notifications/attempt'
+import { notifyStudentOfClass } from '@/notifications/class-lifecycle'
 import { createStaffNotification, createStudentNotification } from '@/notifications/create'
 import {
   createAdminEnrollmentCancelledNotificationTemplate,
@@ -20,44 +23,41 @@ import {
   createStudentEnrollmentConfirmedNotificationTemplate,
   createStudentEnrolledNotificationTemplate,
 } from '@/notifications/templates'
+import type { AdminEnrollmentEmailInput } from '@/notifications/types'
 import type { Course, Student } from '@/payload-types'
+import { relationshipId } from '@/utilities/relationshipId'
 
-type EnrollmentNotificationEvent =
-  'ENROLLMENT_CREATED' | 'ENROLLMENT_CANCELLED' | 'ENROLLMENT_CONFIRMED'
-
-type NotifyEnrollmentInput = {
-  payload: Payload
-  event: EnrollmentNotificationEvent
-  student: Pick<Student, 'id' | 'email'> & { fullName?: string | null }
-  course: Course
-}
+type EnrollmentEventInput = TypedJobs['tasks']['notifyEnrollmentEvent']['input']
+type EnrollmentEvent = Exclude<EnrollmentEventInput['event'], 'CLASS_ASSIGNED'>
+type NotificationCopy = { title: string; content: string }
 
 const ENROLLMENT_NOTIFICATION_EVENTS: Record<
-  EnrollmentNotificationEvent,
+  EnrollmentEvent,
   {
-    template: (courseTitle: string) => { title: string; content: string }
+    template: (courseTitle: string) => NotificationCopy
     sendEmail: (payload: Payload, input: { to: string; courseTitle: string }) => Promise<void>
-    adminTemplate?: (
-      studentNameOrEmail: string,
-      courseTitle: string,
-    ) => { title: string; content: string }
-    sendAdminEmail?: (
-      payload: Payload,
-      input: { to: string; studentNameOrEmail: string; courseTitle: string },
-    ) => Promise<void>
+    // Staff hear about the events a student causes; the template and the email go together.
+    staff?: {
+      template: (studentNameOrEmail: string, courseTitle: string) => NotificationCopy
+      sendEmail: (payload: Payload, input: AdminEnrollmentEmailInput) => Promise<void>
+    }
   }
 > = {
   ENROLLMENT_CREATED: {
     template: createStudentEnrolledNotificationTemplate,
     sendEmail: sendEnrollmentConfirmationEmail,
-    adminTemplate: createAdminEnrollmentCreatedNotificationTemplate,
-    sendAdminEmail: sendAdminEnrollmentCreatedEmail,
+    staff: {
+      template: createAdminEnrollmentCreatedNotificationTemplate,
+      sendEmail: sendAdminEnrollmentCreatedEmail,
+    },
   },
   ENROLLMENT_CANCELLED: {
     template: createStudentEnrollmentCancelledNotificationTemplate,
     sendEmail: sendEnrollmentCancellationEmail,
-    adminTemplate: createAdminEnrollmentCancelledNotificationTemplate,
-    sendAdminEmail: sendAdminEnrollmentCancelledEmail,
+    staff: {
+      template: createAdminEnrollmentCancelledNotificationTemplate,
+      sendEmail: sendAdminEnrollmentCancelledEmail,
+    },
   },
   ENROLLMENT_CONFIRMED: {
     template: createStudentEnrollmentConfirmedNotificationTemplate,
@@ -65,68 +65,110 @@ const ENROLLMENT_NOTIFICATION_EVENTS: Record<
   },
 }
 
-export function notifyEnrollment({ payload, event, student, course }: NotifyEnrollmentInput): void {
-  const config = ENROLLMENT_NOTIFICATION_EVENTS[event]
-
-  const { title, content } = config.template(course.title)
-
-  void createStudentNotification(payload, {
-    studentId: student.id,
-    type: event,
-    title,
-    content,
-    metadata: { course: course.id },
-  }).catch((err) => payload.logger.error({ err }, `${event} notification failed`))
-
-  void config
-    .sendEmail(payload, { to: student.email, courseTitle: course.title })
-    .catch((err) => payload.logger.error({ err }, `${event} email failed`))
-
-  if (config.adminTemplate) {
-    const studentIdentifier = student.fullName || student.email
-    const adminTpl = config.adminTemplate(studentIdentifier, course.title)
-
-    void createStaffNotification(payload, {
-      type: event,
-      title: adminTpl.title,
-      content: adminTpl.content,
-      metadata: { course: course.id, student: student.id },
-    }).catch((err) => payload.logger.error({ err }, `${event} admin notification failed`))
-
-    if (config.sendAdminEmail) {
-      void sendAdminEmails(payload, config.sendAdminEmail, {
-        studentNameOrEmail: studentIdentifier,
-        courseTitle: course.title,
-      }).catch((err) => payload.logger.error({ err }, `${event} admin email failed`))
-    }
-  }
+type EnrollmentRecipients = {
+  student: Pick<Student, 'id' | 'email' | 'fullName'>
+  course: Pick<Course, 'id' | 'title'>
+  notifyStaff: boolean
 }
 
-async function sendAdminEmails(
+export async function runEnrollmentNotification(
   payload: Payload,
-  sendEmail: (
-    payload: Payload,
-    input: { to: string; studentNameOrEmail: string; courseTitle: string },
-  ) => Promise<void>,
-  input: { studentNameOrEmail: string; courseTitle: string },
+  { enrollmentId, event, notifyStaff }: EnrollmentEventInput,
 ): Promise<void> {
-  const { docs } = await payload.find({
-    collection: 'users',
-    pagination: false,
+  const enrollment = await payload.findByID({
+    collection: 'enrollments',
+    id: enrollmentId,
     depth: 0,
+    disableErrors: true,
     overrideAccess: true,
-    select: { email: true },
   })
+  const studentId = relationshipId(enrollment?.student)
+  const courseId = relationshipId(enrollment?.course)
+  if (!enrollment || studentId === null || courseId === null) return
 
-  const emails = [...new Set(docs.map((u) => u.email).filter(Boolean))]
+  // Read now, not at queue time: a `fullName` the student entered with this very
+  // registration is written just before the enrollment and must be the name staff see.
+  const [student, course] = await Promise.all([
+    payload.findByID({
+      collection: 'students',
+      id: studentId,
+      depth: 0,
+      select: { email: true, fullName: true },
+      disableErrors: true,
+      overrideAccess: true,
+    }),
+    payload.findByID({
+      collection: 'courses',
+      id: courseId,
+      depth: 0,
+      select: { title: true },
+      disableErrors: true,
+      overrideAccess: true,
+    }),
+  ])
+  if (!student || !course) return
 
-  if (emails.length === 0) return
+  if (event === 'CLASS_ASSIGNED') {
+    const classId = relationshipId(enrollment.class)
+    const classDoc =
+      classId === null
+        ? null
+        : await payload.findByID({
+            collection: 'classes',
+            id: classId,
+            depth: 0,
+            disableErrors: true,
+            overrideAccess: true,
+          })
+    if (classDoc) await notifyStudentOfClass(payload, event, { student, course, classDoc })
+    return
+  }
 
-  await Promise.all(
-    emails.map((to) =>
-      sendEmail(payload, { to, ...input }).catch((err) =>
-        payload.logger.error({ err }, `Admin email to ${to} failed`),
-      ),
-    ),
+  await notifyEnrollment(payload, event, { student, course, notifyStaff })
+}
+
+async function notifyEnrollment(
+  payload: Payload,
+  event: EnrollmentEvent,
+  { student, course, notifyStaff }: EnrollmentRecipients,
+): Promise<void> {
+  const { template, sendEmail, staff } = ENROLLMENT_NOTIFICATION_EVENTS[event]
+
+  await attempt(payload, `${event} notification failed`, () =>
+    createStudentNotification(payload, {
+      studentId: student.id,
+      type: event,
+      ...template(course.title),
+      metadata: { course: course.id },
+    }),
   )
+  await attempt(payload, `${event} email failed`, () =>
+    sendEmail(payload, { to: student.email, courseTitle: course.title }),
+  )
+
+  if (!notifyStaff || !staff) return
+
+  const studentNameOrEmail = student.fullName || student.email
+  await attempt(payload, `${event} staff notification failed`, () =>
+    createStaffNotification(payload, {
+      type: event,
+      ...staff.template(studentNameOrEmail, course.title),
+      metadata: { course: course.id, student: student.id },
+    }),
+  )
+  await attempt(payload, `${event} staff email failed`, async () => {
+    const { docs: users } = await payload.find({
+      collection: 'users',
+      depth: 0,
+      pagination: false,
+      select: { email: true },
+      overrideAccess: true,
+    })
+
+    for (const to of new Set(users.map((user) => user.email))) {
+      await attempt(payload, `${event} staff email failed`, () =>
+        staff.sendEmail(payload, { to, studentNameOrEmail, courseTitle: course.title }),
+      )
+    }
+  })
 }

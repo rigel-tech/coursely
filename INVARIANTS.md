@@ -142,26 +142,27 @@ who edits their own query (or calls the API directly) can ask for `student: { eq
 
 ### The admin notification bell must never mark a student's own notification as read
 
-**Rule** — `src/components/admin/NotificationBell`'s `loadList` fetches the whole
-`notifications` collection (staff-facing and student-facing rows alike), but its
-mark-as-read `PATCH` must only ever target rows with no `student` — filter to that subset
-(`staffDocs` in the current code) before building the `where[id][in][...]` query. Never
-`PATCH` the full fetched batch.
+**Rule** — `src/components/admin/NotificationBell`'s `loadList` asks the server for
+staff-facing rows only (`where: { student: { exists: false } }`), and its mark-as-read
+`PATCH` must still only ever target rows with no `student` — filter the fetched batch to that
+subset (`staffDocs` in the current code) before building the `where[id][in][...]` query.
+Keep both filters: the fetch decides what staff see, `staffDocs` is what keeps the `PATCH`
+off a student's row. Never `PATCH` the full fetched batch.
 
 **Why it breaks silently** — a student's own unread count
 (`countUnreadNotifications`/`listAndMarkRecentNotifications` in
 `src/services/student-notifications.ts`) trusts `isRead` as the only signal that the
-student has seen a notification. Batch-PATCHing every row the admin bell fetches compiles,
-passes lint, and looks like a harmless simplification — the admin panel renders fine and
-the badge clears as expected. But it silently flips `isRead` on a student's own
+student has seen a notification. With the fetch already filtered, `staffDocs` looks like
+dead code, and batch-PATCHing every fetched row compiles, passes lint and changes nothing
+today. The day the fetch is widened again, it silently flips `isRead` on a student's own
 `ENROLLMENT_CREATED`/etc. notification the moment a staff member merely opens their own
 bell, and that notification then vanishes from the student's unread count without the
 student ever having opened it. Nothing throws, nothing logs.
 
-**Where** — `src/components/admin/NotificationBell/index.tsx` (`loadList`, the `staffDocs`
-filter), pinned by `tests/unit/components/admin/notification-bell.spec.tsx` § "marks only
-the rows without a student as read". `src/services/student-notifications.ts` is the reader
-this protects.
+**Where** — `src/components/admin/NotificationBell/index.tsx` (`loadList`: the
+`student: { exists: false }` fetch and the `staffDocs` filter), pinned by
+`tests/unit/components/admin/notification-bell.spec.tsx` § "marks only the rows without a
+student as read". `src/services/student-notifications.ts` is the reader this protects.
 
 ### `notifications.user` scopes nothing — it is a bare FK, not a per-user notification channel
 
@@ -179,12 +180,12 @@ reference.
 student's own list (`student-notifications.ts`'s `where: { student: { equals: studentId }
 }`). Setting `user` on a notification meant to be private to one staff member compiles,
 saves, and looks right in the admin UI — every staff member still sees it in the shared
-bell (`NotificationBell`'s `loadList` fetches the whole collection with no `user` filter),
+bell (`NotificationBell`'s `loadList` fetches every staff-facing row with no `user` filter),
 and nothing errors to say the "privacy" never happened.
 
 **Where** — `src/collections/Notifications/index.ts` (`user` field, the module banner
 stating it plays no part in audience determination), `src/components/admin/NotificationBell/index.tsx`
-(`loadList`, fetches every row regardless of `user`), `src/access/authenticated.ts`
+(`loadList`, fetches every staff-facing row regardless of `user`), `src/access/authenticated.ts`
 (`Notifications.access`, unchanged).
 
 ### `getStudentEnrollments` must query at `depth: 1` with `select`/`populate`/`joins: false` and sanitize into `StudentEnrollmentItem`
@@ -849,6 +850,34 @@ latter also depends on running inside the same transaction to see rows the batch
 written), `src/collections/Enrollments/hooks/guardClassCapacity.ts` (per-document caller,
 transaction supplied by Payload itself), `src/services/class-assignment.ts`
 (`assignStudentsToClass`, the batch caller — explicitly opens the transaction it passes in).
+
+### A notification leaves only through a job queued with the triggering write's `req`
+
+**Rule** — Nothing sends an in-app notification or an email from inside the transaction of
+the write it reports: not from an `afterChange`/`afterOperation` hook, not from a service
+step between `beginTransaction` and `commitTransaction`. A notification a collection write
+raises goes through `queueNotification(req, …)` (`src/notifications/queue.ts`) with that
+operation's own `req`, and the sending happens in a `notifications`-queue task
+(`src/notifications/jobs.ts`). A task throws only from the lookups it makes before sending
+anything; every send goes through `attempt` (`src/notifications/attempt.ts`), which logs a
+failure instead of throwing. The one other allowed shape is a service sending after its own
+write has returned, committed — the registration flow (`src/email/send.ts`'s banner).
+
+**Why it breaks silently** — Payload runs `afterChange` (and `afterOperation`) before it
+commits. A hook that sends directly, or queues without `req`, sends for a write that can
+still roll back: `assignStudentsToClass` updates a whole batch in one transaction and rolls
+it all back if one enrollment fails, and every student already processed has been emailed
+about a class assignment that no longer exists. The send itself succeeds, a stubbed test
+passes, nothing logs — the only symptom is a notification about something the database never
+kept. Queued with `req`, the job row is inserted in the same transaction and disappears with
+it. The retry rule is the same kind of trap: a task that throws after it has sent something
+is re-run from the top and sends it all again.
+
+**Where** — `src/notifications/queue.ts` (`queueNotification`), `src/notifications/jobs.ts`
+(the tasks, retried twice), `src/notifications/attempt.ts`,
+`src/collections/{Enrollments,Classes,Payments}/hooks/notify*.ts` (the triggers),
+`src/payload.config.ts` (`jobs.autoRun` on the `notifications` queue only; `shouldAutoRun`
+off under test, so a test that needs a job's output runs it with `payload.jobs.run`).
 
 ### A relationship field's `ON DELETE` behavior can only be fixed for prod, never for dev/test
 

@@ -1,24 +1,16 @@
 import { formatAmountDisplay } from '@/collections/Payments/formatAmount'
+import { PAYMENT_METHOD_LABELS } from '@/collections/Payments/paymentMethods'
 import type { PaymentInfo } from '../types'
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: 'Tiền mặt',
-  BANK_TRANSFER: 'Chuyển khoản ngân hàng',
-  CARD: 'Quẹt thẻ tại quầy',
-  OTHER: 'Khác',
-}
-
-export type PaymentRecordedNotificationInput = Pick<
-  PaymentInfo,
-  'courseTitle' | 'amount' | 'paymentMethod'
->
 
 export function createStudentPaymentRecordedNotificationTemplate({
   courseTitle,
   amount,
   paymentMethod,
-}: PaymentRecordedNotificationInput): { title: string; content: string } {
-  const methodLabel = PAYMENT_METHOD_LABELS[paymentMethod] || paymentMethod
+}: Pick<PaymentInfo, 'courseTitle' | 'amount' | 'paymentMethod'>): {
+  title: string
+  content: string
+} {
+  const methodLabel = PAYMENT_METHOD_LABELS[paymentMethod].vi
   const formattedAmount = `${formatAmountDisplay(amount)} VND`
 
   return {

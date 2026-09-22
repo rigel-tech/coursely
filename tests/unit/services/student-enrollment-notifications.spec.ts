@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getPayload } from 'payload'
-import { sendAdminEnrollmentCreatedEmail, sendEnrollmentConfirmationEmail } from '@/email/send'
-import { createStudentEnrollment } from '@/services/student-enrollment'
-import type { Student } from '@/payload-types'
+import * as emailSend from '@/email/send'
+import { cancelStudentEnrollment, createStudentEnrollment } from '@/services/student-enrollment'
+import { asPayload } from '../helpers/payload-stub'
 
 vi.mock('payload', async (importOriginal) => ({
   ...(await importOriginal<typeof import('payload')>()),
@@ -15,110 +15,85 @@ vi.mock('@/email/send', () => ({
   sendEnrollmentConfirmedEmail: vi.fn().mockResolvedValue(undefined),
   sendAdminEnrollmentCreatedEmail: vi.fn().mockResolvedValue(undefined),
   sendAdminEnrollmentCancelledEmail: vi.fn().mockResolvedValue(undefined),
+  sendClassAssignedEmail: vi.fn().mockResolvedValue(undefined),
+  sendClassCancelledEmail: vi.fn().mockResolvedValue(undefined),
+  sendClassRescheduledEmail: vi.fn().mockResolvedValue(undefined),
+  sendPaymentRecordedEmail: vi.fn().mockResolvedValue(undefined),
 }))
 
-describe('student enrollment notifications', () => {
-  it('creates an in-app notification and sends a confirmation email', async () => {
-    const create = vi.fn().mockResolvedValueOnce({ id: 31 }).mockResolvedValueOnce({ id: 32 })
-    const student = { id: 7, status: 'ACTIVE', email: 'student@example.com' } as Student
-    vi.mocked(getPayload).mockResolvedValue({
-      create,
-      find: vi.fn((args: { collection: string }) =>
-        args.collection === 'courses'
-          ? Promise.resolve({ docs: [{ id: 12, title: 'Frontend cơ bản' }] })
-          : Promise.resolve({ docs: [] }),
-      ),
-      logger: { error: vi.fn() },
-    } as never)
+const course = {
+  id: 12,
+  title: 'Frontend cơ bản',
+  registrationStartAt: null,
+  registrationEndAt: null,
+}
+const student = { id: 7, email: 'student@example.com', fullName: 'Nguyễn Văn A' }
 
-    await createStudentEnrollment({ courseId: 12, student })
+// A "sends nothing" assertion has to catch fire-and-forget work too; every stub resolves as
+// a microtask, so one macrotask turn drains all of it.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(create).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        collection: 'notifications',
-        data: expect.objectContaining({
-          student: 7,
-          type: 'ENROLLMENT_CREATED',
-          metadata: { course: 12 },
-        }),
+function expectNoEmail() {
+  for (const send of Object.values(emailSend)) expect(send).not.toHaveBeenCalled()
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
+// Enrollment notifications are raised by `Enrollments`' `notifyOnStatusChange` hook for
+// every path that writes one; a service that also notified would send each one twice.
+describe('the student-facing enrollment services raise no notifications of their own', () => {
+  it('createStudentEnrollment writes the enrollment and nothing else', async () => {
+    const create = vi.fn().mockResolvedValue({ id: 31 })
+    vi.mocked(getPayload).mockResolvedValue(
+      asPayload({
+        create,
+        find: vi.fn(({ collection }: { collection: string }) =>
+          Promise.resolve({ docs: collection === 'courses' ? [course] : [] }),
+        ),
+        logger: { error: vi.fn() },
       }),
     )
-    expect(sendEnrollmentConfirmationEmail).toHaveBeenCalledWith(expect.anything(), {
-      to: 'student@example.com',
-      courseTitle: 'Frontend cơ bản',
-    })
-  })
-
-  it('creates the enrollment even when the notification write fails, and logs the failure', async () => {
-    const create = vi
-      .fn()
-      .mockResolvedValueOnce({ id: 31 })
-      .mockRejectedValueOnce(new Error('notifications insert failed'))
-    const logger = { error: vi.fn() }
-    const student = { id: 7, status: 'ACTIVE', email: 'student@example.com' } as Student
-    vi.mocked(getPayload).mockResolvedValue({
-      create,
-      find: vi.fn((args: { collection: string }) =>
-        args.collection === 'courses'
-          ? Promise.resolve({ docs: [{ id: 12, title: 'Frontend cơ bản' }] })
-          : Promise.resolve({ docs: [] }),
-      ),
-      logger,
-    } as never)
 
     await expect(createStudentEnrollment({ courseId: 12, student })).resolves.toBe(31)
+    await settle()
 
-    // Flushes the fire-and-forget notification write's rejection handler.
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({ err: expect.any(Error) }),
-      expect.stringContaining('ENROLLMENT_CREATED notification'),
-    )
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ collection: 'enrollments' }))
+    expectNoEmail()
   })
 
-  it('sends email to all admin users when a new enrollment is created', async () => {
-    const create = vi.fn().mockResolvedValue({ id: 31 })
-    const student = {
-      id: 7,
-      status: 'ACTIVE',
-      email: 'student@example.com',
-      fullName: 'Nguyễn Văn A',
-    } as Student
-    vi.mocked(getPayload).mockResolvedValue({
-      create,
-      find: vi.fn((args: { collection: string }) => {
-        if (args.collection === 'courses') {
-          return Promise.resolve({ docs: [{ id: 12, title: 'Frontend cơ bản' }] })
-        }
-        if (args.collection === 'users') {
-          return Promise.resolve({
-            docs: [
-              { id: 1, email: 'admin1@coursely.com' },
-              { id: 2, email: 'admin2@coursely.com' },
-            ],
-          })
-        }
-        return Promise.resolve({ docs: [] })
+  it('cancelStudentEnrollment writes the cancellation and nothing else', async () => {
+    const create = vi.fn().mockResolvedValue({ id: 1 })
+    const update = vi.fn().mockResolvedValue({ id: 41 })
+    vi.mocked(getPayload).mockResolvedValue(
+      asPayload({
+        create,
+        update,
+        findByID: vi.fn().mockResolvedValue({
+          id: 41,
+          student,
+          course,
+          class: null,
+          enrollmentStatus: 'NEW',
+          paymentStatus: 'UNPAID',
+        }),
+        logger: { error: vi.fn() },
       }),
-      logger: { error: vi.fn() },
-    } as never)
+    )
 
-    await createStudentEnrollment({ courseId: 12, student })
+    await cancelStudentEnrollment(41, 7)
+    await settle()
 
-    // Flushes fire-and-forget async email tasks
-    await new Promise((resolve) => setTimeout(resolve, 10))
-
-    expect(sendAdminEnrollmentCreatedEmail).toHaveBeenCalledWith(expect.anything(), {
-      to: 'admin1@coursely.com',
-      studentNameOrEmail: 'Nguyễn Văn A',
-      courseTitle: 'Frontend cơ bản',
-    })
-    expect(sendAdminEnrollmentCreatedEmail).toHaveBeenCalledWith(expect.anything(), {
-      to: 'admin2@coursely.com',
-      studentNameOrEmail: 'Nguyễn Văn A',
-      courseTitle: 'Frontend cơ bản',
-    })
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'enrollments',
+        id: 41,
+        data: expect.objectContaining({ enrollmentStatus: 'CANCELLED' }),
+      }),
+    )
+    expect(create).not.toHaveBeenCalled()
+    expectNoEmail()
   })
 })
