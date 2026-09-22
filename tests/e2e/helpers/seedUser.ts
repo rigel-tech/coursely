@@ -19,6 +19,17 @@ export const testStudent = {
   password: 'test',
 }
 
+/**
+ * A second student, for the session spec alone. Playwright runs spec files in parallel
+ * workers, and `seed` is a plain `payload.create` — two workers seeding one email race, and
+ * the loser dies on `ValidationError: email` before its first test runs. One fixture per
+ * spec is the only thing that makes that impossible.
+ */
+export const testSessionStudent = {
+  email: 'student-session-e2e@payloadcms.com',
+  password: 'test',
+}
+
 const SCRIPT = 'scripts/seed-e2e-user.ts'
 
 const run = (
@@ -60,4 +71,14 @@ export async function seedStudentUser(): Promise<void> {
 /** Removes the e2e student user. */
 export async function cleanupStudentUser(): Promise<void> {
   run('cleanup', testStudent)
+}
+
+/** Creates the session spec's own student in `students` (ACTIVE). */
+export async function seedSessionStudent(): Promise<void> {
+  run('seed', testSessionStudent, 'students')
+}
+
+/** Removes the session spec's own student. */
+export async function cleanupSessionStudent(): Promise<void> {
+  run('cleanup', testSessionStudent)
 }

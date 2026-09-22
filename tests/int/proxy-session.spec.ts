@@ -11,7 +11,7 @@ import configPromise from '@payload-config'
 
 import { proxy } from '@/proxy'
 import { signAccessToken, signRefreshToken, verifyAccessToken } from '@/lib/auth/session-token'
-import { REFRESH_TTL_SEC } from '@/lib/constants/auth'
+import { AUTH_PREFIXES, PROTECTED_PREFIXES, REFRESH_TTL_SEC } from '@/lib/constants/auth'
 
 const ACCESS_COOKIE = 'coursely-access'
 const REFRESH_COOKIE = 'coursely-refresh'
@@ -21,6 +21,8 @@ const ADMIN = 'http://localhost/admin'
 let payload: Payload
 
 const req = (cookie: string) => new NextRequest(PROTECTED, { headers: { cookie } })
+const reqTo = (path: string, cookie?: string) =>
+  new NextRequest(`http://localhost${path}`, cookie ? { headers: { cookie } } : undefined)
 const adminReq = (cookie: string) => new NextRequest(ADMIN, { headers: { cookie } })
 
 const activeStudent = { id: 1, status: 'ACTIVE' }
@@ -182,5 +184,29 @@ describe('proxy — a response carrying a session cookie is never shared-cacheab
 
     expect(signedIn.headers.get('cache-control')).toBeNull()
     expect(anonymous.headers.get('cache-control')).toBeNull()
+  })
+})
+
+// The matcher was narrowed to exactly these prefixes, so they are now the only paths that
+// reach this file at all. Both forms are exercised: a bare prefix and a subpath. A matcher
+// entry written without its `/:path*` tail still guards the bare path, so a table that only
+// probed `/tai-khoan` would stay green while `/tai-khoan/doi-mat-khau` was served to anyone.
+describe('proxy — every guarded prefix still reaches a decision', () => {
+  it.each(PROTECTED_PREFIXES)('turns an anonymous visitor away from %s', async (prefix) => {
+    for (const path of [prefix, `${prefix}/doi-mat-khau`]) {
+      const res = await proxy(reqTo(path))
+
+      expect(res.headers.get('location')).toContain('/dang-nhap?callbackUrl=')
+    }
+  })
+
+  it.each(AUTH_PREFIXES)('sends a signed-in student away from %s', async (prefix) => {
+    const cookie = `${ACCESS_COOKIE}=${await signAccessToken(activeStudent)}`
+
+    for (const path of [prefix, `${prefix}/buoc-2`]) {
+      const res = await proxy(reqTo(path, cookie))
+
+      expect(res.headers.get('location')).toBe('http://localhost/')
+    }
   })
 })
