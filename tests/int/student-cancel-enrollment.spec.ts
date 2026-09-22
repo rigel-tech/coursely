@@ -50,18 +50,6 @@ const makeEnrollment = async (data: LooseData) => {
   return enrollment.id as number
 }
 
-const waitFor = async (
-  check: () => Promise<boolean>,
-  { timeoutMs = 3000, intervalMs = 50 } = {},
-) => {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    if (await check()) return
-    await new Promise((resolve) => setTimeout(resolve, intervalMs))
-  }
-  throw new Error('waitFor: condition never became true')
-}
-
 beforeAll(async () => {
   payload = await getPayload({ config: await configPromise })
 
@@ -255,7 +243,7 @@ describe('cancelStudentEnrollment — refused, enrollment unchanged', () => {
 })
 
 describe('cancelStudentEnrollment — notification and email (US on cancel)', () => {
-  it('creates an ENROLLMENT_CANCELLED notification and sends a confirmation email', async () => {
+  it('queues ENROLLMENT_CANCELLED, whose job writes the notification and sends the confirmation email', async () => {
     const sendEmail = vi.spyOn(payload, 'sendEmail').mockResolvedValue(undefined as never)
     const studentId = await makeStudent('notify')
     const student = await payload.findByID({ collection: 'students', id: studentId })
@@ -268,19 +256,53 @@ describe('cancelStudentEnrollment — notification and email (US on cancel)', ()
 
     await cancelStudentEnrollment(enrollmentId, studentId)
 
-    await waitFor(async () => {
-      const found = await payload.find({
-        collection: 'notifications',
-        where: {
-          and: [{ student: { equals: studentId } }, { type: { equals: 'ENROLLMENT_CANCELLED' } }],
-        },
-      })
-      return found.docs.length > 0
+    // Nothing is sent by the cancellation itself — only the job it queued sends.
+    const { docs: jobs } = await payload.find({
+      collection: 'payload-jobs',
+      depth: 0,
+      pagination: false,
+      overrideAccess: true,
     })
+    const job = jobs.find(
+      ({ taskSlug, input }) =>
+        taskSlug === 'notifyEnrollmentEvent' &&
+        typeof input === 'object' &&
+        input !== null &&
+        !Array.isArray(input) &&
+        input.enrollmentId === enrollmentId &&
+        input.event === 'ENROLLMENT_CANCELLED',
+    )
+    expect(job).toBeDefined()
+    if (job) await payload.jobs.runByID({ id: job.id })
 
-    await waitFor(async () => sendEmail.mock.calls.length > 0)
+    const found = await payload.find({
+      collection: 'notifications',
+      where: {
+        and: [{ student: { equals: studentId } }, { type: { equals: 'ENROLLMENT_CANCELLED' } }],
+      },
+    })
+    expect(found.docs).toHaveLength(1)
     expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: student.email }))
     sendEmail.mockRestore()
+
+    // The job also wrote a staff broadcast (no `student`), which would otherwise stay in
+    // every staff member's bell after this run.
+    const { docs: written } = await payload.find({
+      collection: 'notifications',
+      where: { type: { equals: 'ENROLLMENT_CANCELLED' } },
+      depth: 0,
+      pagination: false,
+    })
+    for (const doc of written) {
+      const metadata = doc.metadata
+      const ours =
+        doc.student === studentId ||
+        (typeof metadata === 'object' &&
+          metadata !== null &&
+          !Array.isArray(metadata) &&
+          metadata.student === studentId)
+      if (ours) await payload.delete({ collection: 'notifications', id: doc.id })
+    }
   })
 })
 
