@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import configPromise from '@payload-config'
 import { getPayload, type PayloadRequest } from 'payload'
 
-import { getSessionStudent } from '@/lib/auth/session-student'
+import { ensureSessionStudent } from '@/lib/auth/session-student'
 import { profileSchema } from '@/lib/validation/profile-schema'
 import type { ProfileState } from '@/lib/constants/profile-state'
 
@@ -29,7 +29,7 @@ const MAX_AVATAR_SIZE = 5 * 1024 * 1024 // 5MB
  * shows a system-failure banner.
  */
 export async function updateProfileAction(formData: FormData): Promise<ProfileState> {
-  const student = await getSessionStudent()
+  const student = await ensureSessionStudent()
   if (!student || student.status !== 'ACTIVE') {
     return {
       status: 'error',

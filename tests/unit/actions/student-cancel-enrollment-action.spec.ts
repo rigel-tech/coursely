@@ -16,10 +16,10 @@ vi.mock('@/services/student-enrollment', () => ({
 }))
 
 vi.mock('@/lib/auth/session-student', () => ({
-  getSessionStudent: vi.fn(),
+  ensureSessionStudent: vi.fn(),
 }))
 
-import { getSessionStudent } from '@/lib/auth/session-student'
+import { ensureSessionStudent } from '@/lib/auth/session-student'
 import { cancelStudentEnrollment } from '@/services/student-enrollment'
 
 const studentWith = (status: Student['status']) => ({ id: 7, status }) as Student
@@ -30,7 +30,7 @@ beforeEach(() => {
 
 describe('cancelEnrollmentAction — the sign-in gate', () => {
   it('refuses a signed-out visitor and cancels nothing', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(null)
+    vi.mocked(ensureSessionStudent).mockResolvedValue(null)
 
     const result = await cancelEnrollmentAction(99)
 
@@ -41,7 +41,7 @@ describe('cancelEnrollmentAction — the sign-in gate', () => {
 
 describe('cancelEnrollmentAction — an account that may not act', () => {
   it('refuses a PENDING_VERIFICATION account', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('PENDING_VERIFICATION'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('PENDING_VERIFICATION'))
 
     const result = await cancelEnrollmentAction(99)
 
@@ -50,7 +50,7 @@ describe('cancelEnrollmentAction — an account that may not act', () => {
   })
 
   it('refuses a DISABLED account', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('DISABLED'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('DISABLED'))
 
     const result = await cancelEnrollmentAction(99)
 
@@ -61,7 +61,7 @@ describe('cancelEnrollmentAction — an account that may not act', () => {
 
 describe('cancelEnrollmentAction — the path that cancels', () => {
   it('delegates to the service and reports success', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(cancelStudentEnrollment).mockResolvedValue(undefined)
 
     const result = await cancelEnrollmentAction(99)
@@ -79,7 +79,7 @@ describe('cancelEnrollmentAction — each refusal reaches its own message', () =
     [new EnrollmentHasPayment()],
     [new EnrollmentAlreadyStarted()],
   ])('maps %p to its own message, not the generic fallback', async (error) => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(cancelStudentEnrollment).mockRejectedValue(error)
 
     const result = await cancelEnrollmentAction(99)
@@ -89,7 +89,7 @@ describe('cancelEnrollmentAction — each refusal reaches its own message', () =
   })
 
   it('still rethrows an error none of the refusal classes recognise', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
+    vi.mocked(ensureSessionStudent).mockResolvedValue(studentWith('ACTIVE'))
     vi.mocked(cancelStudentEnrollment).mockRejectedValue(new Error('db unreachable'))
 
     await expect(cancelEnrollmentAction(99)).rejects.toThrow('db unreachable')

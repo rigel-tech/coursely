@@ -380,7 +380,7 @@ of the action's own response. The browser followed it exactly as it would for an
 a full navigation to `/dang-nhap`, with no action response ever reaching the calling
 component. Nothing throws, no console warning: the person who clicked "Lưu thay đổi" is just
 signed out, with no error banner ever rendered, because the component that would have shown
-one never got a response to render from. The action's own `getSessionStudent()` check — which
+one never got a response to render from. The action's own `ensureSessionStudent()` check — which
 already turns "no session" into a proper in-app message — never even ran.
 
 **Where** — `src/proxy.ts` (`isServerAction`, checked before `decideRoute` runs), pinned by
@@ -507,6 +507,36 @@ rather than asserting it is merely truthy — the one assertion that tells a tok
 pending promise. Note jose rejects a Node `Buffer` under jsdom's realm, so any spec that
 touches this module needs `// @vitest-environment node`.
 
+### A session is renewed only where cookies may be written — never in a Server Component
+
+**Rule** — A Route Handler or Server Action that needs the signed-in student calls
+`ensureSessionStudent`, which renews `coursely-access` from `coursely-refresh`. A Server
+Component calls `getSessionStudent`, which only reads. Never swap them, and never fold the two
+into one function. `proxy` keeps its own renewal for the paths it guards, because a protected
+Server Component page cannot renew itself.
+
+**Why it breaks silently** — both directions fail on a fifteen-minute delay, which is to say
+they pass every test and every manual click-through:
+
+- **A Server Action left on `getSessionStudent`** refuses a student whose access token lapsed
+  while a refresh token good for thirty days sits in the same jar. It returns a polite,
+  well-formed "please sign in" — not an error, not a log line, and indistinguishable from a
+  genuinely signed-out caller. This is the live risk, because `proxy` papers over it by
+  renewing on the page request that rendered the form; the moment its matcher stops covering
+  public pages, nothing on one renews anything.
+- **A Server Component moved to `ensureSessionStudent`** throws from `cookies().set()` — but
+  only on the renewal branch, so only once the access token has actually lapsed. The page
+  renders correctly in dev, in every test, and for the first fifteen minutes in production.
+
+**Where** — `src/lib/auth/session-student.ts` (both readers; the banner states which scope each
+belongs to). Renewing callers: the four actions in `src/actions/student/`,
+`src/app/(frontend)/next/auth-status/route.ts`,
+`src/app/(frontend)/next/notifications-count/route.ts`. Read-only callers:
+`src/app/(frontend)/student/account/page.tsx`, `src/app/(frontend)/courses/[slug]/page.tsx`.
+Pinned by `tests/unit/repo/session-refresh-callers.spec.ts`, which scans both renewing
+directories rather than testing any one caller — the fifth action added next month is where
+this would come back — and by `tests/int/current-student.spec.ts` for the behaviour itself.
+
 ### A session cannot be revoked — it can only expire
 
 **Rule** — There is no session record anywhere: the refresh token _is_ the session, and
@@ -535,8 +565,8 @@ account gate reads stale for up to `ACCESS_TTL_SEC`. Nothing errors. The person 
 **Rule** — `proxy` returns a bare `NextResponse.next()`; it does not rewrite the request
 headers. An `x-user-id`, `x-user-status` or `x-user-role` arriving on a request is
 therefore whatever the caller typed, and no file in `src/` may read one. Server code that
-needs the signed-in student calls `getSessionStudent()`; public UI asks
-`GET /next/auth-status` from the browser.
+needs the signed-in student calls `getSessionStudent()` or `ensureSessionStudent()`; public
+UI asks `GET /next/auth-status` from the browser.
 
 **Why it breaks silently** — `proxy` used to forward the verified identity in these
 headers, deleting the inbound copies first so a client could not forge them. Nothing ever
@@ -553,12 +583,18 @@ Nothing in the type system or the build says a word.
 
 ### A response that carries a session `Set-Cookie` must be `private, no-store`
 
-**Rule** — Whenever `proxy` writes a session cookie — renewing `coursely-access`, or clearing
-both on a refresh token that no longer verifies — it must also set
-`Cache-Control: private, no-store` on that response. The condition is "this response carries a
-cookie", never a pathname or a method: the redirect that clears the cookies needs it just as
-much as the `next()` that renews them. A response `proxy` writes no cookie on must be left
-alone, so ordinary pages keep the cacheable header Next gave them.
+**Rule** — Whenever anything writes a session cookie — renewing `coursely-access`, or clearing
+both on a refresh token that no longer verifies — that response must also carry
+`Cache-Control: private, no-store`. Two surfaces do it, and the rule reads differently on each:
+
+- **`proxy`** sets it on the condition "this response carries a cookie", never a pathname or a
+  method: the redirect that clears the cookies needs it just as much as the `next()` that
+  renews them. A response `proxy` writes no cookie on must be left alone, so ordinary pages
+  keep the cacheable header Next gave them.
+- **A Route Handler that calls `ensureSessionStudent`** sets it on every response it sends,
+  unconditionally. It cannot see whether the renewal fired, its body is one student's in every
+  branch, and a header that depended on a cookie having been written is one more thing to get
+  wrong. A new route on that reader inherits this, header included.
 
 **Why it breaks silently** — Next does not downgrade a page's own `Cache-Control` when
 middleware sets a cookie. A prerendered page carries `s-maxage=31536000`, so the renewal
@@ -572,10 +608,16 @@ On a CDN it surfaces per-POP, so it reads as an intermittent regional glitch rat
 credential leak. This was BUG-08 — reproduced 100% against a production build behind an nginx
 `proxy_cache`.
 
-**Where** — `src/proxy.ts`, the `renew || clear` guard after both cookie branches. Pinned by
-`tests/int/proxy-session.spec.ts` § "a response carrying a session cookie is never
-shared-cacheable" — three tests: the renewal, the clearing redirect, and the one that fails if
-the header ever escapes onto a response with no cookie on it.
+**Where** — `src/proxy.ts`, the `renew || clear` guard after both cookie branches;
+`src/app/(frontend)/next/auth-status/route.ts` and
+`src/app/(frontend)/next/notifications-count/route.ts`, the `NO_STORE` constant on every
+`Response.json`. Pinned by `tests/int/proxy-session.spec.ts` § "a response carrying a session
+cookie is never shared-cacheable" — three tests: the renewal, the clearing redirect, and the one
+that fails if the header ever escapes onto a response with no cookie on it — and by the
+§ "never shared-cacheable" block in each route's own spec.
+
+The reasoning below is about `proxy` only. A Route Handler writes the header onto its own
+`Response`, so nothing has to override anything.
 
 **The part the tests do not prove** — that Next honours a `Cache-Control` set here over the
 page's own. It does, on the self-hosted Node path, because the header reaches `res` before the

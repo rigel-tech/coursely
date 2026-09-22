@@ -7,10 +7,10 @@ vi.mock('@/services/student-notifications', () => ({
 }))
 
 vi.mock('@/lib/auth/session-student', () => ({
-  getSessionStudent: vi.fn(),
+  ensureSessionStudent: vi.fn(),
 }))
 
-import { getSessionStudent } from '@/lib/auth/session-student'
+import { ensureSessionStudent } from '@/lib/auth/session-student'
 import { listAndMarkRecentNotifications } from '@/services/student-notifications'
 
 beforeEach(() => {
@@ -20,7 +20,7 @@ beforeEach(() => {
 describe('listNotificationsAction', () => {
   it('returns the signed-in student’s notifications', async () => {
     const page = { docs: [{ id: 1, title: 'A' }], hasNextPage: false }
-    vi.mocked(getSessionStudent).mockResolvedValue({ id: 7 } as never)
+    vi.mocked(ensureSessionStudent).mockResolvedValue({ id: 7 } as never)
     vi.mocked(listAndMarkRecentNotifications).mockResolvedValue(page as never)
 
     await expect(listNotificationsAction()).resolves.toBe(page)
@@ -28,7 +28,7 @@ describe('listNotificationsAction', () => {
   })
 
   it('passes the requested page through to the service', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue({ id: 7 } as never)
+    vi.mocked(ensureSessionStudent).mockResolvedValue({ id: 7 } as never)
     vi.mocked(listAndMarkRecentNotifications).mockResolvedValue({
       docs: [],
       hasNextPage: false,
@@ -40,7 +40,7 @@ describe('listNotificationsAction', () => {
   })
 
   it('returns an empty page for a signed-out caller, rather than throwing', async () => {
-    vi.mocked(getSessionStudent).mockResolvedValue(null)
+    vi.mocked(ensureSessionStudent).mockResolvedValue(null)
 
     await expect(listNotificationsAction()).resolves.toEqual({ docs: [], hasNextPage: false })
     expect(listAndMarkRecentNotifications).not.toHaveBeenCalled()
