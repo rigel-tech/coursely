@@ -75,6 +75,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (renew) await refreshAccessCookie(response.cookies, renew)
   if (clear) clearSessionCookies(response.cookies)
 
+  // BUG-08. Next leaves a prerendered page's own `s-maxage` in place when middleware sets a
+  // cookie, so without this the response hands one visitor's JWT to every shared cache in
+  // front. The condition is "this response carries a cookie" — never a path or a method.
+  if (renew || clear) response.headers.set('Cache-Control', 'private, no-store')
+
   return response
 }
 
