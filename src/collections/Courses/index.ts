@@ -12,6 +12,7 @@ import {
   OverviewField,
   PreviewField,
 } from '@payloadcms/plugin-seo/fields'
+import { revalidateCourse, revalidateDelete } from './hooks/revalidateCourse'
 
 export const Courses: CollectionConfig<'courses'> = {
   slug: 'courses',
@@ -202,6 +203,10 @@ export const Courses: CollectionConfig<'courses'> = {
     },
     slugField(),
   ],
+  hooks: {
+    afterChange: [revalidateCourse],
+    afterDelete: [revalidateDelete],
+  },
   versions: {
     drafts: {
       autosave: { interval: 100 },
