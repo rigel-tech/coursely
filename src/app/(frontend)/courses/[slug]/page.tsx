@@ -5,6 +5,12 @@
 // `/next/course-status` in the browser instead. See INVARIANTS;
 // `tests/unit/repo/course-page-static.spec.ts` greps this file for both halves, so it fails
 // on the identifiers themselves — naming one here, even in a comment, trips it.
+//
+// It declares no revalidation window, on purpose, so the route takes Next's default of
+// `false`: prerendered once and served until something calls `revalidatePath`. Nothing does
+// yet — `Courses` carries no such hook, unlike `Pages` and `Posts` — so in a production
+// build a published edit does not appear at all. That is a known gap with a task behind it,
+// not an oversight. `next dev` ignores all of this, which is why it never shows up locally.
 
 import type { Metadata } from 'next'
 
@@ -32,12 +38,6 @@ import { LivePreviewListener } from '@/components/public/LivePreviewListener'
 import { formatDate } from '@/utilities/formatDateTime'
 import { COURSE_TYPE_LABEL } from '@/components/public/course-type-label'
 import type { Course } from '@/payload-types'
-
-/**
- * Courses carry no `revalidatePath` hook, so this window is the only thing that picks up a
- * published edit. 600s matches `posts`.
- */
-export const revalidate = 600
 
 type Args = {
   params: Promise<{
