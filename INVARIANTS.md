@@ -731,19 +731,14 @@ signed-in visitor, on exactly the pages that host the header. No warning, no bui
 `src/app/(frontend)/**/page.tsx` files above. Design rationale:
 `specs/002-header-logout-ui/research.md` D1/D4.
 
-**Exception, narrow and deliberate** — `src/app/(frontend)/courses/[slug]/page.tsx` calls
-`getSessionStudent()` (reads `cookies()`) and branches render on the result: whether to show
-the registration form or an enrollment-status badge, and which profile fields to pass down
-(`specs/007-student-enrollment`). This is a real instance of the pattern the rule above
-forbids — it is not broken only because this page carries **no** `force-static` export. The
-moment one is added here (a plausible future optimisation, matching its three siblings
-above), this page silently regresses exactly the way `HeaderAuthControls` was written to
-avoid: every visitor renders signed-out, seeing a blank registration form and never their
-own enrollment badge, with no build error. **Do not add `force-static` to this page** without
-first moving the signed-in read to the client (a dedicated status route, the same shape as
-`/next/auth-status`, returning the student's profile fields and enrollment status) — that
-work was scoped out of PR #47 as a larger change than the review comment (2.9) that flagged
-this warranted on its own.
+`src/app/(frontend)/courses/[slug]/page.tsx` was the one page that broke this rule, reading
+the session on the server to choose between the registration form and an enrollment badge
+(`specs/007-student-enrollment`). It now follows the same shape as the header:
+`src/components/public/CourseRegistration.tsx` asks
+`src/app/(frontend)/next/course-status/route.ts`. That page is cached rather than
+`force-dynamic`, so the read must not come back — `tests/unit/repo/course-page-static.spec.ts`
+greps the page for it, and for `force-dynamic`, because either one regresses in silence: the
+page still renders correctly and only stops being cacheable.
 
 ### An admin component's arguments to `useListDrawer` must be referentially stable, or it refetches on every render
 

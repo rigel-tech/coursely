@@ -1,3 +1,11 @@
+// This page renders the same for everyone, and must stay that way. A per-request read — the
+// cookie jar, the request headers, the signed-in student — opts the route out of static
+// rendering, and every visit then re-runs the Payload queries below. Who the visitor is, and
+// whether they are already enrolled, is asked by `CourseRegistration` from
+// `/next/course-status` in the browser instead. See INVARIANTS;
+// `tests/unit/repo/course-page-static.spec.ts` greps this file for both halves, so it fails
+// on the identifiers themselves — naming one here, even in a comment, trips it.
+
 import type { Metadata } from 'next'
 
 import { Badge } from '@/components/public/ui/badge'
@@ -21,13 +29,15 @@ import {
 import PageClient from './page.client'
 import { CourseRegistration } from '@/components/public/CourseRegistration'
 import { LivePreviewListener } from '@/components/public/LivePreviewListener'
-import { getSessionStudent } from '@/lib/auth/session-student'
-import { getActiveEnrollmentStatus } from '@/services/student-enrollment'
 import { formatDate } from '@/utilities/formatDateTime'
 import { COURSE_TYPE_LABEL } from '@/components/public/course-type-label'
 import type { Course } from '@/payload-types'
 
-export const dynamic = 'force-dynamic'
+/**
+ * Courses carry no `revalidatePath` hook, so this window is the only thing that picks up a
+ * published edit. 600s matches `posts`.
+ */
+export const revalidate = 600
 
 type Args = {
   params: Promise<{
@@ -48,10 +58,6 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
   }
 
   const payload = await getPayload({ config: configPromise })
-  const student = await getSessionStudent()
-  const activeEnrollment = student
-    ? await getActiveEnrollmentStatus(payload, student.id, course.id)
-    : undefined
 
   // Lấy danh sách mục tiêu khóa học (Course Objectives)
   const objectivesRes = await payload.find({
@@ -290,14 +296,6 @@ export default async function CourseDetailPage({ params: paramsPromise }: Args) 
                 ) : (
                   <CourseRegistration
                     course={{ id: course.id, title: course.title, slug: course.slug }}
-                    enrollmentId={activeEnrollment?.id}
-                    enrollmentStatus={activeEnrollment?.enrollmentStatus}
-                    canCancel={activeEnrollment?.canCancel ?? false}
-                    profile={
-                      student
-                        ? { email: student.email, fullName: student.fullName, phone: student.phone }
-                        : undefined
-                    }
                   />
                 )}
               </div>
