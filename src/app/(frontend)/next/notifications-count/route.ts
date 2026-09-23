@@ -3,8 +3,8 @@
  *
  * Mirrors `/next/auth-status`: exists so the public header can poll a signed-in student's
  * unread notification count without a Server Component reading `headers()` / `cookies()`
- * — the header's host pages are `force-static`, which blanks those APIs. Pure read, no
- * side effect, safe to call every 5 seconds.
+ * — the header's host pages are `force-static`, which blanks those APIs. Safe to call every
+ * 5 seconds.
  *
  * Renews the session as it reads it, the same way `/next/auth-status` does — the bell polls
  * this every few seconds, so it is a second place a lapsed access token gets re-minted.
