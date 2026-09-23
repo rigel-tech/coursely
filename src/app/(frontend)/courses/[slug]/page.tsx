@@ -7,10 +7,8 @@
 // on the identifiers themselves — naming one here, even in a comment, trips it.
 //
 // It declares no revalidation window, on purpose, so the route takes Next's default of
-// `false`: prerendered once and served until something calls `revalidatePath`. Nothing does
-// yet — `Courses` carries no such hook, unlike `Pages` and `Posts` — so in a production
-// build a published edit does not appear at all. That is a known gap with a task behind it,
-// not an oversight. `next dev` ignores all of this, which is why it never shows up locally.
+// `false`: prerendered once and served until something calls `revalidatePath`. That hook
+// lives in `src/collections/Courses/hooks/revalidateCourse.ts`, matching `Pages` and `Posts`.
 
 import type { Metadata } from 'next'
 
