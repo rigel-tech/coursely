@@ -225,3 +225,61 @@ Repo này chỉ có `Dockerfile` và `docker-compose.yml`; không có config ngi
 | Ai đó thêm nhánh ghi cookie mới trong `proxy` và quên header            | Điều kiện đặt ở một chỗ duy nhất, ngay dưới hai nhánh ghi cookie. Entry INVARIANTS là thứ chặn ở review.                                                                          |
 | `no-store` vô tình lan sang response ẩn danh, giết cache toàn site      | Test bắt buộc #3 pin đúng việc đó.                                                                                                                                                |
 | Triển khai lên runtime edge trong tương lai                             | Ghi trong Assumptions và trong entry INVARIANTS. Hành vi `appendHeader` ở nhánh edge khác hẳn, phải kiểm lại trước khi đổi hạ tầng.                                               |
+
+## Đợt 2 — sau review BUG-08 (2026-09-23)
+
+Review xác nhận bản vá đúng trên prod build, và nêu ba điểm còn hở. Ghi thẳng vào spec này, không
+mở spec mới.
+
+### Phát hiện
+
+1. **Chưa có e2e tái hiện.** `tests/e2e/session-on-public-pages.spec.ts` xanh cả trên main — nó
+   kiểm việc gia hạn vẫn chạy, không kiểm rò cookie. Assertion reviewer đề xuất (`GET /` không trả
+   `Set-Cookie: coursely-*`) đỏ trên main, xanh trên PR. Nó pin matcher của `proxy`
+   (`62f93a4`); phần `no-store` (`594793a`) vẫn do `tests/int/proxy-session.spec.ts` pin.
+2. **Banner `next/notifications-count/route.ts` tự mâu thuẫn**: "Pure read, no side effect"
+   trong khi route gia hạn phiên.
+3. **`/khoa-hoc/:slug` vẫn động trên prod build** (`ƒ`, `private, no-cache, no-store`). Nguyên
+   nhân theo tài liệu Next 16.3.0 (`generate-static-params.md:302`): thiếu `generateStaticParams`
+   thì route động. `posts/[slug]` cũng gọi `draftMode()` nhưng có `generateStaticParams`, nên
+   `draftMode()` không phải thủ phạm — xác nhận cuối bằng prod build. Hệ quả: `perf(courses)`
+   chưa có tác dụng, `course-page-static.spec.ts` không chứng minh điều nó mô tả, và banner
+   "không cập nhật trên production" nói về rủi ro chưa tồn tại.
+4. **Chọn hướng (a): cho trang thật sự được cache.** Khi đó khóa học sửa xong phải được
+   revalidate. Có rewrite `/khoa-hoc/:slug → /courses/:slug`, nên `revalidatePath` phải nhận
+   đường dẫn **đích** `/courses/<slug>` (`revalidatePath.md:55-57`) — truyền `/khoa-hoc/…` không
+   lỗi, chỉ lặng lẽ không làm gì. Trang còn hiển thị `course-objectives` và `course-phases`, nên
+   sửa hai collection này cũng phải revalidate trang của khóa học cha.
+
+### Danh sách test — đã chốt qua `AskUserQuestion` 2026-09-23
+
+Bắt buộc:
+
+1. **e2e `/` không `Set-Cookie`**: trong `session-on-public-pages.spec.ts`, sau `dropAccessCookie`,
+   `GET /` không trả `Set-Cookie` nào bắt đầu bằng `coursely-`.
+2. **Hook `Courses`** (unit): publish → `/courses/<slug>`; unpublish hoặc đổi slug → cả đường dẫn
+   cũ; delete; `context.disableRevalidate` → không gọi; không bao giờ `/khoa-hoc/…`.
+3. **Hook `CourseObjectives` / `CoursePhases`** (unit): tạo/sửa/xóa → revalidate
+   `/courses/<slug>` của khóa học cha.
+4. **`course-page-static`** (unit): `page.tsx` export `generateStaticParams`.
+
+Đề xuất — **đã chọn cả hai**:
+
+5. **int: hook với Payload thật**: update/delete khóa học qua Local API, `next/cache` mock, kiểm
+   `revalidatePath` được gọi đúng đường dẫn.
+6. **e2e prod build**: trên `next build && next start` (user tự dựng), `/khoa-hoc/:slug` không mang
+   `no-store`. Bỏ qua khi chạy trên `next dev`, vì dev luôn ép `no-cache`.
+
+### Danh sách việc, theo giai đoạn — dừng chờ duyệt sau mỗi giai đoạn
+
+1. **GĐ1** — test #1; đỏ bằng cách tạm khôi phục matcher cũ của `proxy` (báo trước file/dòng),
+   hoàn nguyên, xanh.
+2. **GĐ2** — sửa banner `notifications-count`. Không có test (chỉ comment).
+3. **GĐ3** — hook revalidate cho `Courses`, `CourseObjectives`, `CoursePhases` + test #2, #3, #5.
+   Entry INVARIANTS: `revalidatePath` trên route bị rewrite nhận đường dẫn đích.
+4. **GĐ4** — `generateStaticParams` cho `courses/[slug]/page.tsx`, viết lại banner trang, sửa
+   `course-page-static.spec.ts`, viết lại entry INVARIANTS về trang khóa học + test #4, #6.
+   Kiểm chứng cuối trên prod build do user chạy: route thành `○`/`●`, publish một chỉnh sửa thì
+   trang cập nhật.
+5. **GĐ5** — `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm test:int` xanh. Commit khi
+   user yêu cầu.
