@@ -26,7 +26,7 @@ ENV PAYLOAD_SECRET=$PAYLOAD_SECRET
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-RUN pnpm build
+RUN pnpm payload migrate && pnpm build
 
 # Stage 3: Runner
 FROM node:22-alpine AS runner
