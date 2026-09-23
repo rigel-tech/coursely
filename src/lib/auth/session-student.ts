@@ -75,21 +75,21 @@ export async function getSessionStudent(): Promise<Student | null> {
  * both cookies are cleared.
  */
 export async function ensureSessionStudent(): Promise<Student | null> {
-  const jar = await cookies()
+  const cook = await cookies()
 
-  const claims = await verifyAccessToken(jar.get(ACCESS_TOKEN_COOKIE)?.value)
+  const claims = await verifyAccessToken(cook.get(ACCESS_TOKEN_COOKIE)?.value)
   if (claims) return loadStudent(claims)
 
-  const refreshCookie = jar.get(REFRESH_TOKEN_COOKIE)?.value
+  const refreshCookie = cook.get(REFRESH_TOKEN_COOKIE)?.value
   if (!refreshCookie) return null
 
   const renewed = await verifyRefreshToken(refreshCookie)
   if (!renewed) {
-    clearSessionCookies(jar)
+    clearSessionCookies(cook)
     return null
   }
 
-  await refreshAccessCookie(jar, renewed)
+  await refreshAccessCookie(cook, renewed)
 
   return loadStudent(renewed)
 }
