@@ -4,17 +4,28 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { signAccessToken } from '@/lib/auth/session-token'
+import { signAccessToken, signRefreshToken } from '@/lib/auth/session-token'
+import { REFRESH_TTL_SEC } from '@/lib/constants/auth'
 
 const ctx = vi.hoisted(() => ({
   cookieJar: new Map<string, string>(),
   revalidated: [] as string[],
+  writes: [] as string[],
+  deletes: [] as string[],
 }))
 
 vi.mock('next/headers', () => ({
   cookies: async () => ({
     get: (name: string) =>
       ctx.cookieJar.has(name) ? { name, value: ctx.cookieJar.get(name) } : undefined,
+    set: (name: string, value: string) => {
+      ctx.writes.push(name)
+      ctx.cookieJar.set(name, value)
+    },
+    delete: (name: string) => {
+      ctx.deletes.push(name)
+      ctx.cookieJar.delete(name)
+    },
   }),
 }))
 
@@ -25,6 +36,7 @@ vi.mock('next/cache', () => ({
 const { updateProfileAction } = await import('@/actions/student/profile')
 
 const ACCESS_COOKIE = 'coursely-access'
+const REFRESH_COOKIE = 'coursely-refresh'
 
 let payload: Payload
 const madeIds = new Set<number>()
@@ -67,6 +79,8 @@ beforeAll(async () => {
 
 afterEach(async () => {
   ctx.cookieJar.clear()
+  ctx.writes.length = 0
+  ctx.deletes.length = 0
   ctx.revalidated.length = 0
   vi.restoreAllMocks()
   for (const id of madeIds) {
@@ -104,6 +118,28 @@ describe('updateProfileAction — happy path', () => {
     expect(after.fullName).toBe('Nguyễn Văn A')
     expect(typeof after.avatar).toBe('number')
     madeMediaIds.add(after.avatar as number)
+  })
+})
+
+// The end-to-end proof for the whole stage: an action reached with a lapsed access token
+// and a live refresh token does the work instead of refusing. Before renewal moved out of
+// `proxy`, this only passed because `proxy` had already re-minted the cookie on the page
+// request that rendered the form — which it will stop doing for public pages.
+describe('updateProfileAction — a lapsed access token', () => {
+  it('renews from the refresh token and saves, rather than refusing', async () => {
+    const student = await seedStudent()
+    ctx.cookieJar.delete(ACCESS_COOKIE)
+    ctx.cookieJar.set(
+      REFRESH_COOKIE,
+      await signRefreshToken({ id: student.id as number, status: 'ACTIVE' }, REFRESH_TTL_SEC),
+    )
+
+    const res = await updateProfileAction(form({ fullName: 'Tên Mới', phone: '0912345678' }))
+
+    expect(res.status).toBe('success')
+    expect(ctx.writes).toEqual([ACCESS_COOKIE])
+    const after = await payload.findByID({ collection: 'students', id: student.id, depth: 0 })
+    expect(after.fullName).toBe('Tên Mới')
   })
 })
 

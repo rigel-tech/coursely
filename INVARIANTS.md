@@ -97,8 +97,8 @@ with a green build and a green test suite.
 copies that check, never the truthiness shortcut.
 
 **Why it breaks silently** — every Payload auth collection has its own `POST /api/{slug}/login`
-that signs a `payload-token`, and `proxy`'s matcher excludes `/api/`, so `proxy` never sees
-those requests. Once a second auth collection exists (`students`), a signed-in student holds a
+that signs a `payload-token`, and `proxy`'s matcher lists only guarded page prefixes, so
+`proxy` never sees those requests. Once a second auth collection exists (`students`), a signed-in student holds a
 valid `payload-token`. A `Boolean(user)` predicate cannot tell it apart from a staff token, so
 it grants the student every collection it guards over REST — reading the whole `users` table,
 minting staff accounts, resetting an admin password. Nothing throws, the build and tests stay
@@ -374,14 +374,14 @@ the same URL as the page it was called from. `proxy` must treat that header as a
 unconditional pass: whatever `decideRoute` would have returned for the pathname, a Server
 Action request always gets `NextResponse.next()`, never a redirect.
 
-**Why it breaks silently** — `proxy`'s matcher covers ordinary pages and Server Action POSTs
-alike, since both hit the same URL. Before this rule, a stale session hitting a protected
+**Why it breaks silently** — `proxy`'s matcher covers a guarded page and the Server Action
+POSTs made from it alike, since both hit the same URL. Before this rule, a stale session hitting a protected
 page's action (`/tai-khoan`'s `updateProfileAction`, say) got an HTTP redirect back in place
 of the action's own response. The browser followed it exactly as it would for any redirect —
 a full navigation to `/dang-nhap`, with no action response ever reaching the calling
 component. Nothing throws, no console warning: the person who clicked "Lưu thay đổi" is just
 signed out, with no error banner ever rendered, because the component that would have shown
-one never got a response to render from. The action's own `getSessionStudent()` check — which
+one never got a response to render from. The action's own `ensureSessionStudent()` check — which
 already turns "no session" into a proper in-app message — never even ran.
 
 **Where** — `src/proxy.ts` (`isServerAction`, checked before `decideRoute` runs), pinned by
@@ -441,8 +441,10 @@ Vietnamese URLs (`/dang-nhap`, `/tai-khoan`, `/xac-thuc-otp`, `/quen-mat-khau`,
 does not retire the folder path, so both reach the app. Two rules follow. Every
 `redirect()`, `Link href`, `revalidatePath` and e-mail link uses the **public** path on the
 left of that table, never the folder name on the right. And anything that decides by
-pathname — `PROTECTED_PREFIXES` is the only one today — must list **both** names, because
-`proxy` runs before the rewrite and sees whichever one the browser asked for.
+pathname must list **both** names, because `proxy` runs before the rewrite and sees whichever
+one the browser asked for. Two things do today: `PROTECTED_PREFIXES` and `config.matcher` in
+`src/proxy.ts`, which since the matcher was narrowed is what decides whether `proxy` runs for
+a path at all.
 
 **Why it breaks silently** — the two paths render the identical page, so every manual
 check of the public URL passes while the folder path stays wide open; no request errors,
@@ -455,8 +457,36 @@ is one the guard does not cover and one no redirect will ever send them back to.
 **Where** — `rewrites.ts` (the table, and its header states the same rule),
 `src/lib/constants/auth.ts` (`PROTECTED_PREFIXES` — each guarded page listed under both
 names), `src/lib/auth/route-guard.ts` (`decideRoute` matches on the raw pathname) and
-`src/proxy.ts` (runs before the rewrite). `tests/unit/repo/protected-prefixes.spec.ts`
-reads the rewrite table and fails if a guarded source has an unguarded destination.
+`src/proxy.ts` (`config.matcher`, and it runs before the rewrite).
+`tests/unit/repo/protected-prefixes.spec.ts` reads the rewrite table and fails if a guarded
+source has an unguarded destination; `tests/unit/repo/proxy-matcher.spec.ts` fails if the
+matcher and the prefix lists drift apart.
+
+### A `proxy` matcher source without `/:path*` gates the bare path only — the Next docs say otherwise
+
+**Rule** — Every source in `config.matcher` (`src/proxy.ts`) ends in `/:path*`, and the list
+is spelled out as string literals. Never write a bare prefix, and never build the list from
+`PROTECTED_PREFIXES` / `AUTH_PREFIXES` however tempting the duplication makes it.
+
+**Why it breaks silently** — Next compiles each source with path-to-regexp and adds no
+subpath suffix of its own, so `/tai-khoan` becomes `^/tai-khoan[/#?]?$`: it matches that path and
+nothing beneath it. `/tai-khoan/doi-mat-khau` then never reaches the guard at all — the page
+renders, `tsc` is clean, and a test that probes only the bare prefix stays green forever.
+What makes this the likely mistake rather than a careless one is that the Next documentation
+states the opposite: `proxy.md` lists "Are anchored to the start of the path: `/about`
+matches `/about` and `/about/team`" among its source-pattern rules. It does not.
+
+The literals half fails harder and just as quietly. Next: "The `matcher` values need to be
+constants so they can be statically analyzed at build-time. Dynamic values such as variables
+will be ignored." An imported array yields _no_ matcher, so `proxy` runs on nothing and every
+guarded page is served to anyone, with no build warning.
+
+**Where** — `src/proxy.ts`, `config.matcher` (its banner repeats this). Checked against Next
+16.3.0 by running `tryToParsePath` (`next/dist/lib/try-to-parse-path.js`) directly — the same
+function `getMiddlewareMatchers` calls in `next/dist/build/analysis/get-page-static-info.js`.
+Pinned by `tests/unit/repo/proxy-matcher.spec.ts`, which compiles the live matcher through
+that function and probes bare and subpath forms, plus both sync directions against the two
+prefix lists.
 
 ## Sessions
 
@@ -508,6 +538,36 @@ rather than asserting it is merely truthy — the one assertion that tells a tok
 pending promise. Note jose rejects a Node `Buffer` under jsdom's realm, so any spec that
 touches this module needs `// @vitest-environment node`.
 
+### A session is renewed only where cookies may be written — never in a Server Component
+
+**Rule** — A Route Handler or Server Action that needs the signed-in student calls
+`ensureSessionStudent`, which renews `coursely-access` from `coursely-refresh`. A Server
+Component calls `getSessionStudent`, which only reads. Never swap them, and never fold the two
+into one function. `proxy` keeps its own renewal for the paths it guards, because a protected
+Server Component page cannot renew itself.
+
+**Why it breaks silently** — both directions fail on a fifteen-minute delay, which is to say
+they pass every test and every manual click-through:
+
+- **A Server Action left on `getSessionStudent`** refuses a student whose access token lapsed
+  while a refresh token good for thirty days sits in the same jar. It returns a polite,
+  well-formed "please sign in" — not an error, not a log line, and indistinguishable from a
+  genuinely signed-out caller. This was hidden for as long as `proxy` papered over it by
+  renewing on the page request that rendered the form; its matcher no longer covers public
+  pages, so nothing on one renews anything.
+- **A Server Component moved to `ensureSessionStudent`** throws from `cookies().set()` — but
+  only on the renewal branch, so only once the access token has actually lapsed. The page
+  renders correctly in dev, in every test, and for the first fifteen minutes in production.
+
+**Where** — `src/lib/auth/session-student.ts` (both readers; the banner states which scope each
+belongs to). Renewing callers: the four actions in `src/actions/student/`,
+`src/app/(frontend)/next/auth-status/route.ts`,
+`src/app/(frontend)/next/notifications-count/route.ts`. Read-only callers:
+`src/app/(frontend)/student/account/page.tsx`, `src/app/(frontend)/courses/[slug]/page.tsx`.
+Pinned by `tests/unit/repo/session-refresh-callers.spec.ts`, which scans both renewing
+directories rather than testing any one caller — the fifth action added next month is where
+this would come back — and by `tests/int/current-student.spec.ts` for the behaviour itself.
+
 ### A session cannot be revoked — it can only expire
 
 **Rule** — There is no session record anywhere: the refresh token _is_ the session, and
@@ -536,8 +596,8 @@ account gate reads stale for up to `ACCESS_TTL_SEC`. Nothing errors. The person 
 **Rule** — `proxy` returns a bare `NextResponse.next()`; it does not rewrite the request
 headers. An `x-user-id`, `x-user-status` or `x-user-role` arriving on a request is
 therefore whatever the caller typed, and no file in `src/` may read one. Server code that
-needs the signed-in student calls `getSessionStudent()`; public UI asks
-`GET /next/auth-status` from the browser.
+needs the signed-in student calls `getSessionStudent()` or `ensureSessionStudent()`; public
+UI asks `GET /next/auth-status` from the browser.
 
 **Why it breaks silently** — `proxy` used to forward the verified identity in these
 headers, deleting the inbound copies first so a client could not forge them. Nothing ever
@@ -551,6 +611,54 @@ Nothing in the type system or the build says a word.
 `tests/unit/repo/student-header-readers.spec.ts`, which fails the moment any file under
 `src/` mentions one of these names; the proxy behaviour is pinned in
 `tests/int/proxy-session.spec.ts` § "identity is never forwarded as a request header".
+
+### A response that carries a session `Set-Cookie` must be `private, no-store`
+
+**Rule** — Whenever anything writes a session cookie — renewing `coursely-access`, or clearing
+both on a refresh token that no longer verifies — that response must also carry
+`Cache-Control: private, no-store`. Two surfaces do it, and the rule reads differently on each:
+
+- **`proxy`** sets it on the condition "this response carries a cookie", never a pathname or a
+  method: the redirect that clears the cookies needs it just as much as the `next()` that
+  renews them. A response `proxy` writes no cookie on must be left alone, so ordinary pages
+  keep the cacheable header Next gave them.
+- **A Route Handler that calls `ensureSessionStudent`** sets it on every response it sends,
+  unconditionally. It cannot see whether the renewal fired, its body is one student's in every
+  branch, and a header that depended on a cookie having been written is one more thing to get
+  wrong. A new route on that reader inherits this, header included.
+
+**Why it breaks silently** — Next does not downgrade a page's own `Cache-Control` when
+middleware sets a cookie. A prerendered page carries `s-maxage=31536000`, so the renewal
+response leaves the server with one visitor's JWT and a year-long _shared_-cache directive on
+it at the same time. Every layer in between is then behaving correctly when it stores the pair
+and hands that token to the next person who asks for the URL — and the next person is signed
+in as someone else, on a browser that has done nothing but open the home page. Nothing throws,
+`pnpm lint` and `tsc` are clean, and it is invisible in dev: `next dev` forces `no-cache` on
+every response, and a single-origin staging without a CDN in front never reproduces it either.
+On a CDN it surfaces per-POP, so it reads as an intermittent regional glitch rather than a
+credential leak. This was BUG-08 — reproduced 100% against a production build behind an nginx
+`proxy_cache`.
+
+**Where** — `src/proxy.ts`, the `renew || clear` guard after both cookie branches;
+`src/app/(frontend)/next/auth-status/route.ts` and
+`src/app/(frontend)/next/notifications-count/route.ts`, the `NO_STORE` constant on every
+`Response.json`. Pinned by `tests/int/proxy-session.spec.ts` § "a response carrying a session
+cookie is never shared-cacheable" — three tests: the renewal, the clearing redirect, and the one
+that fails if the header ever escapes onto a response with no cookie on it — and by the
+§ "never shared-cacheable" block in each route's own spec.
+
+The reasoning below is about `proxy` only. A Route Handler writes the header onto its own
+`Response`, so nothing has to override anything.
+
+**The part the tests do not prove** — that Next honours a `Cache-Control` set here over the
+page's own. It does, on the self-hosted Node path, because the header reaches `res` before the
+render (`server/lib/router-utils/resolve-routes.js` copies proxy headers into `resHeaders`,
+`server/lib/router-server.js` applies them) and `server/send-payload.js` only writes the page's
+own when `!res.getHeader('Cache-Control')`. Verified against Next 16.3.0; recheck it on a Next
+upgrade, because the three tests above stay green even if that order changes. The edge runtime
+uses `appendHeader` instead and would leave both values present — so this reasoning does not
+carry to a Vercel-style deployment, and the cache layer in front must refuse to store responses
+bearing `Set-Cookie` regardless.
 
 ## Key–value storage
 
@@ -624,19 +732,14 @@ signed-in visitor, on exactly the pages that host the header. No warning, no bui
 `src/app/(frontend)/**/page.tsx` files above. Design rationale:
 `specs/002-header-logout-ui/research.md` D1/D4.
 
-**Exception, narrow and deliberate** — `src/app/(frontend)/courses/[slug]/page.tsx` calls
-`getSessionStudent()` (reads `cookies()`) and branches render on the result: whether to show
-the registration form or an enrollment-status badge, and which profile fields to pass down
-(`specs/007-student-enrollment`). This is a real instance of the pattern the rule above
-forbids — it is not broken only because this page carries **no** `force-static` export. The
-moment one is added here (a plausible future optimisation, matching its three siblings
-above), this page silently regresses exactly the way `HeaderAuthControls` was written to
-avoid: every visitor renders signed-out, seeing a blank registration form and never their
-own enrollment badge, with no build error. **Do not add `force-static` to this page** without
-first moving the signed-in read to the client (a dedicated status route, the same shape as
-`/next/auth-status`, returning the student's profile fields and enrollment status) — that
-work was scoped out of PR #47 as a larger change than the review comment (2.9) that flagged
-this warranted on its own.
+`src/app/(frontend)/courses/[slug]/page.tsx` was the one page that broke this rule, reading
+the session on the server to choose between the registration form and an enrollment badge
+(`specs/007-student-enrollment`). It now follows the same shape as the header:
+`src/components/public/CourseRegistration.tsx` asks
+`src/app/(frontend)/next/course-status/route.ts`. That page is cached rather than
+`force-dynamic`, so the read must not come back — `tests/unit/repo/course-page-static.spec.ts`
+greps the page for it, and for `force-dynamic`, because either one regresses in silence: the
+page still renders correctly and only stops being cacheable.
 
 ### An admin component's arguments to `useListDrawer` must be referentially stable, or it refetches on every render
 

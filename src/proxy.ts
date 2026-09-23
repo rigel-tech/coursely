@@ -75,10 +75,38 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (renew) await refreshAccessCookie(response.cookies, renew)
   if (clear) clearSessionCookies(response.cookies)
 
+  // BUG-08. Next leaves a prerendered page's own `s-maxage` in place when middleware sets a
+  // cookie, so without this the response hands one visitor's JWT to every shared cache in
+  // front. The condition is "this response carries a cookie" — never a path or a method.
+  if (renew || clear) response.headers.set('Cache-Control', 'private, no-store')
+
   return response
 }
 
+/**
+ * Only the paths `decideRoute` actually decides something about — `PROTECTED_PREFIXES` and
+ * `AUTH_PREFIXES`. A public page never reaches this file, so it never has a session cookie
+ * minted onto a response a shared cache may store; that is BUG-08 removed at the source
+ * rather than patched at the header.
+ *
+ * Every entry needs its `/:path*` tail. Next compiles these through path-to-regexp, where a
+ * bare `/tai-khoan` matches that path and nothing beneath it, leaving every subpath of a
+ * protected page ungated — the Next docs say otherwise and are wrong. See INVARIANTS.
+ *
+ * The list is spelled out rather than built from the two constants because Next ignores a
+ * matcher value it cannot read at build time. `tests/unit/repo/proxy-matcher.spec.ts` is
+ * what keeps the copies in step, in both directions.
+ */
 export const config = {
-  // Every page, but not Next internals, static assets or the Payload REST API.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|favicon.svg|api/).*)'],
+  matcher: [
+    '/tai-khoan/:path*',
+    '/student/account/:path*',
+    '/khoa-hoc-cua-toi/:path*',
+    '/dang-nhap/:path*',
+    '/student/login/:path*',
+    '/dang-ky/:path*',
+    '/student/register/:path*',
+    '/xac-thuc-otp/:path*',
+    '/student/verify-otp/:path*',
+  ],
 }

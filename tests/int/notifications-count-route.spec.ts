@@ -4,20 +4,34 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { getPayload, type Payload } from 'payload'
 import configPromise from '@payload-config'
 
-import { signAccessToken } from '@/lib/auth/session-token'
+import { signAccessToken, signRefreshToken } from '@/lib/auth/session-token'
+import { REFRESH_TTL_SEC } from '@/lib/constants/auth'
 
-const ctx = vi.hoisted(() => ({ cookieJar: new Map<string, string>() }))
+const ctx = vi.hoisted(() => ({
+  cookieJar: new Map<string, string>(),
+  writes: [] as string[],
+  deletes: [] as string[],
+}))
 
 vi.mock('next/headers', () => ({
   cookies: async () => ({
     get: (name: string) =>
       ctx.cookieJar.has(name) ? { name, value: ctx.cookieJar.get(name) } : undefined,
+    set: (name: string, value: string) => {
+      ctx.writes.push(name)
+      ctx.cookieJar.set(name, value)
+    },
+    delete: (name: string) => {
+      ctx.deletes.push(name)
+      ctx.cookieJar.delete(name)
+    },
   }),
 }))
 
 const { GET } = await import('@/app/(frontend)/next/notifications-count/route')
 
 const ACCESS_COOKIE = 'coursely-access'
+const REFRESH_COOKIE = 'coursely-refresh'
 
 const read = async (res: Response) => (await res.json()) as { count: number }
 
@@ -58,6 +72,8 @@ beforeAll(async () => {
 
 afterEach(async () => {
   ctx.cookieJar.clear()
+  ctx.writes.length = 0
+  ctx.deletes.length = 0
   for (const id of madeNotificationIds) {
     await payload.delete({ collection: 'notifications', id }).catch(() => {})
   }
@@ -89,5 +105,44 @@ describe('GET /next/notifications-count', () => {
     ctx.cookieJar.set(ACCESS_COOKIE, await signAccessToken({ id: 2_000_000_000 }))
 
     expect(await read(await GET())).toEqual({ count: 0 })
+  })
+
+  it('renews from the refresh token and counts in the same response', async () => {
+    const student = await seedStudent()
+    await seedNotification(student.id, false)
+    ctx.cookieJar.set(
+      REFRESH_COOKIE,
+      await signRefreshToken({ id: student.id, status: 'ACTIVE' }, REFRESH_TTL_SEC),
+    )
+
+    expect(await read(await GET())).toEqual({ count: 1 })
+    expect(ctx.writes).toEqual([ACCESS_COOKIE])
+  })
+})
+
+// The bell polls this every few seconds and it now mints session cookies, so it falls under
+// the rule that a response carrying one is never shared-cacheable (INVARIANTS, "A response
+// that carries a session Set-Cookie must be private, no-store"). Unconditional: the count is
+// one student's, so no case here is shareable, and a branch is one more thing to get wrong.
+describe('GET /next/notifications-count — never shared-cacheable', () => {
+  it('sends private, no-store when it renews', async () => {
+    const student = await seedStudent()
+    ctx.cookieJar.set(
+      REFRESH_COOKIE,
+      await signRefreshToken({ id: student.id, status: 'ACTIVE' }, REFRESH_TTL_SEC),
+    )
+
+    expect((await GET()).headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  it('sends private, no-store for a signed-in student it did not renew', async () => {
+    const student = await seedStudent()
+    ctx.cookieJar.set(ACCESS_COOKIE, await signAccessToken({ id: student.id }))
+
+    expect((await GET()).headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  it('sends private, no-store for an anonymous visitor', async () => {
+    expect((await GET()).headers.get('cache-control')).toBe('private, no-store')
   })
 })

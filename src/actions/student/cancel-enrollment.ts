@@ -1,7 +1,7 @@
 'use server'
 
 import { cancelStudentEnrollment } from '@/services/student-enrollment'
-import { getSessionStudent } from '@/lib/auth/session-student'
+import { ensureSessionStudent } from '@/lib/auth/session-student'
 import {
   EnrollmentAlreadyCancelled,
   EnrollmentAlreadyStarted,
@@ -20,7 +20,7 @@ const STANDING_REFUSAL: Record<Exclude<Student['status'], 'ACTIVE'>, string> = {
 }
 
 export async function cancelEnrollmentAction(enrollmentId: number): Promise<CancelEnrollmentState> {
-  const student = await getSessionStudent()
+  const student = await ensureSessionStudent()
   if (!student) {
     return {
       status: 'error',

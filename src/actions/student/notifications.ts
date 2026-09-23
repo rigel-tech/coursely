@@ -1,6 +1,6 @@
 'use server'
 
-import { getSessionStudent } from '@/lib/auth/session-student'
+import { ensureSessionStudent } from '@/lib/auth/session-student'
 import {
   listAndMarkRecentNotifications,
   type NotificationsPage,
@@ -14,7 +14,7 @@ import {
  * visitor, but must not throw if it somehow is.
  */
 export async function listNotificationsAction(page = 1): Promise<NotificationsPage> {
-  const student = await getSessionStudent()
+  const student = await ensureSessionStudent()
   if (!student) return { docs: [], hasNextPage: false }
 
   return listAndMarkRecentNotifications(student.id, { page })
