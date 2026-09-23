@@ -85,7 +85,9 @@ afterAll(async () => {
   for (const id of madeStudents.splice(0)) {
     await payload.delete({ collection: 'students', id }).catch(() => {})
   }
-  await payload.delete({ collection: 'courses', id: courseId }).catch(() => {})
+  await payload
+    .delete({ collection: 'courses', id: courseId, context: { disableRevalidate: true } })
+    .catch(() => {})
 })
 
 describe('enrollment status timestamps', () => {

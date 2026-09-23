@@ -4,6 +4,7 @@ import { adminGroups } from '@/lib/constants/adminGroups'
 import { authenticated } from '../../access/authenticated'
 import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
 import { slugField } from 'payload'
+import { revalidateCourse, revalidateCourseDelete } from './hooks/revalidateCourse'
 
 import {
   MetaDescriptionField,
@@ -208,5 +209,9 @@ export const Courses: CollectionConfig<'courses'> = {
       schedulePublish: true,
     },
     maxPerDoc: 50,
+  },
+  hooks: {
+    afterChange: [revalidateCourse],
+    afterDelete: [revalidateCourseDelete],
   },
 }

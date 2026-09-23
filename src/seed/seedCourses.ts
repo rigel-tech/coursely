@@ -109,6 +109,7 @@ export async function seedCourses(payload: Payload) {
         if (!existing.docs[0].image && imageId) {
           await payload.update({
             collection: 'courses',
+            context: { disableRevalidate: true },
             id: existing.docs[0].id,
             data: { image: imageId },
           })
@@ -118,6 +119,7 @@ export async function seedCourses(payload: Payload) {
 
       await payload.create({
         collection: 'courses',
+        context: { disableRevalidate: true },
         draft: false,
         data: {
           ...rest,

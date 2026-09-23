@@ -375,6 +375,7 @@ export async function seedCourseDetails(payload: Payload) {
         for (let i = 0; i < objectives.length; i++) {
           await payload.create({
             collection: 'course-objectives',
+            context: { disableRevalidate: true },
             data: {
               title: objectives[i].title,
               description: objectives[i].description,
@@ -400,6 +401,7 @@ export async function seedCourseDetails(payload: Payload) {
         for (let i = 0; i < phases.length; i++) {
           await payload.create({
             collection: 'course-phases',
+            context: { disableRevalidate: true },
             data: {
               title: phases[i].title,
               description: lexicalDoc([heading(phases[i].title, 'h3'), list(phases[i].bullets)]),

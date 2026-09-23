@@ -114,7 +114,9 @@ afterAll(async () => {
     await payload.delete({ collection: 'enrollments', id }).catch(() => {})
   }
   await payload.delete({ collection: 'enrollments', id: enrollmentId }).catch(() => {})
-  await payload.delete({ collection: 'courses', id: courseId }).catch(() => {})
+  await payload
+    .delete({ collection: 'courses', id: courseId, context: { disableRevalidate: true } })
+    .catch(() => {})
   for (const id of madeStaff) await payload.delete({ collection: 'users', id }).catch(() => {})
   for (const id of madeStudents)
     await payload.delete({ collection: 'students', id }).catch(() => {})

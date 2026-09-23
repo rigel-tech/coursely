@@ -277,6 +277,11 @@ Bắt buộc:
 2. **GĐ2** — sửa banner `notifications-count`. Không có test (chỉ comment).
 3. **GĐ3** — hook revalidate cho `Courses`, `CourseObjectives`, `CoursePhases` + test #2, #3, #5.
    Entry INVARIANTS: `revalidatePath` trên route bị rewrite nhận đường dẫn đích.
+   _Phát hiện khi làm_: ngoài request của Next, `revalidatePath` ném
+   `static generation store missing` và rollback lệnh ghi. Cleanup `.catch(() => {})` trong
+   `tests/int/` nuốt lỗi đó và để lại 10 khóa học rác (đã xóa bằng SQL). Chốt 2026-09-23:
+   caller ngoài Next truyền `context: { disableRevalidate: true }` — hai seed khóa học và
+   cleanup trong 9 file int test; hook không tự nuốt lỗi.
 4. **GĐ4** — `generateStaticParams` cho `courses/[slug]/page.tsx`, viết lại banner trang, sửa
    `course-page-static.spec.ts`, viết lại entry INVARIANTS về trang khóa học + test #4, #6.
    Kiểm chứng cuối trên prod build do user chạy: route thành `○`/`●`, publish một chỉnh sửa thì
