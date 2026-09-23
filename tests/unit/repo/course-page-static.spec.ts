@@ -28,10 +28,17 @@ describe('the course detail page stays cacheable', () => {
   })
 
   it('reaches for no per-request cookie or header API', () => {
-    // `draftMode()` is deliberately not in this list: reading `isEnabled` does not opt a
-    // route out of static rendering — only `enable()` / `disable()` do. See INVARIANTS.
+    // `draftMode()` is deliberately not in this list: `posts/[slug]` reads `isEnabled` the same
+    // way and still prerenders. A production build is the only proof either way.
     expect(source).not.toMatch(/\bcookies\(\)/)
     expect(source).not.toMatch(/\bheaders\(\)/)
+  })
+
+  // A dynamic segment with no `generateStaticParams` is rendered on every request, whatever
+  // else the page avoids — the Next 16.3.0 docs, `generate-static-params.md`. That alone kept
+  // this page `ƒ` on a production build after every per-request read was gone.
+  it('exports generateStaticParams', () => {
+    expect(source).toMatch(/export\s+async\s+function\s+generateStaticParams\b/)
   })
 
   it('does not declare force-dynamic', () => {

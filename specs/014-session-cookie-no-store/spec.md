@@ -286,5 +286,8 @@ Bắt buộc:
    `course-page-static.spec.ts`, viết lại entry INVARIANTS về trang khóa học + test #4, #6.
    Kiểm chứng cuối trên prod build do user chạy: route thành `○`/`●`, publish một chỉnh sửa thì
    trang cập nhật.
+   _Kết quả 2026-09-23_: test #4 đỏ → xanh. Test #6 đã viết, tự bỏ qua trên `next dev`; build
+   cục bộ treo ở câu hỏi migration của Payload (`prodMigrations` + DB dev được tạo bằng push),
+   nên user chốt lấy bằng chứng đỏ/xanh cho #6 và `ƒ` → `●` trực tiếp trên production.
 5. **GĐ5** — `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm test:int` xanh. Commit khi
    user yêu cầu.

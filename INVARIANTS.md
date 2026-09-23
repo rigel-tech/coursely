@@ -769,10 +769,16 @@ signed-in visitor, on exactly the pages that host the header. No warning, no bui
 the session on the server to choose between the registration form and an enrollment badge
 (`specs/007-student-enrollment`). It now follows the same shape as the header:
 `src/components/public/CourseRegistration.tsx` asks
-`src/app/(frontend)/next/course-status/route.ts`. That page is cached rather than
-`force-dynamic`, so the read must not come back — `tests/unit/repo/course-page-static.spec.ts`
-greps the page for it, and for `force-dynamic`, because either one regresses in silence: the
-page still renders correctly and only stops being cacheable.
+`src/app/(frontend)/next/course-status/route.ts`. Keeping the read out is necessary but not
+sufficient: a dynamic segment with no `generateStaticParams` renders on every request anyway
+(Next 16.3.0 `generate-static-params.md`), and that alone kept the page `ƒ` after the read
+was gone. The page is cacheable only with no per-request read, no `force-dynamic`, **and** a
+`generateStaticParams` — `tests/unit/repo/course-page-static.spec.ts` greps the page for all
+three, because each regresses in silence: the page still renders correctly and only stops
+being cacheable. Once cached, it is kept fresh by the hooks in
+_"`revalidatePath` on a rewritten page takes the folder path"_. The grep proves the source,
+not the result; `tests/e2e/course-page-cache.spec.ts` checks the served `Cache-Control`, and
+runs only against a production server (`E2E_PROD=1`).
 
 ### An admin component's arguments to `useListDrawer` must be referentially stable, or it refetches on every render
 

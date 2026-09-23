@@ -6,11 +6,13 @@
 // `tests/unit/repo/course-page-static.spec.ts` greps this file for both halves, so it fails
 // on the identifiers themselves — naming one here, even in a comment, trips it.
 //
-// It declares no revalidation window, on purpose, so the route takes Next's default of
-// `false`: prerendered once and served until something calls `revalidatePath`. Nothing does
-// yet — `Courses` carries no such hook, unlike `Pages` and `Posts` — so in a production
-// build a published edit does not appear at all. That is a known gap with a task behind it,
-// not an oversight. `next dev` ignores all of this, which is why it never shows up locally.
+// Avoiding those reads is not enough on its own: a dynamic segment with no
+// `generateStaticParams` is rendered on every request regardless. Its empty list renders each
+// course on its first visit and caches it from then on — no revalidation window, so Next's
+// default of `false`. What refreshes a cached course is the revalidation hooks on `Courses`,
+// `CourseObjectives` and `CoursePhases` (`src/collections/Courses/hooks/revalidateCourse.ts`);
+// drop either half and the page is silently stale or silently uncached. `next dev` ignores
+// all of this, which is why neither shows up locally.
 
 import type { Metadata } from 'next'
 
@@ -43,6 +45,10 @@ type Args = {
   params: Promise<{
     slug?: string
   }>
+}
+
+export async function generateStaticParams() {
+  return []
 }
 
 export default async function CourseDetailPage({ params: paramsPromise }: Args) {
