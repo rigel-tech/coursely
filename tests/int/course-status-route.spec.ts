@@ -76,6 +76,7 @@ const seedStudent = async () => {
 const seedCourse = async () => {
   const course = await payload.create({
     collection: 'courses',
+    context: { disableRevalidate: true },
     data: { title: unique('Khoá'), slug: unique('khoa'), _status: 'published' },
   } as Parameters<Payload['create']>[0])
   return (course as { id: number }).id

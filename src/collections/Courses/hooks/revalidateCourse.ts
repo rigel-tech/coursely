@@ -1,70 +1,85 @@
-import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'payload'
+import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, PayloadRequest } from 'payload'
 
 import { revalidatePath } from 'next/cache'
 
-import type { Course } from '@/payload-types'
+import type { Course, CourseObjective, CoursePhase } from '../../../payload-types'
 
-export const revalidateCourse: CollectionAfterChangeHook<Course> = ({
-  doc,
-  previousDoc,
-  req: { payload, context },
-}) => {
-  if (!context.disableRevalidate) {
-    if (doc._status === 'published') {
-      const paths = [`/khoa-hoc/${doc.slug}`, `/courses/${doc.slug}`, '/']
+type CourseChild = CourseObjective | CoursePhase
 
-      payload.logger.info(`Revalidating course at paths: ${paths.join(', ')}`)
+// The folder path, never the public `/khoa-hoc/:slug`: that one is a rewrite, and
+// `revalidatePath` takes the route's own path — the public one is accepted without error and
+// purges nothing. See INVARIANTS.
+const coursePath = (slug: string) => `/courses/${slug}`
 
-      for (const path of paths) {
-        try {
-          revalidatePath(path)
-        } catch {
-          // Ignored outside Next.js request context (e.g. CLI seed scripts)
-        }
-      }
-    }
+// The home page lists published courses, so any course change that reaches the public site
+// revalidates it too. Objectives and phases never appear there.
+const HOME = '/'
 
-    // If the course was previously published and was unpublished, or if the slug changed,
-    // we need to revalidate the previous paths.
-    const wasPublished = previousDoc?._status === 'published'
-    const isNowUnpublished = doc._status !== 'published'
-    const slugChanged = Boolean(previousDoc?.slug && previousDoc.slug !== doc.slug)
+const revalidateCourseById = async (id: number, req: PayloadRequest) => {
+  const { slug } = await req.payload.findByID({
+    collection: 'courses',
+    id,
+    depth: 0,
+    select: { slug: true },
+    req,
+  })
+  revalidatePath(coursePath(slug))
+}
 
-    if (wasPublished && (isNowUnpublished || slugChanged) && previousDoc?.slug) {
-      const oldPaths = [`/khoa-hoc/${previousDoc.slug}`, `/courses/${previousDoc.slug}`, '/']
+const courseId = (course: CourseChild['course']) =>
+  typeof course === 'object' ? course.id : course
 
-      payload.logger.info(`Revalidating old course at paths: ${oldPaths.join(', ')}`)
+/** Revalidates a course's page, and the home page, on publish, unpublish or re-slug. */
+export const revalidateCourse: CollectionAfterChangeHook<Course> = ({ doc, previousDoc, req }) => {
+  if (req.context.disableRevalidate) return doc
 
-      for (const oldPath of oldPaths) {
-        try {
-          revalidatePath(oldPath)
-        } catch {
-          // Ignored outside Next.js request context
-        }
-      }
-    }
+  const paths = new Set<string>()
+  if (doc._status === 'published') paths.add(coursePath(doc.slug))
+
+  if (
+    previousDoc._status === 'published' &&
+    (doc._status !== 'published' || previousDoc.slug !== doc.slug)
+  ) {
+    paths.add(coursePath(previousDoc.slug))
   }
 
+  if (paths.size > 0) paths.add(HOME)
+  for (const path of paths) revalidatePath(path)
   return doc
 }
 
-export const revalidateDelete: CollectionAfterDeleteHook<Course> = ({
+/** Revalidates a deleted course's detail page and the home page. */
+export const revalidateCourseDelete: CollectionAfterDeleteHook<Course> = ({ doc, req }) => {
+  if (req.context.disableRevalidate) return doc
+
+  revalidatePath(coursePath(doc.slug))
+  revalidatePath(HOME)
+  return doc
+}
+
+/** Revalidates the detail page of the course an objective or phase belongs to. */
+export const revalidateParentCourse: CollectionAfterChangeHook<CourseChild> = async ({
   doc,
-  req: { payload, context },
+  previousDoc,
+  req,
 }) => {
-  if (!context.disableRevalidate && doc?.slug) {
-    const paths = [`/khoa-hoc/${doc.slug}`, `/courses/${doc.slug}`, '/']
-
-    payload.logger.info(`Revalidating deleted course at paths: ${paths.join(', ')}`)
-
-    for (const path of paths) {
-      try {
-        revalidatePath(path)
-      } catch {
-        // Ignored outside Next.js request context
-      }
-    }
+  if (req.context.disableRevalidate) {
+    return doc
   }
 
+  const courseIds = new Set([doc.course, previousDoc?.course].filter(Boolean).map(courseId))
+
+  await Promise.all([...courseIds].map((courseId) => revalidateCourseById(courseId, req)))
+
+  return doc
+}
+/** Revalidates the parent course's detail page when an objective or phase is deleted. */
+export const revalidateParentCourseDelete: CollectionAfterDeleteHook<CourseChild> = async ({
+  doc,
+  req,
+}) => {
+  if (req.context.disableRevalidate) return doc
+
+  await revalidateCourseById(courseId(doc.course), req)
   return doc
 }

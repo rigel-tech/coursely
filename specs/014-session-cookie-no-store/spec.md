@@ -277,9 +277,28 @@ Bắt buộc:
 2. **GĐ2** — sửa banner `notifications-count`. Không có test (chỉ comment).
 3. **GĐ3** — hook revalidate cho `Courses`, `CourseObjectives`, `CoursePhases` + test #2, #3, #5.
    Entry INVARIANTS: `revalidatePath` trên route bị rewrite nhận đường dẫn đích.
+   _Phát hiện khi làm_: ngoài request của Next, `revalidatePath` ném
+   `static generation store missing` và rollback lệnh ghi. Cleanup `.catch(() => {})` trong
+   `tests/int/` nuốt lỗi đó và để lại 10 khóa học rác (đã xóa bằng SQL). Chốt 2026-09-23:
+   caller ngoài Next truyền `context: { disableRevalidate: true }` — hai seed khóa học và
+   cleanup trong 9 file int test; hook không tự nuốt lỗi.
 4. **GĐ4** — `generateStaticParams` cho `courses/[slug]/page.tsx`, viết lại banner trang, sửa
    `course-page-static.spec.ts`, viết lại entry INVARIANTS về trang khóa học + test #4, #6.
    Kiểm chứng cuối trên prod build do user chạy: route thành `○`/`●`, publish một chỉnh sửa thì
    trang cập nhật.
+   _Kết quả 2026-09-23_: test #4 đỏ → xanh. Test #6 đã viết, tự bỏ qua trên `next dev`; build
+   cục bộ treo ở câu hỏi migration của Payload (`prodMigrations` + DB dev được tạo bằng push),
+   nên user chốt lấy bằng chứng đỏ/xanh cho #6 và `ƒ` → `●` trực tiếp trên production.
 5. **GĐ5** — `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm test:int` xanh. Commit khi
    user yêu cầu.
+   _Kết quả 2026-09-23_: lint/typecheck/unit (588)/int (221) xanh. `test:e2e` đỏ cục bộ vì
+   `notification-bell` và `responsive-header` dùng chung một student seed → cho
+   `responsive-header` fixture riêng. Còn `admin.spec` và `session-on-public-pages` chỉ đỏ khi
+   chạy song song, xanh khi tuần tự; chưa rõ cơ chế. Chốt: `workers: 1` ở mọi nơi như CI →
+   15 passed, 1 skipped (#6, chỉ chạy trên prod).
+6. **GĐ6 — trang chủ** (bổ sung vào PR #68, 2026-09-23). `/` liệt kê khóa học và được prerender,
+   nên hook `Courses` phải revalidate cả `/` khi publish, unpublish, đổi slug, xóa; objective /
+   phase thì không. Test đã chốt qua `AskUserQuestion` (bắt buộc + cả hai đề xuất): unit publish /
+   unpublish-đổi slug / xóa có `/`; nháp chưa publish không gọi gì; objective/phase không gọi
+   `/`; int qua Local API có `/`. Đỏ trước: 4 unit + 3 int đỏ trên code cũ; 2 unit còn lại đỏ
+   trên bản cài đặt ngây thơ (gọi `/` ở mọi hook) rồi mới viết bản đúng.

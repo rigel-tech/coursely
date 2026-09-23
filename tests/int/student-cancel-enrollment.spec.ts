@@ -88,7 +88,9 @@ afterAll(async () => {
   }
   await payload.delete({ collection: 'classes', id: classFutureId }).catch(() => {})
   await payload.delete({ collection: 'classes', id: classPastId }).catch(() => {})
-  await payload.delete({ collection: 'courses', id: courseId }).catch(() => {})
+  await payload
+    .delete({ collection: 'courses', id: courseId, context: { disableRevalidate: true } })
+    .catch(() => {})
 })
 
 describe('cancelStudentEnrollment — succeeds and marks CANCELLED', () => {
