@@ -257,7 +257,10 @@ visible, but only to whoever clicks it.
 right of `rewrites.ts`. So `/khoa-hoc/:slug` is revalidated as `revalidatePath('/courses/<slug>')`.
 Every course revalidation goes through `coursePath` in `revalidateCourse.ts`. The course page
 also renders its `course-objectives` and `course-phases`, so saving or deleting one of those
-revalidates the page of the course it belongs to — both courses, when it moves.
+revalidates the page of the course it belongs to — both courses, when it moves. The home page
+`/` lists published courses and is prerendered, so every course change that reaches the public
+site — publish, unpublish, re-slug, delete — revalidates `/` as well; objectives and phases do
+not, since the home page shows neither. A new page that lists courses needs the same.
 
 A Local API write to any of those three collections from outside a Next request — a seed, a
 script, an int test — passes `context: { disableRevalidate: true }`. Outside Next,

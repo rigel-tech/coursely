@@ -46,14 +46,14 @@ afterAll(async () => {
 })
 
 describe('Courses runs its revalidation hooks', () => {
-  it('publishing a course revalidates its folder path', async () => {
+  it('publishing a course revalidates its folder path and the home page', async () => {
     const slug = uniqueSlug()
     await seedCourse(slug)
 
-    expect(ctx.revalidated).toEqual([`/courses/${slug}`])
+    expect(ctx.revalidated.sort()).toEqual(['/', `/courses/${slug}`])
   })
 
-  it('re-slugging a published course revalidates the new and the old path', async () => {
+  it('re-slugging a published course revalidates the new path, the old path and the home page', async () => {
     const oldSlug = uniqueSlug()
     const course = await seedCourse(oldSlug)
     ctx.revalidated.length = 0
@@ -61,10 +61,12 @@ describe('Courses runs its revalidation hooks', () => {
     const newSlug = uniqueSlug()
     await payload.update({ collection: 'courses', id: course.id, data: { slug: newSlug } })
 
-    expect(ctx.revalidated.sort()).toEqual([`/courses/${newSlug}`, `/courses/${oldSlug}`].sort())
+    expect(ctx.revalidated.sort()).toEqual(
+      ['/', `/courses/${newSlug}`, `/courses/${oldSlug}`].sort(),
+    )
   })
 
-  it('deleting a course revalidates its folder path', async () => {
+  it('deleting a course revalidates its folder path and the home page', async () => {
     const slug = uniqueSlug()
     const course = await seedCourse(slug)
     ctx.revalidated.length = 0
@@ -72,6 +74,6 @@ describe('Courses runs its revalidation hooks', () => {
     await payload.delete({ collection: 'courses', id: course.id })
     madeIds.delete(course.id)
 
-    expect(ctx.revalidated).toEqual([`/courses/${slug}`])
+    expect(ctx.revalidated.sort()).toEqual(['/', `/courses/${slug}`])
   })
 })

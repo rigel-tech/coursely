@@ -11,6 +11,10 @@ type CourseChild = CourseObjective | CoursePhase
 // purges nothing. See INVARIANTS.
 const coursePath = (slug: string) => `/courses/${slug}`
 
+// The home page lists published courses, so any course change that reaches the public site
+// revalidates it too. Objectives and phases never appear there.
+const HOME = '/'
+
 const revalidateCourseById = async (id: number, req: PayloadRequest) => {
   const { slug } = await req.payload.findByID({
     collection: 'courses',
@@ -25,26 +29,31 @@ const revalidateCourseById = async (id: number, req: PayloadRequest) => {
 const courseId = (course: CourseChild['course']) =>
   typeof course === 'object' ? course.id : course
 
-/** Revalidates a course's detail page when it is published, unpublished or re-slugged. */
+/** Revalidates a course's page, and the home page, on publish, unpublish or re-slug. */
 export const revalidateCourse: CollectionAfterChangeHook<Course> = ({ doc, previousDoc, req }) => {
   if (req.context.disableRevalidate) return doc
 
-  if (doc._status === 'published') revalidatePath(coursePath(doc.slug))
+  const paths = new Set<string>()
+  if (doc._status === 'published') paths.add(coursePath(doc.slug))
 
   if (
     previousDoc._status === 'published' &&
     (doc._status !== 'published' || previousDoc.slug !== doc.slug)
   ) {
-    revalidatePath(coursePath(previousDoc.slug))
+    paths.add(coursePath(previousDoc.slug))
   }
+
+  if (paths.size > 0) paths.add(HOME)
+  for (const path of paths) revalidatePath(path)
   return doc
 }
 
-/** Revalidates a deleted course's detail page. */
+/** Revalidates a deleted course's detail page and the home page. */
 export const revalidateCourseDelete: CollectionAfterDeleteHook<Course> = ({ doc, req }) => {
   if (req.context.disableRevalidate) return doc
 
   revalidatePath(coursePath(doc.slug))
+  revalidatePath(HOME)
   return doc
 }
 
@@ -54,14 +63,16 @@ export const revalidateParentCourse: CollectionAfterChangeHook<CourseChild> = as
   previousDoc,
   req,
 }) => {
-  if (req.context.disableRevalidate) return doc
+  if (req.context.disableRevalidate) {
+    return doc
+  }
 
-  // Both ends of a move: the course it left shows it too, until revalidated.
-  const ids = new Set([doc.course, previousDoc.course].filter(Boolean).map(courseId))
-  for (const id of ids) await revalidateCourseById(id, req)
+  const courseIds = new Set([doc.course, previousDoc?.course].filter(Boolean).map(courseId))
+
+  await Promise.all([...courseIds].map((courseId) => revalidateCourseById(courseId, req)))
+
   return doc
 }
-
 /** Revalidates the parent course's detail page when an objective or phase is deleted. */
 export const revalidateParentCourseDelete: CollectionAfterDeleteHook<CourseChild> = async ({
   doc,

@@ -28,36 +28,47 @@ beforeEach(() => {
 })
 
 describe('revalidateCourse', () => {
-  it('revalidates the folder path of a course when it is published', () => {
+  // The home page lists courses too, so every course change that reaches the public site
+  // revalidates `/` alongside the course's own page.
+  it('revalidates the folder path and the home page when a course is published', () => {
     change(revalidateCourse, {
       doc: course('tieng-anh', 'published'),
       previousDoc: course('tieng-anh', 'draft'),
       req: req(),
     })
-    expect(revalidated).toEqual(['/courses/tieng-anh'])
+    expect(revalidated.sort()).toEqual(['/', '/courses/tieng-anh'])
   })
 
-  it('revalidates the page a course is unpublished from', () => {
+  it('revalidates the page a course is unpublished from, and the home page', () => {
     change(revalidateCourse, {
       doc: course('tieng-anh', 'draft'),
       previousDoc: course('tieng-anh', 'published'),
       req: req(),
     })
-    expect(revalidated).toEqual(['/courses/tieng-anh'])
+    expect(revalidated.sort()).toEqual(['/', '/courses/tieng-anh'])
   })
 
-  it('revalidates both the new and the old path when a published course is re-slugged', () => {
+  it('revalidates the new path, the old path and the home page when a course is re-slugged', () => {
     change(revalidateCourse, {
       doc: course('tieng-anh-moi', 'published'),
       previousDoc: course('tieng-anh', 'published'),
       req: req(),
     })
-    expect(revalidated.sort()).toEqual(['/courses/tieng-anh', '/courses/tieng-anh-moi'])
+    expect(revalidated.sort()).toEqual(['/', '/courses/tieng-anh', '/courses/tieng-anh-moi'])
   })
 
-  it('revalidates the page of a deleted course', () => {
+  it('revalidates the page of a deleted course, and the home page', () => {
     change(revalidateCourseDelete, { doc: course('tieng-anh', 'published'), req: req() })
-    expect(revalidated).toEqual(['/courses/tieng-anh'])
+    expect(revalidated.sort()).toEqual(['/', '/courses/tieng-anh'])
+  })
+
+  it('revalidates nothing when a never-published course is saved as a draft', () => {
+    change(revalidateCourse, {
+      doc: course('tieng-anh', 'draft'),
+      previousDoc: course('tieng-anh', 'draft'),
+      req: req(),
+    })
+    expect(revalidated).toEqual([])
   })
 
   it('does nothing under context.disableRevalidate', () => {
@@ -100,6 +111,16 @@ describe('revalidateParentCourse', () => {
     expect(revalidated.sort()).toEqual(['/courses/tieng-anh', '/courses/tieng-nhat'])
   })
 
+  it('never revalidates the home page, which shows no objectives or phases', async () => {
+    await change(revalidateParentCourse, {
+      doc: { id: 9, course: 2 },
+      previousDoc: { id: 9, course: 1 },
+      req: req(),
+    })
+    await change(revalidateParentCourseDelete, { doc: { id: 9, course: 1 }, req: req() })
+    expect(revalidated).not.toContain('/')
+  })
+
   it('revalidates the parent course page when an objective or phase is deleted', async () => {
     await change(revalidateParentCourseDelete, { doc: { id: 9, course: 2 }, req: req() })
     expect(revalidated).toEqual(['/courses/tieng-nhat'])
@@ -136,6 +157,6 @@ describe('never the public rewrite source', () => {
     await change(revalidateParentCourseDelete, { doc: { id: 9, course: 1 }, req: req() })
 
     expect(revalidated.length).toBeGreaterThan(0)
-    expect(revalidated.filter((p) => !p.startsWith('/courses/'))).toEqual([])
+    expect(revalidated.filter((p) => p.startsWith('/khoa-hoc'))).toEqual([])
   })
 })

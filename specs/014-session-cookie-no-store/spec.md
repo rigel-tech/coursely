@@ -296,3 +296,9 @@ Bắt buộc:
    `responsive-header` fixture riêng. Còn `admin.spec` và `session-on-public-pages` chỉ đỏ khi
    chạy song song, xanh khi tuần tự; chưa rõ cơ chế. Chốt: `workers: 1` ở mọi nơi như CI →
    15 passed, 1 skipped (#6, chỉ chạy trên prod).
+6. **GĐ6 — trang chủ** (bổ sung vào PR #68, 2026-09-23). `/` liệt kê khóa học và được prerender,
+   nên hook `Courses` phải revalidate cả `/` khi publish, unpublish, đổi slug, xóa; objective /
+   phase thì không. Test đã chốt qua `AskUserQuestion` (bắt buộc + cả hai đề xuất): unit publish /
+   unpublish-đổi slug / xóa có `/`; nháp chưa publish không gọi gì; objective/phase không gọi
+   `/`; int qua Local API có `/`. Đỏ trước: 4 unit + 3 int đỏ trên code cũ; 2 unit còn lại đỏ
+   trên bản cài đặt ngây thơ (gọi `/` ở mọi hook) rồi mới viết bản đúng.
