@@ -291,3 +291,8 @@ Bắt buộc:
    nên user chốt lấy bằng chứng đỏ/xanh cho #6 và `ƒ` → `●` trực tiếp trên production.
 5. **GĐ5** — `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm test:int` xanh. Commit khi
    user yêu cầu.
+   _Kết quả 2026-09-23_: lint/typecheck/unit (588)/int (221) xanh. `test:e2e` đỏ cục bộ vì
+   `notification-bell` và `responsive-header` dùng chung một student seed → cho
+   `responsive-header` fixture riêng. Còn `admin.spec` và `session-on-public-pages` chỉ đỏ khi
+   chạy song song, xanh khi tuần tự; chưa rõ cơ chế. Chốt: `workers: 1` ở mọi nơi như CI →
+   15 passed, 1 skipped (#6, chỉ chạy trên prod).

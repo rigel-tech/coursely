@@ -30,6 +30,12 @@ export const testSessionStudent = {
   password: 'test',
 }
 
+/** The responsive-header spec's own student — same reason as `testSessionStudent`. */
+export const testHeaderStudent = {
+  email: 'student-header-e2e@payloadcms.com',
+  password: 'test',
+}
+
 const SCRIPT = 'scripts/seed-e2e-user.ts'
 
 const run = (
@@ -81,4 +87,14 @@ export async function seedSessionStudent(): Promise<void> {
 /** Removes the session spec's own student. */
 export async function cleanupSessionStudent(): Promise<void> {
   run('cleanup', testSessionStudent)
+}
+
+/** Creates the responsive-header spec's own student in `students` (ACTIVE). */
+export async function seedHeaderStudent(): Promise<void> {
+  run('seed', testHeaderStudent, 'students')
+}
+
+/** Removes the responsive-header spec's own student. */
+export async function cleanupHeaderStudent(): Promise<void> {
+  run('cleanup', testHeaderStudent)
 }
