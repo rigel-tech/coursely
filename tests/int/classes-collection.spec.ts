@@ -46,7 +46,9 @@ afterAll(async () => {
   for (const id of madeClasses.splice(0)) {
     await payload.delete({ collection: 'classes', id }).catch(() => {})
   }
-  await payload.delete({ collection: 'courses', id: courseId }).catch(() => {})
+  await payload
+    .delete({ collection: 'courses', id: courseId, context: { disableRevalidate: true } })
+    .catch(() => {})
   await payload.delete({ collection: 'users', id: userId }).catch(() => {})
 })
 

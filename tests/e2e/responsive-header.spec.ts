@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 
-import { seedStudentUser, cleanupStudentUser, testStudent } from './helpers/seedUser'
+import { seedHeaderStudent, cleanupHeaderStudent, testHeaderStudent } from './helpers/seedUser'
 
 const SITE = 'http://localhost:3000'
 const PHONES = [320, 375]
@@ -10,19 +10,19 @@ const horizontalOverflow = (page: Page): Promise<number> =>
 
 const signIn = async (page: Page): Promise<void> => {
   await page.goto(`${SITE}/student/login`)
-  await page.locator('#login-email').fill(testStudent.email)
-  await page.locator('#login-password').fill(testStudent.password)
+  await page.locator('#login-email').fill(testHeaderStudent.email)
+  await page.locator('#login-password').fill(testHeaderStudent.password)
   await page.locator('form').getByRole('button', { name: 'Đăng nhập' }).click()
   await page.waitForURL((url) => !url.pathname.startsWith('/student/login'))
 }
 
 test.describe('Header on narrow screens', () => {
   test.beforeAll(async () => {
-    await seedStudentUser()
+    await seedHeaderStudent()
   })
 
   test.afterAll(async () => {
-    await cleanupStudentUser()
+    await cleanupHeaderStudent()
   })
 
   for (const width of PHONES) {

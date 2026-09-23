@@ -251,6 +251,42 @@ visible, but only to whoever clicks it.
 `src/components/public/Link/index.tsx:38` (`CMSLink`),
 `src/components/public/PayloadRedirects/index.tsx:31` (`PayloadRedirects`, also :35).
 
+### `revalidatePath` on a rewritten page takes the folder path, never the public one
+
+**Rule** — Next caches a rewritten page under its route's own path, the destination on the
+right of `rewrites.ts`. So `/khoa-hoc/:slug` is revalidated as `revalidatePath('/courses/<slug>')`.
+Every course revalidation goes through `coursePath` in `revalidateCourse.ts`. The course page
+also renders its `course-objectives` and `course-phases`, so saving or deleting one of those
+revalidates the page of the course it belongs to — both courses, when it moves. The home page
+`/` lists published courses and is prerendered, so every course change that reaches the public
+site — publish, unpublish, re-slug, delete — revalidates `/` as well; objectives and phases do
+not, since the home page shows neither. A new page that lists courses needs the same.
+
+A Local API write to any of those three collections from outside a Next request — a seed, a
+script, an int test — passes `context: { disableRevalidate: true }`. Outside Next,
+`revalidatePath` throws `Invariant: static generation store missing`, and the throw rolls the
+write back.
+
+**Why it breaks silently** — `revalidatePath('/khoa-hoc/<slug>')` returns normally and warns
+about nothing; the editor sees a successful save, and the cached page keeps serving the old
+content until the next build. `next dev` never caches, so it cannot show up locally. The
+out-of-Next throw is loud on its own, but test cleanup is written as
+`payload.delete(…).catch(() => {})`: the delete is rolled back, the catch swallows why, the
+test stays green, and the row stays in the database. The first run of these hooks left ten
+courses behind exactly that way.
+
+**Where** — `src/collections/Courses/hooks/revalidateCourse.ts` (`coursePath`), wired in
+`Courses`, `CourseObjectives` and `CoursePhases`. Source: Next 16.3.0
+`node_modules/next/dist/docs/01-app/03-api-reference/04-functions/revalidatePath.md`
+§ "Using `revalidatePath` with rewrites". Pinned by
+`tests/unit/collections/revalidate-course.spec.ts` § "never the public rewrite source", and
+`tests/int/revalidate-course.spec.ts` for the wiring on `Courses`. Out-of-Next writers today:
+`src/seed/seedCourses.ts`, `src/seed/seedCourseDetails.ts`, and the course cleanup in
+`tests/int/`.
+
+> `src/actions/student/profile.ts:111` revalidates `/tai-khoan`, the public name, written
+> under the rule this entry replaces. Left for its own change, not swept here.
+
 ## Config-to-component wiring
 
 ### A new `blockType` must be registered in `blockComponents`
@@ -438,8 +474,9 @@ chain against `src/lib/errors/auth.ts`, both _return_ their refusal instead of t
 Vietnamese URLs (`/dang-nhap`, `/tai-khoan`, `/xac-thuc-otp`, `/quen-mat-khau`,
 `/dat-lai-mat-khau`), and `/courses` the URL `/khoa-hoc`. A rewrite **adds** a name; it
 does not retire the folder path, so both reach the app. Two rules follow. Every
-`redirect()`, `Link href`, `revalidatePath` and e-mail link uses the **public** path on the
-left of that table, never the folder name on the right. And anything that decides by
+`redirect()`, `Link href` and e-mail link uses the **public** path on the left of that
+table, never the folder name on the right — `revalidatePath` is the one exception and takes
+the folder name, see _"`revalidatePath` on a rewritten page takes the folder path"_. And anything that decides by
 pathname must list **both** names, because `proxy` runs before the rewrite and sees whichever
 one the browser asked for. Two things do today: `PROTECTED_PREFIXES` and `config.matcher` in
 `src/proxy.ts`, which since the matcher was narrowed is what decides whether `proxy` runs for
@@ -735,10 +772,16 @@ signed-in visitor, on exactly the pages that host the header. No warning, no bui
 the session on the server to choose between the registration form and an enrollment badge
 (`specs/007-student-enrollment`). It now follows the same shape as the header:
 `src/components/public/CourseRegistration.tsx` asks
-`src/app/(frontend)/next/course-status/route.ts`. That page is cached rather than
-`force-dynamic`, so the read must not come back — `tests/unit/repo/course-page-static.spec.ts`
-greps the page for it, and for `force-dynamic`, because either one regresses in silence: the
-page still renders correctly and only stops being cacheable.
+`src/app/(frontend)/next/course-status/route.ts`. Keeping the read out is necessary but not
+sufficient: a dynamic segment with no `generateStaticParams` renders on every request anyway
+(Next 16.3.0 `generate-static-params.md`), and that alone kept the page `ƒ` after the read
+was gone. The page is cacheable only with no per-request read, no `force-dynamic`, **and** a
+`generateStaticParams` — `tests/unit/repo/course-page-static.spec.ts` greps the page for all
+three, because each regresses in silence: the page still renders correctly and only stops
+being cacheable. Once cached, it is kept fresh by the hooks in
+_"`revalidatePath` on a rewritten page takes the folder path"_. The grep proves the source,
+not the result; `tests/e2e/course-page-cache.spec.ts` checks the served `Cache-Control`, and
+runs only against a production server (`E2E_PROD=1`).
 
 ### An admin component's arguments to `useListDrawer` must be referentially stable, or it refetches on every render
 

@@ -3,6 +3,10 @@ import type { CollectionConfig } from 'payload'
 import { adminGroups } from '@/lib/constants/adminGroups'
 import { anyone } from '../../access/anyone'
 import { authenticated } from '../../access/authenticated'
+import {
+  revalidateParentCourse,
+  revalidateParentCourseDelete,
+} from '../Courses/hooks/revalidateCourse'
 
 export const CourseObjectives: CollectionConfig<'course-objectives'> = {
   slug: 'course-objectives',
@@ -49,4 +53,8 @@ export const CourseObjectives: CollectionConfig<'course-objectives'> = {
       admin: { position: 'sidebar' },
     },
   ],
+  hooks: {
+    afterChange: [revalidateParentCourse],
+    afterDelete: [revalidateParentCourseDelete],
+  },
 }

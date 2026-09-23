@@ -150,7 +150,9 @@ afterAll(async () => {
   for (const id of madeStaff.splice(0)) {
     await payload.delete({ collection: 'users', id }).catch(() => {})
   }
-  await payload.delete({ collection: 'courses', id: courseId }).catch(() => {})
+  await payload
+    .delete({ collection: 'courses', id: courseId, context: { disableRevalidate: true } })
+    .catch(() => {})
 })
 
 describe('enrollments — payments join field', () => {
