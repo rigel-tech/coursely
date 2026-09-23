@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 
 import {
   CourseRegistrationForm,
@@ -12,34 +12,65 @@ import { ENROLLMENT_STATUS } from '@/components/public/enrollment-status'
 import { cancelEnrollmentAction } from '@/actions/student/cancel-enrollment'
 import type { Enrollment, Student } from '@/payload-types'
 
-type CourseRegistrationProps = {
-  course: CourseRegistrationCourse
-  enrollmentId?: number
-  enrollmentStatus?: Enrollment['enrollmentStatus']
-  canCancel?: boolean
-  profile?: Partial<Pick<Student, 'email' | 'fullName' | 'phone'>>
+type CourseProfile = Partial<Pick<Student, 'email' | 'fullName' | 'phone'>>
+
+type CourseStatus = {
+  authenticated?: boolean
+  profile?: CourseProfile
+  enrollment?: {
+    id: number
+    enrollmentStatus: Enrollment['enrollmentStatus']
+    canCancel: boolean
+  }
 }
 
 /**
  * Whether this visitor may enrol is decided by `createEnrollmentAction` when the form is
- * submitted, not here — this component renders the form unconditionally and only reacts
- * to what the server answers. `enrollmentStatus` seeds the badge from the page's own
- * server-side lookup; `onSuccess` moves it into local state so a successful submit shows
- * the badge immediately, without a reload. `canCancel` is the same page-level lookup's
- * verdict — only a display hint; `cancelEnrollmentAction` re-validates everything itself.
+ * submitted, not here — this component renders the form and only reacts to what the server
+ * answers. What it does decide is which of three things to show, and it asks
+ * `/next/course-status` rather than being handed the answer as props: the page used to read
+ * the session server-side to compute them, and that read is what kept it off the cache.
+ *
+ * Nothing renders until that answer arrives. Showing the form first would flash "Vui lòng
+ * đăng nhập" at a student who is signed in, or invite a click on a form that is about to be
+ * replaced by their own enrollment badge.
+ *
+ * A status route that cannot be reached resolves to signed-out, so the visitor is offered
+ * sign-in — the one action that can help — rather than a spinner that never ends.
  */
-export function CourseRegistration({
-  course,
-  enrollmentId,
-  enrollmentStatus,
-  canCancel = false,
-  profile,
-}: CourseRegistrationProps) {
-  const [status, setStatus] = useState(enrollmentStatus)
-  const [cancellable, setCancellable] = useState(canCancel)
-  const [id, setId] = useState(enrollmentId)
+export function CourseRegistration({ course }: { course: CourseRegistrationCourse }) {
+  const [loaded, setLoaded] = useState(false)
+  const [profile, setProfile] = useState<CourseProfile | undefined>(undefined)
+  const [status, setStatus] = useState<Enrollment['enrollmentStatus'] | undefined>(undefined)
+  const [cancellable, setCancellable] = useState(false)
+  const [id, setId] = useState<number | undefined>(undefined)
   const [message, setMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetch(`/next/course-status?courseId=${course.id}`)
+      .then((res) => res.json())
+      .then((data: CourseStatus) => {
+        if (cancelled) return
+
+        if (data?.authenticated === true) setProfile(data.profile ?? {})
+        if (data?.enrollment) {
+          setStatus(data.enrollment.enrollmentStatus)
+          setId(data.enrollment.id)
+          setCancellable(data.enrollment.canCancel)
+        }
+        setLoaded(true)
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [course.id])
 
   const handleCancel = () => {
     if (!id) return
@@ -59,12 +90,25 @@ export function CourseRegistration({
   /**
    * A registration `createEnrollmentAction` just accepted is always `NEW` + unpaid + no
    * class yet — `isEnrollmentCancellable`'s exact base case — so the cancel control can be
-   * shown immediately without waiting for a reload to re-run the page-level lookup.
+   * shown immediately without waiting for a reload to re-run the status lookup.
    */
   const handleRegistered = (newEnrollmentId: number) => {
     setStatus('NEW')
     setId(newEnrollmentId)
     setCancellable(true)
+  }
+
+  if (!loaded) {
+    return (
+      <div
+        aria-label="Đang tải trạng thái đăng ký"
+        className="flex flex-col gap-3 rounded-md border border-border bg-muted px-3 py-3"
+        role="status"
+      >
+        <div className="h-5 w-2/3 animate-pulse rounded bg-border" />
+        <div className="h-9 w-full animate-pulse rounded bg-border" />
+      </div>
+    )
   }
 
   return (
