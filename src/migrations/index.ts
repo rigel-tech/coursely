@@ -16,6 +16,8 @@ import * as migration_20260917_150000_convert_payments_enrollment_id_to_relation
 import * as migration_20260917_210000_add_enrollment_cancelled_notification_type from './20260917_210000_add_enrollment_cancelled_notification_type'
 import * as migration_20260918_100000_add_payments_enrollment_unique_idx from './20260918_100000_add_payments_enrollment_unique_idx'
 import * as migration_20260918_120000_shrink_enrollments_payment_status_enum from './20260918_120000_shrink_enrollments_payment_status_enum'
+import * as migration_20260920_143000_add_new_notification_types from './20260920_143000_add_new_notification_types'
+import * as migration_20260922_100000_add_notification_task_slugs from './20260922_100000_add_notification_task_slugs'
 
 export const migrations = [
   {
@@ -107,5 +109,15 @@ export const migrations = [
     up: migration_20260918_120000_shrink_enrollments_payment_status_enum.up,
     down: migration_20260918_120000_shrink_enrollments_payment_status_enum.down,
     name: '20260918_120000_shrink_enrollments_payment_status_enum',
+  },
+  {
+    up: migration_20260920_143000_add_new_notification_types.up,
+    down: migration_20260920_143000_add_new_notification_types.down,
+    name: '20260920_143000_add_new_notification_types',
+  },
+  {
+    up: migration_20260922_100000_add_notification_task_slugs.up,
+    down: migration_20260922_100000_add_notification_task_slugs.down,
+    name: '20260922_100000_add_notification_task_slugs',
   },
 ]

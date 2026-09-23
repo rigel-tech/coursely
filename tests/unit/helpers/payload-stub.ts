@@ -1,4 +1,4 @@
-import type { Payload } from 'payload'
+import type { Payload, PayloadRequest } from 'payload'
 
 /**
  * A mocked `Payload` never has the whole shape — only the methods a given spec's stub
@@ -9,3 +9,6 @@ import type { Payload } from 'payload'
  * `as never` at every `getPayload` mock.
  */
 export const asPayload = (stub: object): Payload => stub as unknown as Payload
+
+/** The same one cast for a stubbed `req` — a hook only ever reads a few of its fields. */
+export const asRequest = (stub: object): PayloadRequest => stub as unknown as PayloadRequest

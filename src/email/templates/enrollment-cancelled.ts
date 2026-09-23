@@ -1,8 +1,5 @@
+import { escapeHtml } from './escape-html'
 import type { EmailBody } from './verify-otp'
-
-/** `courseTitle` is staff-entered, not this module's own data — escape it before it reaches markup. */
-const escapeHtml = (value: string): string =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 export function createEnrollmentCancelledEmailTemplate(courseTitle: string): EmailBody {
   return {

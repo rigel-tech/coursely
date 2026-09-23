@@ -13,6 +13,15 @@ vi.mock('@/services/student-verification-otp', () => ({
 }))
 vi.mock('@/email/send', () => ({
   sendDuplicateAttemptEmail: vi.fn().mockResolvedValue(undefined),
+  sendEnrollmentConfirmationEmail: vi.fn().mockResolvedValue(undefined),
+  sendEnrollmentCancellationEmail: vi.fn().mockResolvedValue(undefined),
+  sendEnrollmentConfirmedEmail: vi.fn().mockResolvedValue(undefined),
+  sendAdminEnrollmentCreatedEmail: vi.fn().mockResolvedValue(undefined),
+  sendAdminEnrollmentCancelledEmail: vi.fn().mockResolvedValue(undefined),
+  sendClassAssignedEmail: vi.fn().mockResolvedValue(undefined),
+  sendClassCancelledEmail: vi.fn().mockResolvedValue(undefined),
+  sendClassRescheduledEmail: vi.fn().mockResolvedValue(undefined),
+  sendPaymentRecordedEmail: vi.fn().mockResolvedValue(undefined),
 }))
 
 describe('student registration notifications', () => {

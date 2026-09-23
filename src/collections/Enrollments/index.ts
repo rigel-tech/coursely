@@ -8,6 +8,7 @@ import { guardAgainstDeleteWithPayments } from './hooks/guardAgainstDeleteWithPa
 import { guardClassCapacity } from './hooks/guardClassCapacity'
 import { setClassAssignedAt } from './hooks/setClassAssignedAt'
 import { setCreatedBy } from './hooks/setCreatedBy'
+import { notifyOnStatusChange } from './hooks/notifyOnStatusChange'
 
 /** A class that has been cancelled or has already finished can take nobody new. */
 const DEAD_CLASS_STATUSES = ['CANCELLED', 'COMPLETED']
@@ -15,6 +16,7 @@ const DEAD_CLASS_STATUSES = ['CANCELLED', 'COMPLETED']
 export const Enrollments: CollectionConfig<'enrollments'> = {
   slug: 'enrollments',
   hooks: {
+    afterChange: [notifyOnStatusChange],
     beforeChange: [
       setCreatedBy,
       deriveEnrollmentPaymentStatus,

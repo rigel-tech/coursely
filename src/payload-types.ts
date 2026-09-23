@@ -150,6 +150,9 @@ export interface Config {
   user: Student | User;
   jobs: {
     tasks: {
+      notifyEnrollmentEvent: TaskNotifyEnrollmentEvent;
+      notifyClassEvent: TaskNotifyClassEvent;
+      notifyPaymentRecorded: TaskNotifyPaymentRecorded;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -1074,7 +1077,15 @@ export interface Notification {
   id: number;
   student?: (number | null) | Student;
   user?: (number | null) | User;
-  type: 'ACCOUNT_CREATED' | 'ENROLLMENT_CREATED' | 'ENROLLMENT_CANCELLED';
+  type:
+    | 'ACCOUNT_CREATED'
+    | 'ENROLLMENT_CREATED'
+    | 'ENROLLMENT_CANCELLED'
+    | 'ENROLLMENT_CONFIRMED'
+    | 'CLASS_ASSIGNED'
+    | 'PAYMENT_RECORDED'
+    | 'CLASS_RESCHEDULED'
+    | 'CLASS_CANCELLED';
   title: string;
   content: string;
   metadata?:
@@ -1233,7 +1244,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'schedulePublish';
+        taskSlug: 'inline' | 'notifyEnrollmentEvent' | 'notifyClassEvent' | 'notifyPaymentRecorded' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1266,7 +1277,8 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'schedulePublish') | null;
+  taskSlug?:
+    ('inline' | 'notifyEnrollmentEvent' | 'notifyClassEvent' | 'notifyPaymentRecorded' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -2300,6 +2312,39 @@ export interface CollectionsWidget {
     [k: string]: unknown;
   };
   width: 'full';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskNotifyEnrollmentEvent".
+ */
+export interface TaskNotifyEnrollmentEvent {
+  input: {
+    enrollmentId: number;
+    event: 'ENROLLMENT_CREATED' | 'ENROLLMENT_CANCELLED' | 'ENROLLMENT_CONFIRMED' | 'CLASS_ASSIGNED';
+    notifyStaff: boolean;
+  };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskNotifyClassEvent".
+ */
+export interface TaskNotifyClassEvent {
+  input: {
+    classId: number;
+    event: 'CLASS_ASSIGNED' | 'CLASS_RESCHEDULED' | 'CLASS_CANCELLED';
+  };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskNotifyPaymentRecorded".
+ */
+export interface TaskNotifyPaymentRecorded {
+  input: {
+    paymentId: number;
+  };
+  output?: unknown;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -2,17 +2,14 @@
 
 /**
  * The admin-panel counterpart to `src/components/public/NotificationBell` (specs/010):
- * shows every row in the `notifications` collection, staff-facing and student-facing
- * alike. Talks directly to Payload's own generated REST endpoints for `notifications` (no
- * custom Next.js route or Server Action — staff already pass the collection's own
- * `authenticated` access, research.md Decision 1). `limit: 0` on `find` is not a count
- * shortcut (it disables pagination and returns every row — see INVARIANTS.md), so the
- * count comes from the collection's own `/count` endpoint instead.
+ * shows staff-facing notifications (where `student` does not exist). Talks directly to
+ * Payload's own generated REST endpoints for `notifications` (no custom Next.js route or
+ * Server Action — staff already pass the collection's own `authenticated` access,
+ * research.md Decision 1). `limit: 0` on `find` is not a count shortcut (it disables
+ * pagination and returns every row — see INVARIANTS.md), so the count comes from the
+ * collection's own `/count` endpoint instead.
  *
- * Opening the list marks rows read, but only the ones with no `student` — a row that
- * belongs to a student is that student's own unread notification (read through
- * `student-notifications.ts`), and staff merely glancing at it here must not silently mark
- * it read on the student's behalf.
+ * Opening the list marks rows read.
  */
 import React, { useCallback, useEffect, useState } from 'react'
 import { Popup, useConfig } from '@payloadcms/ui'
@@ -69,7 +66,12 @@ export const NotificationBell: React.FC = () => {
 
   const loadList = useCallback(async () => {
     const res = await requests.get(buildURL(apiRoute, '/notifications', ''), {
-      params: { sort: '-createdAt', limit: 20, depth: 0 },
+      params: {
+        sort: '-createdAt',
+        limit: 20,
+        depth: 0,
+        where: { student: { exists: false } },
+      },
     })
     const data: PaginatedDocs<AdminNotification> = await res.json()
     const docs = data.docs ?? []
