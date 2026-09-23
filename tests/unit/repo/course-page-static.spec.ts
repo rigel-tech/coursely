@@ -38,9 +38,9 @@ describe('the course detail page stays cacheable', () => {
     expect(source).not.toMatch(/dynamic\s*=\s*['"]force-dynamic['"]/)
   })
 
-  it('declares a revalidate window, so the cache is bounded rather than absent', () => {
-    expect(source).toMatch(/export const revalidate\s*=\s*\d+/)
-  })
+  // No `revalidate` case here on purpose. The window was dropped deliberately, which leaves
+  // the route on Next's default of `false` — cached until something calls `revalidatePath`.
+  // Asserting a window again would fail a page that is the way it is meant to be.
 
   it('leaves the enrollment lookup to the client status route', () => {
     expect(source).not.toMatch(/\bgetActiveEnrollmentStatus\b/)
