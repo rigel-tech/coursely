@@ -53,6 +53,15 @@ test.describe('a session survives browsing public pages', () => {
 
     await dropAccessCookie(context)
 
+    // BUG-08: a public page must never be where the session is renewed — a shared cache would
+    // store that visitor's token with the page. This pins `proxy`'s matcher; that a cookie
+    // written anywhere carries `no-store` is `tests/int/proxy-session.spec.ts`'s job.
+    const res = await context.request.get(`${SITE}/`)
+    const setCookies = res.headersArray().filter((h) => h.name.toLowerCase() === 'set-cookie')
+    expect(setCookies.filter((h) => h.value.startsWith('coursely-')).map((h) => h.value)).toEqual(
+      [],
+    )
+
     // Two public pages, neither of which reaches `proxy` any more.
     for (const path of ['/', '/khoa-hoc']) {
       await page.goto(`${SITE}${path}`)
