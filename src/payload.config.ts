@@ -180,7 +180,7 @@ export default buildConfig({
     tasks: notificationTasks,
     // Only the notifications queue: `schedulePublish` jobs sit on `default`, and nothing
     // has ever run that queue here.
-    autoRun: [{ cron: '* * * * *', queue: NOTIFICATIONS_QUEUE }],
+    autoRun: [{ cron: '*/10 * * * * *', queue: NOTIFICATIONS_QUEUE }],
     // Same exclusions as `onInit` — a test run or a build must never start sending.
     shouldAutoRun: () =>
       process.env.NODE_ENV !== 'test' &&
